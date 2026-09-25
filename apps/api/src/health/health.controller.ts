@@ -31,7 +31,7 @@ export class HealthController {
   @Get()
   async check() {
     const [postgres, redis] = await Promise.all([
-      probe(() => this.db.pool.query('SELECT 1')),
+      probe(() => this.db.ping()),
       probe(() => this.redis.client.ping()),
     ]);
 
