@@ -1,16 +1,24 @@
+import { createDatabase, type DatabaseConnection, type Db } from '@jobpilot/db';
 import { Injectable, type OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Pool } from 'pg';
 
 @Injectable()
 export class Database implements OnApplicationShutdown {
-  readonly pool: Pool;
+  private readonly connection: DatabaseConnection;
 
   constructor(config: ConfigService) {
-    this.pool = new Pool({ connectionString: config.getOrThrow<string>('DATABASE_URL') });
+    this.connection = createDatabase(config.getOrThrow<string>('DATABASE_URL'));
+  }
+
+  get db(): Db {
+    return this.connection.db;
+  }
+
+  async ping() {
+    await this.connection.pool.query('SELECT 1');
   }
 
   async onApplicationShutdown() {
-    await this.pool.end();
+    await this.connection.pool.end();
   }
 }
