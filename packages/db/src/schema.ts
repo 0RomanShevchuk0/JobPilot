@@ -100,11 +100,7 @@ export const vacancies = pgTable(
          .$type<EmploymentType[]>()
          .notNull()
          .default(emptyTextArray),
-      workModes: text("work_modes")
-         .array()
-         .$type<WorkMode[]>()
-         .notNull()
-         .default(emptyTextArray),
+      workModes: text("work_modes").array().$type<WorkMode[]>().notNull().default(emptyTextArray),
       locations: jsonb("locations").$type<Location[]>().notNull().default([]),
       languages: jsonb("languages").$type<Language[]>().notNull().default([]),
       salaryMin: integer("salary_min"),
@@ -142,11 +138,7 @@ export const profiles = pgTable("profiles", {
    salaryCurrency: text("salary_currency"),
    salaryPeriod: text("salary_period").$type<SalaryPeriod>(),
    locations: jsonb("locations").$type<Location[]>().notNull().default([]),
-   workModes: text("work_modes")
-      .array()
-      .$type<WorkMode[]>()
-      .notNull()
-      .default(emptyTextArray),
+   workModes: text("work_modes").array().$type<WorkMode[]>().notNull().default(emptyTextArray),
    languages: jsonb("languages").$type<Language[]>().notNull().default([]),
    hardFilters: jsonb("hard_filters").notNull().default({}),
    notes: text("notes").notNull().default(""), // free-form facts for AI: notice period, work permit, relocation...
@@ -189,9 +181,7 @@ export const applications = pgTable("applications", {
    status: text("status").$type<ApplicationStatus>().notNull().default("draft"),
    failureReason: text("failure_reason"),
    cvDocumentId: uuid("cv_document_id").references(() => documents.id),
-   coverLetterDocumentId: uuid("cover_letter_document_id").references(
-      () => documents.id,
-   ),
+   coverLetterDocumentId: uuid("cover_letter_document_id").references(() => documents.id),
    formFields: jsonb("form_fields").$type<FormField[]>().notNull().default([]),
    submittedAt: tstz("submitted_at"),
    createdAt: tstz("created_at").notNull().defaultNow(),

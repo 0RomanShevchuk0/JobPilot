@@ -1,27 +1,27 @@
 {
-  "name": "@jobpilot/api",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "tsc && concurrently --kill-others --names tsc,api --prefix-colors blue,green \"tsc --watch --preserveWatchOutput\" \"node --watch dist/main.js\"",
-    "build": "nest build",
-    "start": "node dist/main.js",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@jobpilot/db": "workspace:*",
-    "@nestjs/common": "^12.1.0",
-    "@nestjs/config": "^12.0.1",
-    "@nestjs/core": "^12.1.0",
-    "@nestjs/platform-express": "^12.1.0",
-    "ioredis": "^6.0.0",
-    "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
-  },
-  "devDependencies": {
-    "@nestjs/cli": "^12.0.0",
-    "@types/node": "^24.13.6",
-    "concurrently": "^10.0.5",
-    "typescript": "~6.0.3"
-  }
+   "name": "@jobpilot/api",
+   "private": true,
+   "type": "module",
+   "scripts": {
+      "dev": "tsc && concurrently --kill-others --names tsc,api --prefix-colors blue,green \"tsc --watch --preserveWatchOutput\" \"node --watch dist/main.js\"",
+      "build": "nest build",
+      "start": "node dist/main.js",
+      "typecheck": "tsc --noEmit"
+   },
+   "dependencies": {
+      "@jobpilot/db": "workspace:*",
+      "@nestjs/common": "^12.1.0",
+      "@nestjs/config": "^12.0.1",
+      "@nestjs/core": "^12.1.0",
+      "@nestjs/platform-express": "^12.1.0",
+      "ioredis": "^6.0.0",
+      "reflect-metadata": "^0.2.2",
+      "rxjs": "^7.8.2"
+   },
+   "devDependencies": {
+      "@nestjs/cli": "^12.0.0",
+      "@types/node": "^24.13.6",
+      "concurrently": "^10.0.5",
+      "typescript": "~6.0.3"
+   }
 }
