@@ -166,6 +166,9 @@ importers:
 
   .:
     devDependencies:
+      prettier:
+        specifier: ^3.9.9
+        version: 3.9.9
       turbo:
         specifier: ^2.11.0
         version: 2.11.3
@@ -202,7 +205,7 @@ importers:
     devDependencies:
       '@nestjs/cli':
         specifier: ^12.0.0
-        version: 12.0.6(@types/node@24.13.6)
+        version: 12.0.6(@types/node@24.13.6)(prettier@3.9.9)
       '@types/node':
         specifier: ^24.13.6
         version: 24.13.6
@@ -1657,6 +1660,11 @@ packages:
     resolution: {integrity: sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==}
     engines: {node: '>=0.10.0'}
 
+  prettier@3.9.9:
+    resolution: {integrity: sha512-Z/CJHIkdujO/OtN7nXUii0Rf3VT5SRuhjBA82Xvu2XhBUgX3nhP67T0LHceBdQLex7OOFGTox+Q5Yg8Jk2Qivg==}
+    engines: {node: '>=14'}
+    hasBin: true
+
   proxy-addr@2.0.8:
     resolution: {integrity: sha512-5nnx0yGyVUcY6t9RnWcARWtwT9F1D8O9rt08htPvnd49W1IgZtmLkhu9WfMzQj1cFxjHIO6connUNVW5k7AVyQ==}
     engines: {node: '>= 0.10'}
@@ -2321,13 +2329,13 @@ snapshots:
 
   '@lukeed/csprng@1.1.0': {}
 
-  '@nestjs/cli@12.0.6(@types/node@24.13.6)':
+  '@nestjs/cli@12.0.6(@types/node@24.13.6)(prettier@3.9.9)':
     dependencies:
       '@angular-devkit/core': 22.2.0(chokidar@5.0.0)
       '@angular-devkit/schematics': 22.2.0(chokidar@5.0.0)
       '@angular-devkit/schematics-cli': 22.2.0(@types/node@24.13.6)(chokidar@5.0.0)
       '@inquirer/prompts': 8.7.2(@types/node@24.13.6)
-      '@nestjs/schematics': 12.0.5(chokidar@5.0.0)(typescript@6.0.3)
+      '@nestjs/schematics': 12.0.5(chokidar@5.0.0)(prettier@3.9.9)(typescript@6.0.3)
       ansis: 4.4.0
       chokidar: 5.0.0
       cli-table3: 0.6.5
@@ -2389,7 +2397,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@nestjs/schematics@12.0.5(chokidar@5.0.0)(typescript@6.0.3)':
+  '@nestjs/schematics@12.0.5(chokidar@5.0.0)(prettier@3.9.9)(typescript@6.0.3)':
     dependencies:
       '@angular-devkit/core': 22.1.8(chokidar@5.0.0)
       '@angular-devkit/schematics': 22.1.8(chokidar@5.0.0)
@@ -2397,6 +2405,8 @@ snapshots:
       jsonc-parser: 3.3.1
       pluralize: 8.0.0
       typescript: 6.0.3
+    optionalDependencies:
+      prettier: 3.9.9
     transitivePeerDependencies:
       - chokidar
 
@@ -3019,6 +3029,8 @@ snapshots:
   postgres-interval@1.2.0:
     dependencies:
       xtend: 4.0.2
+
+  prettier@3.9.9: {}
 
   proxy-addr@2.0.8:
     dependencies:

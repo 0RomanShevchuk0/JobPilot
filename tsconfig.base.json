@@ -1,19 +1,19 @@
 {
-  "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "resolvePackageJsonExports": true,
-    "target": "ES2023",
-    "esModuleInterop": true,
-    "isolatedModules": true,
-    "allowSyntheticDefaultImports": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "declaration": true,
-    "removeComments": true,
-    "sourceMap": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "strictPropertyInitialization": false
-  }
+   "compilerOptions": {
+      "module": "nodenext",
+      "moduleResolution": "nodenext",
+      "resolvePackageJsonExports": true,
+      "target": "ES2023",
+      "esModuleInterop": true,
+      "isolatedModules": true,
+      "allowSyntheticDefaultImports": true,
+      "emitDecoratorMetadata": true,
+      "experimentalDecorators": true,
+      "declaration": true,
+      "removeComments": true,
+      "sourceMap": true,
+      "skipLibCheck": true,
+      "strict": true,
+      "strictPropertyInitialization": false
+   }
 }
