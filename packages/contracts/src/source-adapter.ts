@@ -1,0 +1,35 @@
+import type { NormalizedPosting, RawContentType } from "./posting.js";
+
+/** What discover() finds on a source listing: enough to decide whether the page is worth fetching. */
+export interface PostingRef {
+   externalId: string;
+   url: string;
+   updatedAt?: Date;
+}
+
+export interface RawPosting {
+   externalId: string;
+   url: string;
+   fetchedAt: Date;
+   contentType: RawContentType;
+   body: string;
+}
+
+export type FetchResult = { status: "ok"; raw: RawPosting } | { status: "gone" };
+
+export interface DiscoverParams {
+   /** Specializations to look for, e.g. "Node.js". Each adapter maps them to its own filters. Empty = everything. */
+   keywords?: string[];
+}
+
+/**
+ * Implemented once per source. The platform only talks to sources through this interface.
+ * Rate limiting and retries are the caller's job: every method makes at most the requests it needs, once.
+ */
+export interface SourceAdapter {
+   readonly source: string;
+   discover(params: DiscoverParams): Promise<PostingRef[]>;
+   fetch(ref: PostingRef): Promise<FetchResult>;
+   /** Pure: no network. Must never guess — a field it is not sure about stays undefined. */
+   parse(raw: RawPosting): NormalizedPosting;
+}

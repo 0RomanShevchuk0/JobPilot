@@ -18,7 +18,12 @@ export type ApplyMethod = (typeof applyMethods)[number];
 export const rawContentTypes = ["html", "json", "xml"] as const;
 export type RawContentType = (typeof rawContentTypes)[number];
 
+/** office = where the job's office is; candidate = where the candidate is allowed to work from */
+export const locationKinds = ["office", "candidate"] as const;
+export type LocationKind = (typeof locationKinds)[number];
+
 export const locationSchema = z.object({
+   kind: z.enum(locationKinds),
    raw: z.string().min(1),
    country: z.string().length(2).optional(), // ISO 3166-1 alpha-2
    city: z.string().min(1).optional(),
