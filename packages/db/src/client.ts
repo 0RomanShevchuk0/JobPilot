@@ -1,12 +1,21 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
-import * as schema from './schema.js';
+import { Pool } from "pg";
 
-export function createDatabase(connectionString: string) {
-  const pool = new Pool({ connectionString });
-  const db = drizzle({ client: pool, schema });
-  return { db, pool };
+/**
+ * The only way the rest of the system talks to the database.
+ * Repositories get added here as real queries appear; Drizzle never leaves this package.
+ */
+export interface DatabaseClient {
+   ping(): Promise<void>;
+   close(): Promise<void>;
 }
 
-export type DatabaseConnection = ReturnType<typeof createDatabase>;
-export type Db = DatabaseConnection['db'];
+export function createDatabase(connectionString: string): DatabaseClient {
+   const pool = new Pool({ connectionString });
+
+   return {
+      async ping() {
+         await pool.query("SELECT 1");
+      },
+      close: () => pool.end(),
+   };
+}
