@@ -9,9 +9,9 @@
       }
    },
    "scripts": {
-      "build": "tsc",
-      "dev": "tsc --watch --preserveWatchOutput",
-      "typecheck": "tsc --noEmit -p tsconfig.test.json",
+      "build": "tsc -p tsconfig.build.json",
+      "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+      "typecheck": "tsc",
       "test": "vitest run"
    },
    "dependencies": {

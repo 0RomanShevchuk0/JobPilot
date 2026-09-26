@@ -9,9 +9,9 @@
       }
    },
    "scripts": {
-      "build": "tsc",
-      "dev": "tsc --watch --preserveWatchOutput",
-      "typecheck": "tsc --noEmit",
+      "build": "tsc -p tsconfig.build.json",
+      "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+      "typecheck": "tsc",
       "db:generate": "drizzle-kit generate",
       "db:migrate": "drizzle-kit migrate",
       "db:studio": "drizzle-kit studio"
