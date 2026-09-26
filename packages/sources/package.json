@@ -1,0 +1,29 @@
+{
+   "name": "@jobpilot/sources",
+   "private": true,
+   "type": "module",
+   "exports": {
+      ".": {
+         "types": "./dist/index.d.ts",
+         "default": "./dist/index.js"
+      }
+   },
+   "scripts": {
+      "build": "tsc",
+      "dev": "tsc --watch --preserveWatchOutput",
+      "typecheck": "tsc --noEmit -p tsconfig.test.json",
+      "test": "vitest run"
+   },
+   "dependencies": {
+      "@jobpilot/contracts": "workspace:*",
+      "cheerio": "^1.2.0",
+      "fast-xml-parser": "^5.11.1",
+      "turndown": "^7.2.4"
+   },
+   "devDependencies": {
+      "@types/node": "^24.13.6",
+      "@types/turndown": "^5.0.6",
+      "typescript": "~6.0.3",
+      "vitest": "^5.0.2"
+   }
+}

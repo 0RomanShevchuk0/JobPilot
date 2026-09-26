@@ -9,6 +9,7 @@
       "dev": "turbo run dev",
       "build": "turbo run build",
       "typecheck": "turbo run typecheck",
+      "test": "turbo run test",
       "format": "prettier --write .",
       "format:check": "prettier --check .",
       "db:generate": "pnpm --filter @jobpilot/db db:generate",
