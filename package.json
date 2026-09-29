@@ -14,6 +14,7 @@
       "format:check": "prettier --check .",
       "db:generate": "pnpm --filter @jobpilot/db db:generate",
       "db:migrate": "pnpm --filter @jobpilot/db db:migrate",
+      "db:studio": "pnpm --filter @jobpilot/db db:studio",
       "infra:up": "docker compose up -d --wait",
       "infra:down": "docker compose down"
    },
