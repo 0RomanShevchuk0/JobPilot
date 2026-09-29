@@ -3,3 +3,8 @@
 export * from "./client.js";
 export type { PostingsRepository, PostingToFetch } from "./repositories/postings.js";
 export type { SourceInfo, SourcesRepository } from "./repositories/sources.js";
+export type {
+   LinkPostingInput,
+   VacanciesRepository,
+   VacancyPosting,
+} from "./repositories/vacancies.js";

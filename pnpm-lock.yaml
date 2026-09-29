@@ -227,6 +227,9 @@ importers:
       '@jobpilot/sources':
         specifier: workspace:*
         version: link:../../packages/sources
+      '@jobpilot/vacancies':
+        specifier: workspace:*
+        version: link:../../packages/vacancies
       bullmq:
         specifier: ^6.3.8
         version: 6.3.9(ioredis@6.0.0(supports-color@10.2.2))(pg@8.23.0)
@@ -300,6 +303,19 @@ importers:
       '@types/turndown':
         specifier: ^5.0.6
         version: 5.0.6
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^5.0.2
+        version: 5.0.2(@types/node@24.13.6)(vite@8.3.1(@types/node@24.13.6)(esbuild@0.28.2)(tsx@4.23.15))
+
+  packages/vacancies:
+    dependencies:
+      '@jobpilot/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
       typescript:
         specifier: ~6.0.3
         version: 6.0.3

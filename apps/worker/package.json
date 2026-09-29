@@ -7,12 +7,14 @@
       "build": "tsc",
       "start": "node dist/main.js",
       "discover:now": "tsc && node dist/discover-now.js",
+      "vacancies:rebuild": "tsc && node dist/rebuild-vacancies.js",
       "typecheck": "tsc --noEmit"
    },
    "dependencies": {
       "@jobpilot/contracts": "workspace:*",
       "@jobpilot/db": "workspace:*",
       "@jobpilot/sources": "workspace:*",
+      "@jobpilot/vacancies": "workspace:*",
       "bullmq": "^6.3.8",
       "ioredis": "^6.0.0"
    },
