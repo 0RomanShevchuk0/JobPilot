@@ -28,6 +28,8 @@ export interface DiscoverParams {
  */
 export interface SourceAdapter {
    readonly source: string;
+   /** Bump when parse() output changes, so stored postings can be found and re-parsed from posting_raw. */
+   readonly parserVersion: number;
    discover(params: DiscoverParams): Promise<PostingRef[]>;
    fetch(ref: PostingRef): Promise<FetchResult>;
    /** Pure: no network. Must never guess — a field it is not sure about stays undefined. */

@@ -6,6 +6,7 @@ import { parseRss, rssUrl } from "./rss.js";
 export function createDjinniAdapter(): SourceAdapter {
    return {
       source: "djinni",
+      parserVersion: 2,
 
       async discover({ keywords }) {
          const urls = keywords?.length ? keywords.map((k) => rssUrl(k)) : [rssUrl()];
