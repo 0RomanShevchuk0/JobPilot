@@ -27,7 +27,8 @@ interface JobPostingLd {
    directApply?: boolean;
    employmentType?: OneOrMany<string>;
    jobLocationType?: string | null;
-   hiringOrganization?: { name?: string; sameAs?: string };
+   // a plain string ("confidential") when the employer is hidden
+   hiringOrganization?: { name?: string; sameAs?: string } | string;
    experienceRequirements?: { monthsOfExperience?: number };
    baseSalary?: {
       currency?: string;
@@ -48,11 +49,12 @@ export function parseJobPage(raw: RawPosting): NormalizedPosting {
    const $ = cheerio.load(raw.body);
    const ld = findJobPosting($);
    const descriptionHtml = $(".job-post__description").first().html();
-   if (!ld?.title || !ld.hiringOrganization?.name || !descriptionHtml) {
+   if (!ld?.title || !descriptionHtml) {
       // a layout change, not a closed job: fail loudly instead of saving half a posting
       throw new Error(`djinni ${raw.externalId}: job page layout not recognized`);
    }
    const url = ld.url ?? raw.url;
+   const org = typeof ld.hiringOrganization === "object" ? ld.hiringOrganization : undefined;
 
    return {
       source: "djinni",
@@ -60,10 +62,7 @@ export function parseJobPage(raw: RawPosting): NormalizedPosting {
       url,
       title: ld.title.trim(),
       description: toMarkdown(descriptionHtml),
-      company: {
-         name: ld.hiringOrganization.name.trim(),
-         website: validUrl(ld.hiringOrganization.sameAs),
-      },
+      company: org?.name ? { name: org.name.trim(), website: validUrl(org.sameAs) } : undefined,
       publishedAt: ld.datePosted ? kyivTimeToIso(ld.datePosted) : undefined,
       employmentTypes: nonEmpty(employmentTypes(ld)),
       workModes: nonEmpty(workModes($, ld)),

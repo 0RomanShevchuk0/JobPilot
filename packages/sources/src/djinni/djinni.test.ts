@@ -136,6 +136,23 @@ describe("job page: location only on the page, not in JSON-LD", () => {
    });
 });
 
+describe("job page: hidden employer", () => {
+   // JSON-LD says hiringOrganization: "confidential"; the page shows only the posting agency's banner
+   const posting = parseJobPage(
+      raw(
+         "850047",
+         "https://djinni.co/jobs/850047-backend-developer-node-js-ai-evaluation/",
+         "job-confidential.html",
+      ),
+   );
+
+   it("leaves the company empty instead of inventing one", () => {
+      expect(posting.company).toBeUndefined();
+      expect(posting.title).toBe("Backend Developer Node.js (AI Evaluation)");
+      expect(normalizedPostingSchema.safeParse(posting).success).toBe(true);
+   });
+});
+
 describe("closed job page", () => {
    const html = fixture("job-closed.html");
 

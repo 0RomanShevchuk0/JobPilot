@@ -89,9 +89,7 @@ export const vacancies = pgTable(
    "vacancies",
    {
       id: id(),
-      companyId: uuid("company_id")
-         .notNull()
-         .references(() => companies.id),
+      companyId: uuid("company_id").references(() => companies.id), // null = employer hidden
       title: text("title").notNull(),
       description: text("description").notNull(), // markdown
       seniority: text("seniority").$type<Seniority>(),

@@ -56,10 +56,13 @@ export const normalizedPostingSchema = z.object({
    url: z.url(),
    title: z.string().min(1),
    description: z.string().min(1), // markdown
-   company: z.object({
-      name: z.string().min(1),
-      website: z.url().optional(),
-   }),
+   // undefined = the employer is hidden (confidential postings, recruiting agencies)
+   company: z
+      .object({
+         name: z.string().min(1),
+         website: z.url().optional(),
+      })
+      .optional(),
 
    publishedAt: z.iso.datetime({ offset: true }).optional(),
    seniority: z.enum(seniorities).optional(),
