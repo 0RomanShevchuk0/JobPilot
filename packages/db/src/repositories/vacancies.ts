@@ -1,0 +1,114 @@
+import type { NormalizedPosting, VacancyFields } from "@jobpilot/contracts";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import type { Drizzle } from "../drizzle.js";
+import { companies, postings, vacancies } from "../schema.js";
+
+export interface LinkPostingInput {
+   postingId: string;
+   fingerprint: string;
+   /** undefined when the employer is hidden */
+   company?: { name: string; normalizedName: string; website?: string };
+   // a new vacancy starts from its first posting; mergeVacancy fills in the rest
+   title: string;
+   description: string;
+}
+
+export interface VacancyPosting {
+   postingId: string;
+   parsed: NormalizedPosting;
+   firstSeenAt: Date;
+   goneAt: Date | null;
+}
+
+export interface VacanciesRepository {
+   /**
+    * Attaches a posting to its vacancy: the one it is already linked to, else an open vacancy with
+    * the same fingerprint, else a new one. Returns the vacancy id.
+    */
+   linkPosting(input: LinkPostingInput): Promise<string>;
+   /** All parsed postings of a vacancy, to merge its fields from. */
+   postingsOf(vacancyId: string): Promise<VacancyPosting[]>;
+   update(vacancyId: string, fields: VacancyFields): Promise<void>;
+}
+
+export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
+   return {
+      async linkPosting({ postingId, fingerprint, company, title, description }) {
+         return db.transaction(async (tx) => {
+            let companyId: string | null = null;
+            if (company) {
+               const [row] = await tx
+                  .insert(companies)
+                  .values(company)
+                  .onConflictDoUpdate({
+                     target: companies.normalizedName,
+                     // keep the first name seen; learn the website if we didn't know it
+                     set: { website: sql`coalesce(${companies.website}, excluded.website)` },
+                  })
+                  .returning({ id: companies.id });
+               companyId = row.id;
+            }
+
+            const [posting] = await tx
+               .select({ vacancyId: postings.vacancyId })
+               .from(postings)
+               .where(eq(postings.id, postingId));
+            if (!posting) throw new Error(`posting ${postingId} not found`);
+            if (posting.vacancyId) return posting.vacancyId;
+
+            const [open] = await tx
+               .select({ id: vacancies.id })
+               .from(vacancies)
+               .where(and(eq(vacancies.fingerprint, fingerprint), isNull(vacancies.closedAt)))
+               .limit(1);
+
+            const vacancyId =
+               open?.id ??
+               (
+                  await tx
+                     .insert(vacancies)
+                     .values({ companyId, title, description, fingerprint })
+                     .returning({ id: vacancies.id })
+               )[0].id;
+
+            await tx.update(postings).set({ vacancyId }).where(eq(postings.id, postingId));
+            return vacancyId;
+         });
+      },
+
+      async postingsOf(vacancyId) {
+         const rows = await db
+            .select({
+               postingId: postings.id,
+               parsed: postings.parsed,
+               firstSeenAt: postings.firstSeenAt,
+               goneAt: postings.goneAt,
+            })
+            .from(postings)
+            .where(and(eq(postings.vacancyId, vacancyId), isNotNull(postings.parsed)));
+         return rows.map((r) => ({ ...r, parsed: r.parsed! }));
+      },
+
+      async update(vacancyId, v) {
+         await db
+            .update(vacancies)
+            .set({
+               title: v.title,
+               description: v.description,
+               seniority: v.seniority ?? null,
+               employmentTypes: v.employmentTypes,
+               workModes: v.workModes,
+               locations: v.locations,
+               languages: v.languages,
+               salaryMin: v.salary?.min ?? null,
+               salaryMax: v.salary?.max ?? null,
+               salaryCurrency: v.salary?.currency ?? null,
+               salaryPeriod: v.salary?.period ?? null,
+               skills: v.skills,
+               experienceYears: v.experienceYears ?? null,
+               closedAt: v.closedAt,
+            })
+            .where(eq(vacancies.id, vacancyId));
+      },
+   };
+}

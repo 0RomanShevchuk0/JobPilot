@@ -1,15 +1,16 @@
 import { normalizedPostingSchema, type NormalizedPosting } from "@jobpilot/contracts";
 import type { DatabaseClient } from "@jobpilot/db";
-import { type Job, UnrecoverableError } from "bullmq";
+import { type Job, type Queue, UnrecoverableError } from "bullmq";
 import { log } from "../log.js";
-import type { FetchJobData } from "../queues.js";
+import { type FetchJobData, type BuildVacancyJobData, buildVacancyJobOptions } from "../queues.js";
 import type { SourceEntry } from "../sources.js";
 
-/** One posting page → parse → validate against the contract → database. */
+/** One posting page → parse → validate against the contract → database → build its vacancy. */
 export async function handleFetch(
    job: Job<FetchJobData>,
    entry: SourceEntry,
    database: DatabaseClient,
+   buildVacancyQueue: Queue<BuildVacancyJobData>,
 ) {
    const { postingId, ref } = job.data;
    const { adapter } = entry;
@@ -22,6 +23,12 @@ export async function handleFetch(
 
    if (result.status === "gone") {
       await database.postings.markGone(postingId);
+      // its vacancy may now be closed
+      await buildVacancyQueue.add(
+         "build-vacancy",
+         { postingId },
+         buildVacancyJobOptions(postingId),
+      );
       log(`fetch:${adapter.source}`, `${ref.externalId} gone (closed or removed)`);
       return "gone";
    }
@@ -35,6 +42,7 @@ export async function handleFetch(
    }
 
    await database.postings.saveFetched(postingId, result.raw, parsed, adapter.parserVersion);
+   await buildVacancyQueue.add("build-vacancy", { postingId }, buildVacancyJobOptions(postingId));
    log(
       `fetch:${adapter.source}`,
       `${ref.externalId} saved: ${parsed.title} @ ${parsed.company?.name ?? "(employer hidden)"}`,

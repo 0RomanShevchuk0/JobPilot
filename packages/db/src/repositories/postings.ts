@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { NormalizedPosting, PostingRef, RawPosting } from "@jobpilot/contracts";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { postingRaw, postings } from "../schema.js";
 
@@ -24,6 +24,10 @@ export interface PostingsRepository {
    ): Promise<void>;
    /** The source says the posting is closed or removed. */
    markGone(postingId: string): Promise<void>;
+   /** The parsed form of a posting, or undefined if it is not fetched and parsed yet. */
+   getParsed(postingId: string): Promise<NormalizedPosting | undefined>;
+   /** Ids of every parsed posting, e.g. to rebuild all vacancies after the rules for building them change. */
+   listParsedIds(): Promise<string[]>;
 }
 
 export function createPostingsRepository(db: Drizzle): PostingsRepository {
@@ -80,6 +84,23 @@ export function createPostingsRepository(db: Drizzle): PostingsRepository {
                .set({ parsed, parserVersion, url: parsed.url, goneAt: null })
                .where(eq(postings.id, postingId));
          });
+      },
+
+      async getParsed(postingId) {
+         const [row] = await db
+            .select({ parsed: postings.parsed })
+            .from(postings)
+            .where(eq(postings.id, postingId));
+         return row?.parsed ?? undefined;
+      },
+
+      async listParsedIds() {
+         const rows = await db
+            .select({ id: postings.id })
+            .from(postings)
+            .where(isNotNull(postings.parsed))
+            .orderBy(postings.firstSeenAt);
+         return rows.map((r) => r.id);
       },
 
       async markGone(postingId) {
