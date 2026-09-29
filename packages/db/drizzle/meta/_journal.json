@@ -15,6 +15,13 @@
       "when": 1790598140564,
       "tag": "0001_vacancy_company_optional",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790719000216,
+      "tag": "0002_user_data_cascade",
+      "breakpoints": true
     }
   ]
 }

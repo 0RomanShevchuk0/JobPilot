@@ -152,7 +152,7 @@ export const vacancyMatches = pgTable(
    {
       userId: uuid("user_id")
          .notNull()
-         .references(() => users.id),
+         .references(() => users.id, { onDelete: "cascade" }), // deleting a user deletes their data
       vacancyId: uuid("vacancy_id")
          .notNull()
          .references(() => vacancies.id),
@@ -172,7 +172,7 @@ export const applications = pgTable("applications", {
    id: id(),
    userId: uuid("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }), // deleting a user deletes their data
    postingId: uuid("posting_id")
       .notNull()
       .references(() => postings.id),
@@ -193,7 +193,7 @@ export const documents = pgTable("documents", {
    id: id(),
    userId: uuid("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }), // deleting a user deletes their data
    type: text("type").$type<DocumentType>().notNull(),
    isBase: boolean("is_base").notNull().default(false),
    content: text("content").notNull(), // markdown
