@@ -1,7 +1,8 @@
+import type { DiscoverJobData, FetchJobData } from "@jobpilot/contracts";
 import type { DatabaseClient } from "@jobpilot/db";
 import { type Job, type Queue, UnrecoverableError } from "bullmq";
 import { log } from "../log.js";
-import { type DiscoverJobData, type FetchJobData, fetchJobOptions } from "../queues.js";
+import { fetchJobOptions } from "../queues.js";
 import { findSource } from "../sources.js";
 
 /** RSS/listing → postings table → one fetch job per new or bumped posting. */

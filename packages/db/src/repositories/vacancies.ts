@@ -1,4 +1,12 @@
-import type { NormalizedPosting, VacancyFields } from "@jobpilot/contracts";
+import type {
+   Language,
+   Location,
+   NormalizedPosting,
+   Salary,
+   Seniority,
+   VacancyFields,
+   WorkMode,
+} from "@jobpilot/contracts";
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { companies, postings, vacancies } from "../schema.js";
@@ -20,6 +28,20 @@ export interface VacancyPosting {
    goneAt: Date | null;
 }
 
+/** What matching needs to know about a vacancy. */
+export interface VacancyForMatching {
+   id: string;
+   title: string;
+   seniority?: Seniority;
+   workModes: WorkMode[];
+   locations: Location[];
+   languages: Language[];
+   salary?: Salary;
+   /** undefined when the employer is hidden */
+   companyNormalizedName?: string;
+   closedAt: Date | null;
+}
+
 export interface VacanciesRepository {
    /**
     * Attaches a posting to its vacancy: the one it is already linked to, else an open vacancy with
@@ -29,6 +51,9 @@ export interface VacanciesRepository {
    /** All parsed postings of a vacancy, to merge its fields from. */
    postingsOf(vacancyId: string): Promise<VacancyPosting[]>;
    update(vacancyId: string, fields: VacancyFields): Promise<void>;
+   getForMatching(vacancyId: string): Promise<VacancyForMatching | undefined>;
+   /** Ids of vacancies that still have an active posting. */
+   listOpenIds(): Promise<string[]>;
 }
 
 export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
@@ -109,6 +134,52 @@ export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
                closedAt: v.closedAt,
             })
             .where(eq(vacancies.id, vacancyId));
+      },
+
+      async getForMatching(vacancyId) {
+         const [row] = await db
+            .select({
+               id: vacancies.id,
+               title: vacancies.title,
+               seniority: vacancies.seniority,
+               workModes: vacancies.workModes,
+               locations: vacancies.locations,
+               languages: vacancies.languages,
+               salaryMin: vacancies.salaryMin,
+               salaryMax: vacancies.salaryMax,
+               salaryCurrency: vacancies.salaryCurrency,
+               salaryPeriod: vacancies.salaryPeriod,
+               companyNormalizedName: companies.normalizedName,
+               closedAt: vacancies.closedAt,
+            })
+            .from(vacancies)
+            .leftJoin(companies, eq(companies.id, vacancies.companyId))
+            .where(eq(vacancies.id, vacancyId));
+         if (!row) return undefined;
+
+         const { salaryMin, salaryMax, salaryCurrency, salaryPeriod, ...rest } = row;
+         return {
+            ...rest,
+            seniority: rest.seniority ?? undefined,
+            companyNormalizedName: rest.companyNormalizedName ?? undefined,
+            salary:
+               salaryCurrency && salaryPeriod && (salaryMin !== null || salaryMax !== null)
+                  ? {
+                       min: salaryMin ?? undefined,
+                       max: salaryMax ?? undefined,
+                       currency: salaryCurrency,
+                       period: salaryPeriod,
+                    }
+                  : undefined,
+         };
+      },
+
+      async listOpenIds() {
+         const rows = await db
+            .select({ id: vacancies.id })
+            .from(vacancies)
+            .where(isNull(vacancies.closedAt));
+         return rows.map((r) => r.id);
       },
    };
 }

@@ -2,3 +2,6 @@ export * from "./posting.js";
 export * from "./application.js";
 export * from "./source-adapter.js";
 export * from "./vacancy.js";
+export * from "./profile.js";
+export * from "./match.js";
+export * from "./queues.js";
