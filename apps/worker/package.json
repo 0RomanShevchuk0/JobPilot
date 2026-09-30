@@ -13,6 +13,7 @@
    "dependencies": {
       "@jobpilot/contracts": "workspace:*",
       "@jobpilot/db": "workspace:*",
+      "@jobpilot/matching": "workspace:*",
       "@jobpilot/sources": "workspace:*",
       "@jobpilot/vacancies": "workspace:*",
       "bullmq": "^6.3.8",

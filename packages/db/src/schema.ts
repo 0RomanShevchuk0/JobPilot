@@ -3,9 +3,13 @@ import type {
    DocumentType,
    EmploymentType,
    FormField,
+   HardFilters,
    Language,
    Location,
+   MatchAnalysis,
    NormalizedPosting,
+   ProfileContacts,
+   ProfileSkill,
    RawContentType,
    SalaryPeriod,
    Seniority,
@@ -128,17 +132,17 @@ export const profiles = pgTable("profiles", {
       .primaryKey()
       .references(() => users.id, { onDelete: "cascade" }),
    version: integer("version").notNull().default(1), // +1 on every change; stale matches have a lower profile_version
-   contacts: jsonb("contacts").notNull().default({}),
+   contacts: jsonb("contacts").$type<ProfileContacts>().notNull().default({}),
    titles: text("titles").array().notNull().default(emptyTextArray),
    seniority: text("seniority").$type<Seniority>(),
-   skills: jsonb("skills").notNull().default([]),
+   skills: jsonb("skills").$type<ProfileSkill[]>().notNull().default([]),
    salaryMin: integer("salary_min"),
    salaryCurrency: text("salary_currency"),
    salaryPeriod: text("salary_period").$type<SalaryPeriod>(),
    locations: jsonb("locations").$type<Location[]>().notNull().default([]),
    workModes: text("work_modes").array().$type<WorkMode[]>().notNull().default(emptyTextArray),
    languages: jsonb("languages").$type<Language[]>().notNull().default([]),
-   hardFilters: jsonb("hard_filters").notNull().default({}),
+   hardFilters: jsonb("hard_filters").$type<HardFilters>().notNull().default({}),
    notes: text("notes").notNull().default(""), // free-form facts for AI: notice period, work permit, relocation...
    updatedAt: tstz("updated_at")
       .notNull()
@@ -160,7 +164,7 @@ export const vacancyMatches = pgTable(
       prefilterPassed: boolean("prefilter_passed").notNull(),
       // null when rejected by the prefilter: no LLM call was made
       score: integer("score"),
-      analysis: jsonb("analysis").notNull(),
+      analysis: jsonb("analysis").$type<MatchAnalysis>().notNull(),
       model: text("model"),
       promptVersion: text("prompt_version"),
       evaluatedAt: tstz("evaluated_at").notNull().defaultNow(),

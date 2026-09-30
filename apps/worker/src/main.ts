@@ -1,3 +1,12 @@
+import {
+   QueueNames,
+   type DiscoverJobData,
+   fetchQueueName,
+   type FetchJobData,
+   type BuildVacancyJobData,
+   type MatchVacancyJobData,
+   type MatchUserJobData,
+} from "@jobpilot/contracts";
 import { createDatabase } from "@jobpilot/db";
 import { Queue, UnrecoverableError, Worker } from "bullmq";
 import { Redis } from "ioredis";
@@ -5,30 +14,25 @@ import { config } from "./config.js";
 import { handleDiscover } from "./jobs/discover.js";
 import { handleFetch } from "./jobs/fetch.js";
 import { handleBuildVacancy } from "./jobs/build-vacancy.js";
+import { handleMatchUser } from "./jobs/match-user.js";
+import { handleMatchVacancy } from "./jobs/match-vacancy.js";
 import { log } from "./log.js";
-import {
-   DISCOVER_QUEUE,
-   type DiscoverJobData,
-   discoverJobOptions,
-   type FetchJobData,
-   fetchQueueName,
-   BUILD_VACANCY_QUEUE,
-   type BuildVacancyJobData,
-} from "./queues.js";
+import { discoverJobOptions } from "./queues.js";
 import { sources } from "./sources.js";
 
 // BullMQ workers need maxRetriesPerRequest: null so blocking commands survive Redis reconnects
 const connection = new Redis(config.redisUrl, { maxRetriesPerRequest: null });
 const database = createDatabase(config.databaseUrl);
 
-const discoverQueue = new Queue<DiscoverJobData>(DISCOVER_QUEUE, { connection });
+const discoverQueue = new Queue<DiscoverJobData>(QueueNames.discover, { connection });
 const fetchQueues = new Map(
    sources.map((s) => [
       s.adapter.source,
       new Queue<FetchJobData>(fetchQueueName(s.adapter.source), { connection }),
    ]),
 );
-const buildVacancyQueue = new Queue<BuildVacancyJobData>(BUILD_VACANCY_QUEUE, { connection });
+const buildVacancyQueue = new Queue<BuildVacancyJobData>(QueueNames.buildVacancy, { connection });
+const matchVacancyQueue = new Queue<MatchVacancyJobData>(QueueNames.matchVacancy, { connection });
 const workers: Worker[] = [];
 
 for (const entry of sources) {
@@ -58,25 +62,42 @@ for (const entry of sources) {
 
 workers.push(
    new Worker<DiscoverJobData>(
-      DISCOVER_QUEUE,
+      QueueNames.discover,
       (job) => handleDiscover(job, database, fetchQueues),
       { connection, concurrency: 1 },
    ),
    new Worker<BuildVacancyJobData>(
-      BUILD_VACANCY_QUEUE,
-      (job) => handleBuildVacancy(job, database),
+      QueueNames.buildVacancy,
+      (job) => handleBuildVacancy(job, database, matchVacancyQueue),
       {
          connection,
          concurrency: 1,
       },
    ),
+   new Worker<MatchUserJobData>(
+      QueueNames.matchUser,
+      (job) => handleMatchUser(job, database, matchVacancyQueue),
+      { connection, concurrency: 1 },
+   ),
+   new Worker<MatchVacancyJobData>(
+      QueueNames.matchVacancy,
+      (job) => handleMatchVacancy(job, database),
+      // AI scoring will call rate-limited LLMs from here; the prefilter alone is instant
+      { connection, concurrency: 1 },
+   ),
 );
 
+// A queue fed one job at a time (e.g. match-vacancy while build-vacancy runs) empties after every
+// job; the summary waits until it has stayed empty this long, so a run gets one line, not one per job.
+const SUMMARY_QUIET_MS = 2000;
+
 for (const worker of workers) {
-   // counts since the queue was last empty, to close each run with a one-line summary
+   // counts since the last summary
    let completed = 0;
    let failed = 0;
+   let summaryTimer: NodeJS.Timeout | undefined;
 
+   worker.on("active", () => clearTimeout(summaryTimer));
    worker.on("completed", () => completed++);
    worker.on("failed", (job, err) => {
       failed++;
@@ -90,9 +111,12 @@ for (const worker of workers) {
    });
    worker.on("drained", () => {
       if (completed + failed === 0) return; // idle: nothing happened since the last summary
-      log(worker.name, `queue empty: ${completed} completed, ${failed} failed`);
-      completed = 0;
-      failed = 0;
+      clearTimeout(summaryTimer);
+      summaryTimer = setTimeout(() => {
+         log(worker.name, `queue empty: ${completed} completed, ${failed} failed`);
+         completed = 0;
+         failed = 0;
+      }, SUMMARY_QUIET_MS).unref(); // never keeps the process alive on shutdown
    });
 }
 
@@ -108,6 +132,7 @@ async function shutdown(signal: string) {
    await Promise.all([
       discoverQueue.close(),
       buildVacancyQueue.close(),
+      matchVacancyQueue.close(),
       ...[...fetchQueues.values()].map((q) => q.close()),
    ]);
    await database.close();

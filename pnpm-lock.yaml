@@ -178,6 +178,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@jobpilot/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@jobpilot/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -193,6 +196,9 @@ importers:
       '@nestjs/platform-express':
         specifier: ^12.1.0
         version: 12.1.0(@nestjs/common@12.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2))(@nestjs/core@12.1.0)(supports-color@10.2.2)
+      bullmq:
+        specifier: ^6.3.8
+        version: 6.3.9(ioredis@6.0.0(supports-color@10.2.2))(pg@8.23.0)
       ioredis:
         specifier: ^6.0.0
         version: 6.0.0(supports-color@10.2.2)
@@ -202,6 +208,9 @@ importers:
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
     devDependencies:
       '@nestjs/cli':
         specifier: ^12.0.0
@@ -224,6 +233,9 @@ importers:
       '@jobpilot/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@jobpilot/matching':
+        specifier: workspace:*
+        version: link:../../packages/matching
       '@jobpilot/sources':
         specifier: workspace:*
         version: link:../../packages/sources
@@ -281,6 +293,22 @@ importers:
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
+
+  packages/matching:
+    dependencies:
+      '@jobpilot/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@jobpilot/vacancies':
+        specifier: workspace:*
+        version: link:../vacancies
+    devDependencies:
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^5.0.2
+        version: 5.0.2(@types/node@24.13.6)(vite@8.3.1(@types/node@24.13.6)(esbuild@0.28.2)(tsx@4.23.15))
 
   packages/sources:
     dependencies:

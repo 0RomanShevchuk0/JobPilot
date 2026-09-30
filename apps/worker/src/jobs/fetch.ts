@@ -1,8 +1,13 @@
-import { normalizedPostingSchema, type NormalizedPosting } from "@jobpilot/contracts";
+import {
+   normalizedPostingSchema,
+   type NormalizedPosting,
+   type FetchJobData,
+   type BuildVacancyJobData,
+} from "@jobpilot/contracts";
 import type { DatabaseClient } from "@jobpilot/db";
 import { type Job, type Queue, UnrecoverableError } from "bullmq";
 import { log } from "../log.js";
-import { type FetchJobData, type BuildVacancyJobData, buildVacancyJobOptions } from "../queues.js";
+import { buildVacancyJobOptions } from "../queues.js";
 import type { SourceEntry } from "../sources.js";
 
 /** One posting page → parse → validate against the contract → database → build its vacancy. */
