@@ -102,6 +102,19 @@ describe("prefilter", () => {
       expect(checksOf({ title: "Graphics Engineer" })).toEqual([]); // contains "php" letters, not the word
    });
 
+   it("experience: rejects vacancies asking for more years than my limit", () => {
+      const limited: Profile = {
+         ...profile,
+         hardFilters: { ...profile.hardFilters, maxRequiredYears: 4 },
+      };
+      const checks = (experienceYears?: number) =>
+         prefilter(limited, { ...unknown, experienceYears }).rejectedBy.map((r) => r.check);
+      expect(checks(5)).toEqual(["experience"]);
+      expect(checks(4)).toEqual([]); // "from 4 years" is within the limit
+      expect(checks(undefined)).toEqual([]); // not stated: unknown never rejects
+      expect(checksOf({ experienceYears: 10 })).toEqual([]); // no limit in the profile
+   });
+
    it("company: excluded employers are rejected however they are written", () => {
       expect(checksOf({ companyNormalizedName: "epam systems" })).toEqual(["company"]);
       expect(checksOf({ companyNormalizedName: undefined })).toEqual([]); // hidden employer

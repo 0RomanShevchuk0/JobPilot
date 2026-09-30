@@ -6,6 +6,7 @@ export type PrefilterCheck =
    | "salary"
    | "language"
    | "stop_word"
+   | "experience"
    | "company";
 
 export interface RejectReason {

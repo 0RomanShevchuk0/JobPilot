@@ -39,6 +39,7 @@ export interface VacancyForMatching {
    salary?: Salary;
    /** undefined when the employer is hidden */
    companyNormalizedName?: string;
+   experienceYears?: number;
    closedAt: Date | null;
 }
 
@@ -149,6 +150,7 @@ export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
                salaryMax: vacancies.salaryMax,
                salaryCurrency: vacancies.salaryCurrency,
                salaryPeriod: vacancies.salaryPeriod,
+               experienceYears: vacancies.experienceYears,
                companyNormalizedName: companies.normalizedName,
                closedAt: vacancies.closedAt,
             })
@@ -162,6 +164,7 @@ export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
             ...rest,
             seniority: rest.seniority ?? undefined,
             companyNormalizedName: rest.companyNormalizedName ?? undefined,
+            experienceYears: rest.experienceYears ?? undefined,
             salary:
                salaryCurrency && salaryPeriod && (salaryMin !== null || salaryMax !== null)
                   ? {
