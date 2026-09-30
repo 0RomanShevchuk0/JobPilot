@@ -7,12 +7,6 @@ import {
    workModes,
 } from "./posting.js";
 
-export const profileSkillSchema = z.object({
-   name: z.string().min(1),
-   years: z.number().nonnegative().optional(),
-});
-export type ProfileSkill = z.infer<typeof profileSkillSchema>;
-
 /** What goes into application forms: "Full name", "Phone", "LinkedIn"... */
 export const profileContactsSchema = z.object({
    fullName: z.string().min(1).optional(),
@@ -30,6 +24,8 @@ export const hardFiltersSchema = z.object({
    excludeCompanies: z.array(z.string().min(1)).optional(),
    /** Words that rule a vacancy out when they appear in its title, e.g. "PHP". */
    stopWords: z.array(z.string().min(1)).optional(),
+   /** Skip vacancies that ask for more years of experience than this. */
+   maxRequiredYears: z.number().int().nonnegative().optional(),
 });
 export type HardFilters = z.infer<typeof hardFiltersSchema>;
 
@@ -41,12 +37,19 @@ export const profileSchema = z.object({
    contacts: profileContactsSchema.default({}),
    titles: z.array(z.string().min(1)).default([]),
    seniority: z.enum(seniorities).optional(), // my own level
-   skills: z.array(profileSkillSchema).default([]),
+   experienceYears: z.number().int().nonnegative().optional(), // total professional experience in whole years
+   skills: z.array(z.string().min(1)).default([]), // as written: "Node.js", "React"...
+   // expectations in one currency and period; min drives the prefilter, target is for AI scoring
    salary: z
       .object({
          min: z.number().positive(),
+         target: z.number().positive().optional(),
          currency: z.string().length(3),
          period: z.enum(salaryPeriods),
+      })
+      .refine((s) => s.target === undefined || s.target >= s.min, {
+         message: "target must not be below min",
+         path: ["target"],
       })
       .optional(),
    locations: z.array(locationSchema).default([]),

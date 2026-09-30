@@ -21,6 +21,8 @@ export interface VacancyForPrefilter {
    salary?: Salary;
    /** undefined when the employer is hidden */
    companyNormalizedName?: string;
+   /** minimum years of experience the vacancy asks for */
+   experienceYears?: number;
 }
 
 /**
@@ -37,6 +39,7 @@ export function prefilter(profile: Profile, vacancy: VacancyForPrefilter): Prefi
       checkSalary(profile, vacancy),
       ...checkLanguages(profile, vacancy),
       checkStopWords(profile, vacancy),
+      checkExperience(profile, vacancy),
       checkCompany(profile, vacancy),
    ].filter((r): r is RejectReason => r !== undefined);
    return { passed: rejectedBy.length === 0, rejectedBy };
@@ -109,6 +112,15 @@ function checkLanguages(p: Profile, v: VacancyForPrefilter): RejectReason[] {
          },
       ];
    });
+}
+
+function checkExperience(p: Profile, v: VacancyForPrefilter): RejectReason | undefined {
+   const max = p.hardFilters.maxRequiredYears;
+   if (max === undefined || v.experienceYears === undefined || v.experienceYears <= max) return;
+   return {
+      check: "experience",
+      detail: `${v.experienceYears}+ years required, my limit is ${max}`,
+   };
 }
 
 function checkStopWords(p: Profile, v: VacancyForPrefilter): RejectReason | undefined {

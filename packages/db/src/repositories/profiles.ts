@@ -26,11 +26,13 @@ export function createProfilesRepository(db: Drizzle): ProfilesRepository {
                contacts: row.contacts,
                titles: row.titles,
                seniority: row.seniority ?? undefined,
+               experienceYears: row.experienceYears ?? undefined,
                skills: row.skills,
                salary:
                   row.salaryMin !== null && row.salaryCurrency && row.salaryPeriod
                      ? {
                           min: row.salaryMin,
+                          target: row.salaryTarget ?? undefined,
                           currency: row.salaryCurrency,
                           period: row.salaryPeriod,
                        }
@@ -49,8 +51,10 @@ export function createProfilesRepository(db: Drizzle): ProfilesRepository {
             contacts: p.contacts,
             titles: p.titles,
             seniority: p.seniority ?? null,
+            experienceYears: p.experienceYears ?? null,
             skills: p.skills,
             salaryMin: p.salary ? Math.round(p.salary.min) : null,
+            salaryTarget: p.salary?.target !== undefined ? Math.round(p.salary.target) : null,
             salaryCurrency: p.salary?.currency ?? null,
             salaryPeriod: p.salary?.period ?? null,
             locations: p.locations,
