@@ -1,10 +1,4 @@
-import type {
-   AiAssessment,
-   MatchAnalysis,
-   RejectReason,
-   Salary,
-   WorkMode,
-} from "@jobpilot/contracts";
+import type { AiAssessment, MatchAnalysis, MatchListItem } from "@jobpilot/contracts";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { companies, postings, profiles, vacancies, vacancyMatches } from "../schema.js";
@@ -34,28 +28,6 @@ export interface Assessment {
    ai: AiAssessment;
    model: string;
    promptVersion: number;
-}
-
-/** One vacancy in the user's list, with how it was evaluated against their current profile. */
-export interface MatchListItem {
-   vacancyId: string;
-   title: string;
-   /** null when the employer is hidden */
-   company: string | null;
-   /** pages of the vacancy's active postings */
-   urls: string[];
-   /** null: rejected by the prefilter or not scored yet */
-   score: number | null;
-   verdict: AiAssessment["verdict"] | null;
-   summary: string | null;
-   concerns: string[];
-   matchedSkills: string[];
-   missingSkills: string[];
-   /** why the prefilter rejected it; empty when it passed */
-   rejectedBy: RejectReason[];
-   salary: Salary | null;
-   workModes: WorkMode[];
-   evaluatedAt: Date;
 }
 
 export interface MatchesRepository {
@@ -140,6 +112,7 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
          return rows.map(
             ({ analysis, salaryMin, salaryMax, salaryCurrency, salaryPeriod, ...r }) => ({
                ...r,
+               evaluatedAt: r.evaluatedAt.toISOString(),
                urls: urls.filter((u) => u.vacancyId === r.vacancyId).map((u) => u.url),
                verdict: analysis.ai?.verdict ?? null,
                summary: analysis.ai?.summary ?? null,

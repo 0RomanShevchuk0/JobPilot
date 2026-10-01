@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Salary, WorkMode } from "./posting.js";
 
 export type PrefilterCheck =
    | "seniority"
@@ -69,4 +70,29 @@ export type AiAssessment = z.infer<typeof aiAssessmentSchema>;
 export interface MatchAnalysis {
    prefilter: PrefilterResult;
    ai?: AiAssessment;
+}
+
+/**
+ * One vacancy in GET /matches: how it was evaluated against the user's current profile.
+ * The API's wire format, so dates are ISO strings.
+ */
+export interface MatchListItem {
+   vacancyId: string;
+   title: string;
+   /** null when the employer is hidden */
+   company: string | null;
+   /** pages of the vacancy's active postings */
+   urls: string[];
+   /** null: rejected by the prefilter or not scored yet */
+   score: number | null;
+   verdict: AiAssessment["verdict"] | null;
+   summary: string | null;
+   concerns: string[];
+   matchedSkills: string[];
+   missingSkills: string[];
+   /** why the prefilter rejected it; empty when it passed */
+   rejectedBy: RejectReason[];
+   salary: Salary | null;
+   workModes: WorkMode[];
+   evaluatedAt: string;
 }
