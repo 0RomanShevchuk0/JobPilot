@@ -3,6 +3,7 @@ import { normalizedPostingSchema, type RawPosting } from "@jobpilot/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDjinniAdapter } from "./adapter.js";
 import { isClosedPage, kyivTimeToIso, parseJobPage } from "./job-page.js";
+import { countryCode } from "./mappings.js";
 import { parseRss, rssUrl } from "./rss.js";
 
 // real pages saved from djinni.co on 2026-09-26
@@ -167,6 +168,23 @@ describe("closed job page", () => {
             raw("700000", "https://djinni.co/jobs/700000-frontend-developer/", "job-closed.html"),
          ),
       ).toThrow(/layout not recognized/);
+   });
+});
+
+describe("countryCode", () => {
+   it.each([
+      ["UA", "UA"], // JSON-LD of one job
+      ["UKR", "UA"], // "Countries where we consider candidates" of another: alpha-3
+      ["POL", "PL"],
+      ["SRB", "RS"],
+      ["Ukraine", "UA"], // office address
+   ])("%s → %s", (value, code) => {
+      expect(countryCode(value)).toBe(code);
+   });
+
+   it("leaves regions and unknown codes alone", () => {
+      expect(countryCode("Europe")).toBeUndefined();
+      expect(countryCode("XYZ")).toBeUndefined();
    });
 });
 

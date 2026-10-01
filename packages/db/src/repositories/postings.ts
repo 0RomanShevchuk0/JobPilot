@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { NormalizedPosting, PostingRef, RawPosting } from "@jobpilot/contracts";
-import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { postingRaw, postings } from "../schema.js";
 
@@ -28,6 +28,12 @@ export interface PostingsRepository {
    getParsed(postingId: string): Promise<NormalizedPosting | undefined>;
    /** Ids of every parsed posting, e.g. to rebuild all vacancies after the rules for building them change. */
    listParsedIds(): Promise<string[]>;
+   /** Ids of fetched postings of a source parsed by an older parser, or not parsed at all. */
+   listOutdatedIds(sourceId: string, parserVersion: number): Promise<string[]>;
+   /** The stored page of a posting, to parse it again without fetching. */
+   getRaw(postingId: string): Promise<RawPosting | undefined>;
+   /** Replaces the parsed form after re-parsing the stored page; leaves the page and gone status alone. */
+   saveParsed(postingId: string, parsed: NormalizedPosting, parserVersion: number): Promise<void>;
 }
 
 export function createPostingsRepository(db: Drizzle): PostingsRepository {
@@ -101,6 +107,40 @@ export function createPostingsRepository(db: Drizzle): PostingsRepository {
             .where(isNotNull(postings.parsed))
             .orderBy(postings.firstSeenAt);
          return rows.map((r) => r.id);
+      },
+
+      async listOutdatedIds(sourceId, parserVersion) {
+         const rows = await db
+            .select({ id: postings.id })
+            .from(postings)
+            .innerJoin(postingRaw, eq(postingRaw.postingId, postings.id))
+            .where(
+               and(
+                  eq(postings.sourceId, sourceId),
+                  or(isNull(postings.parserVersion), lt(postings.parserVersion, parserVersion)),
+               ),
+            )
+            .orderBy(postings.firstSeenAt);
+         return rows.map((r) => r.id);
+      },
+
+      async getRaw(postingId) {
+         const [row] = await db
+            .select({
+               externalId: postings.externalId,
+               url: postings.url,
+               fetchedAt: postingRaw.fetchedAt,
+               contentType: postingRaw.contentType,
+               body: postingRaw.body,
+            })
+            .from(postingRaw)
+            .innerJoin(postings, eq(postings.id, postingRaw.postingId))
+            .where(eq(postingRaw.postingId, postingId));
+         return row;
+      },
+
+      async saveParsed(postingId, parsed, parserVersion) {
+         await db.update(postings).set({ parsed, parserVersion }).where(eq(postings.id, postingId));
       },
 
       async markGone(postingId) {

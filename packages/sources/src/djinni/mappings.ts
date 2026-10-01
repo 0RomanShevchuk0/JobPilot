@@ -1,4 +1,5 @@
 import type { EmploymentType, SalaryPeriod } from "@jobpilot/contracts";
+import { ALPHA3_TO_ALPHA2 } from "../iso-countries.js";
 
 /** Language names as Djinni prints them → ISO 639-1. Unknown names are skipped rather than guessed. */
 export const LANGUAGE_CODES: Record<string, string> = {
@@ -74,9 +75,11 @@ export const COUNTRY_CODES: Record<string, string> = {
    "united arab emirates": "AE",
 };
 
+/** A country as Djinni writes it → ISO 3166-1 alpha-2: "UA", "UKR" and "Ukraine" all give "UA". */
 export function countryCode(value: string): string | undefined {
    const v = value.trim();
    if (/^[A-Za-z]{2}$/.test(v)) return v.toUpperCase();
+   if (/^[A-Za-z]{3}$/.test(v)) return ALPHA3_TO_ALPHA2[v.toUpperCase()];
    return COUNTRY_CODES[v.toLowerCase()];
 }
 

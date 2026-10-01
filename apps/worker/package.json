@@ -8,6 +8,7 @@
       "start": "node dist/main.js",
       "discover:now": "tsc && node dist/discover-now.js",
       "vacancies:rebuild": "tsc && node dist/rebuild-vacancies.js",
+      "postings:reparse": "tsc && node dist/reparse-postings.js",
       "typecheck": "tsc --noEmit"
    },
    "dependencies": {
