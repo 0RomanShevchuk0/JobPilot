@@ -112,6 +112,7 @@ export const vacancies = pgTable(
       experienceYears: integer("experience_years"),
       fingerprint: text("fingerprint").notNull(),
       createdAt: tstz("created_at").notNull().defaultNow(),
+      updatedAt: tstz("updated_at").notNull().defaultNow(), // last time the merged fields changed; evaluations older than this are stale
       closedAt: tstz("closed_at"), // null = at least one posting still active
    },
    (t) => [index("vacancies_fingerprint_idx").on(t.fingerprint)],
@@ -166,7 +167,7 @@ export const vacancyMatches = pgTable(
       score: integer("score"),
       analysis: jsonb("analysis").$type<MatchAnalysis>().notNull(),
       model: text("model"),
-      promptVersion: text("prompt_version"),
+      promptVersion: integer("prompt_version"),
       evaluatedAt: tstz("evaluated_at").notNull().defaultNow(),
    },
    (t) => [primaryKey({ columns: [t.userId, t.vacancyId] })],

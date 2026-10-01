@@ -27,6 +27,14 @@ export interface PrefilterResult {
  * The descriptions go into the JSON schema the model sees, so they are written for the model.
  */
 export const aiAssessmentSchema = z.object({
+   requiredYears: z
+      .number()
+      .int()
+      .nonnegative()
+      .nullable()
+      .describe(
+         'Minimum years of professional experience the description asks for ("5+ years" → 5, "3-5 years" → 3); null if it doesn\'t say',
+      ),
    score: z
       .number()
       .int()
