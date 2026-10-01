@@ -53,6 +53,7 @@ describe("buildScoringRequest", () => {
 describe("applyHardLimits", () => {
    const ai: AiAssessment = {
       requiredYears: null,
+      roleMismatch: null,
       score: 67,
       verdict: "stretch",
       matchedSkills: [],
@@ -67,7 +68,26 @@ describe("applyHardLimits", () => {
       expect(limited.concerns).toEqual(["5+ years required, my limit is 4", "Salary not stated"]);
    });
 
-   it("leaves the model's verdict when the years fit or are not stated", () => {
+   it("makes a role that is not the work I look for a skip, however well the stack matches", () => {
+      const limited = applyHardLimits(profile, {
+         ...ai,
+         score: 75,
+         roleMismatch: "people management role",
+      });
+      expect(limited).toMatchObject({ verdict: "skip", score: 39 });
+      expect(limited.concerns[0]).toBe("not the role I look for: people management role");
+   });
+
+   it("lists every deal-breaker it found", () => {
+      const limited = applyHardLimits(profile, {
+         ...ai,
+         requiredYears: 6,
+         roleMismatch: "people management role",
+      });
+      expect(limited.concerns).toHaveLength(3);
+   });
+
+   it("leaves the model's verdict when there is no deal-breaker", () => {
       expect(applyHardLimits(profile, { ...ai, requiredYears: 4 })).toEqual({
          ...ai,
          requiredYears: 4,
