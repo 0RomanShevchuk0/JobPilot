@@ -1,4 +1,4 @@
-import type { MatchListItem } from "@jobpilot/db";
+import type { MatchListItem } from "@jobpilot/contracts";
 import { Injectable } from "@nestjs/common";
 import { Database } from "../infra/database.js";
 
