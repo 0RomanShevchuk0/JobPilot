@@ -133,7 +133,6 @@ export const profiles = pgTable("profiles", {
    version: integer("version").notNull().default(1), // +1 on every change; stale matches have a lower profile_version
    contacts: jsonb("contacts").$type<ProfileContacts>().notNull().default({}),
    titles: text("titles").array().notNull().default(emptyTextArray),
-   seniority: text("seniority").$type<Seniority>(),
    experienceYears: integer("experience_years"), // total, whole years
    skills: text("skills").array().notNull().default(emptyTextArray),
    salaryMin: integer("salary_min"),

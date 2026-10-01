@@ -4,7 +4,6 @@ import { prefilter, type VacancyForPrefilter } from "./prefilter.js";
 import { toUsdPerMonth } from "./salary.js";
 
 const profile: Profile = profileSchema.parse({
-   seniority: "senior",
    salary: { min: 4000, currency: "USD", period: "month" },
    locations: [
       { kind: "candidate", raw: "Ukraine", country: "UA" },
