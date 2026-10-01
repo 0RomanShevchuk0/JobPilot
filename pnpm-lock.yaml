@@ -233,6 +233,9 @@ importers:
       '@jobpilot/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@jobpilot/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
       '@jobpilot/matching':
         specifier: workspace:*
         version: link:../../packages/matching

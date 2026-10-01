@@ -20,4 +20,9 @@ export const config = {
    discoverEveryMs: Number(process.env.DISCOVER_EVERY_MINUTES ?? 180) * 60_000,
    // until user profiles exist, what to look for comes from the environment
    djinniKeywords: list("DJINNI_KEYWORDS"),
+   llm: {
+      provider: required("LLM_PROVIDER"),
+      model: process.env.LLM_MODEL || undefined, // the provider's default when empty
+      geminiApiKey: process.env.GEMINI_API_KEY,
+   },
 };

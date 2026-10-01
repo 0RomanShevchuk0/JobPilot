@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import type {
    Language,
    Location,
@@ -28,18 +29,23 @@ export interface VacancyPosting {
    goneAt: Date | null;
 }
 
-/** What matching needs to know about a vacancy. */
+/** What matching needs to know about a vacancy: the prefilter and the scoring prompt. */
 export interface VacancyForMatching {
    id: string;
    title: string;
+   description: string; // markdown
    seniority?: Seniority;
    workModes: WorkMode[];
    locations: Location[];
    languages: Language[];
    salary?: Salary;
+   skills: string[];
    /** undefined when the employer is hidden */
+   companyName?: string;
    companyNormalizedName?: string;
    experienceYears?: number;
+   /** evaluations made before this are stale */
+   updatedAt: Date;
    closedAt: Date | null;
 }
 
@@ -51,7 +57,8 @@ export interface VacanciesRepository {
    linkPosting(input: LinkPostingInput): Promise<string>;
    /** All parsed postings of a vacancy, to merge its fields from. */
    postingsOf(vacancyId: string): Promise<VacancyPosting[]>;
-   update(vacancyId: string, fields: VacancyFields): Promise<void>;
+   /** Stores the merged fields. Returns false when they are the same as stored: updatedAt stays as is. */
+   update(vacancyId: string, fields: VacancyFields): Promise<boolean>;
    getForMatching(vacancyId: string): Promise<VacancyForMatching | undefined>;
    /** Ids of vacancies that still have an active posting. */
    listOpenIds(): Promise<string[]>;
@@ -116,25 +123,31 @@ export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
       },
 
       async update(vacancyId, v) {
+         const fields = {
+            title: v.title,
+            description: v.description,
+            seniority: v.seniority ?? null,
+            employmentTypes: v.employmentTypes,
+            workModes: v.workModes,
+            locations: v.locations,
+            languages: v.languages,
+            salaryMin: v.salary?.min ?? null,
+            salaryMax: v.salary?.max ?? null,
+            salaryCurrency: v.salary?.currency ?? null,
+            salaryPeriod: v.salary?.period ?? null,
+            skills: v.skills,
+            experienceYears: v.experienceYears ?? null,
+            closedAt: v.closedAt,
+         };
+         // a bump on the source rebuilds the vacancy from the same postings: only a real change counts
+         const [stored] = await db.select().from(vacancies).where(eq(vacancies.id, vacancyId));
+         if (stored && sameValues(stored, fields)) return false;
+
          await db
             .update(vacancies)
-            .set({
-               title: v.title,
-               description: v.description,
-               seniority: v.seniority ?? null,
-               employmentTypes: v.employmentTypes,
-               workModes: v.workModes,
-               locations: v.locations,
-               languages: v.languages,
-               salaryMin: v.salary?.min ?? null,
-               salaryMax: v.salary?.max ?? null,
-               salaryCurrency: v.salary?.currency ?? null,
-               salaryPeriod: v.salary?.period ?? null,
-               skills: v.skills,
-               experienceYears: v.experienceYears ?? null,
-               closedAt: v.closedAt,
-            })
+            .set({ ...fields, updatedAt: new Date() })
             .where(eq(vacancies.id, vacancyId));
+         return true;
       },
 
       async getForMatching(vacancyId) {
@@ -142,6 +155,7 @@ export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
             .select({
                id: vacancies.id,
                title: vacancies.title,
+               description: vacancies.description,
                seniority: vacancies.seniority,
                workModes: vacancies.workModes,
                locations: vacancies.locations,
@@ -150,8 +164,11 @@ export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
                salaryMax: vacancies.salaryMax,
                salaryCurrency: vacancies.salaryCurrency,
                salaryPeriod: vacancies.salaryPeriod,
+               skills: vacancies.skills,
                experienceYears: vacancies.experienceYears,
+               companyName: companies.name,
                companyNormalizedName: companies.normalizedName,
+               updatedAt: vacancies.updatedAt,
                closedAt: vacancies.closedAt,
             })
             .from(vacancies)
@@ -163,6 +180,7 @@ export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
          return {
             ...rest,
             seniority: rest.seniority ?? undefined,
+            companyName: rest.companyName ?? undefined,
             companyNormalizedName: rest.companyNormalizedName ?? undefined,
             experienceYears: rest.experienceYears ?? undefined,
             salary:
@@ -185,4 +203,15 @@ export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
          return rows.map((r) => r.id);
       },
    };
+}
+
+/**
+ * Whether the stored row already holds these values. Compared as JSON: jsonb returns object keys in its
+ * own order and drops undefined properties, and dates are compared by value.
+ */
+function sameValues(stored: Record<string, unknown>, values: Record<string, unknown>): boolean {
+   const json = (v: unknown) => JSON.parse(JSON.stringify(v ?? null));
+   return Object.entries(values).every(([key, value]) =>
+      isDeepStrictEqual(json(stored[key]), json(value)),
+   );
 }

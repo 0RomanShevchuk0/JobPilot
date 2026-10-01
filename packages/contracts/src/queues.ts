@@ -1,6 +1,6 @@
 // Every queue of the system and the data its jobs carry, in pipeline order:
 //
-//   discover → fetch-<source> → build-vacancy → match-vacancy
+//   discover → fetch-<source> → build-vacancy → match-vacancy → score-vacancy
 //                                                  ↑
 //   match-user (profile changed) ──────────────────┘
 //
@@ -12,8 +12,10 @@ export const QueueNames = {
    discover: "discover",
    /** Builds or updates the vacancy of a stored posting. */
    buildVacancy: "build-vacancy",
-   /** Evaluates one vacancy for one user. */
+   /** Evaluates one vacancy for one user with the prefilter; what passes goes to score-vacancy. */
    matchVacancy: "match-vacancy",
+   /** Scores one prefiltered vacancy for one user with an LLM. Rate-limited by the provider. */
+   scoreVacancy: "score-vacancy",
    /** Re-evaluates every open vacancy for a user, e.g. after their profile changed. Added by the API. */
    matchUser: "match-user",
 } as const;
@@ -37,6 +39,11 @@ export interface BuildVacancyJobData {
 }
 
 export interface MatchVacancyJobData {
+   userId: string;
+   vacancyId: string;
+}
+
+export interface ScoreVacancyJobData {
    userId: string;
    vacancyId: string;
 }

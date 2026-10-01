@@ -36,6 +36,13 @@
       "when": 1790861524933,
       "tag": "0004_profile_drop_seniority",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790866271270,
+      "tag": "0005_ai_scoring",
+      "breakpoints": true
     }
   ]
 }

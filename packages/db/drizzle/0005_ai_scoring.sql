@@ -1,0 +1,2 @@
+ALTER TABLE "vacancy_matches" ALTER COLUMN "prompt_version" SET DATA TYPE integer USING "prompt_version"::integer;--> statement-breakpoint
+ALTER TABLE "vacancies" ADD COLUMN "updated_at" timestamp with time zone DEFAULT now() NOT NULL;

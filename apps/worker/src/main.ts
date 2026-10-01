@@ -6,6 +6,7 @@ import {
    type BuildVacancyJobData,
    type MatchVacancyJobData,
    type MatchUserJobData,
+   type ScoreVacancyJobData,
 } from "@jobpilot/contracts";
 import { createDatabase } from "@jobpilot/db";
 import { Queue, UnrecoverableError, Worker } from "bullmq";
@@ -16,6 +17,8 @@ import { handleFetch } from "./jobs/fetch.js";
 import { handleBuildVacancy } from "./jobs/build-vacancy.js";
 import { handleMatchUser } from "./jobs/match-user.js";
 import { handleMatchVacancy } from "./jobs/match-vacancy.js";
+import { handleScoreVacancy } from "./jobs/score-vacancy.js";
+import { createScoringLlm } from "./llm.js";
 import { log } from "./log.js";
 import { discoverJobOptions } from "./queues.js";
 import { sources } from "./sources.js";
@@ -23,6 +26,7 @@ import { sources } from "./sources.js";
 // BullMQ workers need maxRetriesPerRequest: null so blocking commands survive Redis reconnects
 const connection = new Redis(config.redisUrl, { maxRetriesPerRequest: null });
 const database = createDatabase(config.databaseUrl);
+const scoring = createScoringLlm();
 
 const discoverQueue = new Queue<DiscoverJobData>(QueueNames.discover, { connection });
 const fetchQueues = new Map(
@@ -33,6 +37,7 @@ const fetchQueues = new Map(
 );
 const buildVacancyQueue = new Queue<BuildVacancyJobData>(QueueNames.buildVacancy, { connection });
 const matchVacancyQueue = new Queue<MatchVacancyJobData>(QueueNames.matchVacancy, { connection });
+const scoreVacancyQueue = new Queue<ScoreVacancyJobData>(QueueNames.scoreVacancy, { connection });
 const workers: Worker[] = [];
 
 for (const entry of sources) {
@@ -81,9 +86,13 @@ workers.push(
    ),
    new Worker<MatchVacancyJobData>(
       QueueNames.matchVacancy,
-      (job) => handleMatchVacancy(job, database),
-      // AI scoring will call rate-limited LLMs from here; the prefilter alone is instant
+      (job) => handleMatchVacancy(job, database, scoreVacancyQueue),
       { connection, concurrency: 1 },
+   ),
+   new Worker<ScoreVacancyJobData>(
+      QueueNames.scoreVacancy,
+      (job) => handleScoreVacancy(job, database, scoring.llm),
+      { connection, concurrency: scoring.concurrency, limiter: scoring.limiter },
    ),
 );
 
@@ -123,7 +132,7 @@ for (const worker of workers) {
 log(
    "worker",
    `started: ${sources.map((s) => `${s.adapter.source} [${s.keywords.join(", ") || "all"}]`).join(", ")}; ` +
-      `discover every ${config.discoverEveryMs / 60_000} min`,
+      `discover every ${config.discoverEveryMs / 60_000} min; scoring with ${scoring.llm.model}`,
 );
 
 async function shutdown(signal: string) {
@@ -133,6 +142,7 @@ async function shutdown(signal: string) {
       discoverQueue.close(),
       buildVacancyQueue.close(),
       matchVacancyQueue.close(),
+      scoreVacancyQueue.close(),
       ...[...fetchQueues.values()].map((q) => q.close()),
    ]);
    await database.close();

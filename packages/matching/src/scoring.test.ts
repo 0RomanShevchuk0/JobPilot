@@ -1,6 +1,6 @@
-import { profileSchema } from "@jobpilot/contracts";
+import { profileSchema, type AiAssessment } from "@jobpilot/contracts";
 import { describe, expect, it } from "vitest";
-import { buildScoringRequest, type VacancyForScoring } from "./scoring.js";
+import { applyHardLimits, buildScoringRequest, type VacancyForScoring } from "./scoring.js";
 
 const profile = profileSchema.parse({
    contacts: { fullName: "Jane Doe", email: "jane@example.com", phone: "+491234567" },
@@ -11,6 +11,7 @@ const profile = profileSchema.parse({
    locations: [{ kind: "candidate", raw: "Germany", country: "DE" }],
    workModes: ["remote"],
    languages: [{ code: "en", level: "B2" }],
+   hardFilters: { maxRequiredYears: 4 },
 });
 
 const vacancy: VacancyForScoring = {
@@ -46,5 +47,31 @@ describe("buildScoringRequest", () => {
       });
       expect(prompt).toContain("[cut]");
       expect(prompt.length).toBeLessThan(16_000);
+   });
+});
+
+describe("applyHardLimits", () => {
+   const ai: AiAssessment = {
+      requiredYears: null,
+      score: 67,
+      verdict: "stretch",
+      matchedSkills: [],
+      missingSkills: [],
+      concerns: ["Salary not stated"],
+      summary: "",
+   };
+
+   it("makes a vacancy asking for more years than my limit a skip", () => {
+      const limited = applyHardLimits(profile, { ...ai, requiredYears: 5 });
+      expect(limited).toMatchObject({ verdict: "skip", score: 39 });
+      expect(limited.concerns).toEqual(["5+ years required, my limit is 4", "Salary not stated"]);
+   });
+
+   it("leaves the model's verdict when the years fit or are not stated", () => {
+      expect(applyHardLimits(profile, { ...ai, requiredYears: 4 })).toEqual({
+         ...ai,
+         requiredYears: 4,
+      });
+      expect(applyHardLimits(profile, ai)).toEqual(ai);
    });
 });
