@@ -5,6 +5,7 @@ export type {
    Assessment,
    MatchesRepository,
    MatchInput,
+   MatchListItem,
    StoredMatch,
 } from "./repositories/matches.js";
 export type { PostingsRepository, PostingToFetch } from "./repositories/postings.js";
