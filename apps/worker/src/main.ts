@@ -96,9 +96,10 @@ workers.push(
    ),
 );
 
-// A queue fed one job at a time (e.g. match-vacancy while build-vacancy runs) empties after every
-// job; the summary waits until it has stayed empty this long, so a run gets one line, not one per job.
-const SUMMARY_QUIET_MS = 2000;
+// A queue fed one job at a time (e.g. match-vacancy while pages are fetched one per 3 s) empties after
+// every job; the summary waits until it has stayed empty this long, so a run gets one line, not one
+// per job. Longer than the slowest fetch interval for that reason.
+const SUMMARY_QUIET_MS = 10_000;
 
 for (const worker of workers) {
    // counts since the last summary
