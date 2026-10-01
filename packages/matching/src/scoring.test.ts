@@ -5,7 +5,6 @@ import { buildScoringRequest, type VacancyForScoring } from "./scoring.js";
 const profile = profileSchema.parse({
    contacts: { fullName: "Jane Doe", email: "jane@example.com", phone: "+491234567" },
    titles: ["Backend Developer"],
-   seniority: "middle",
    experienceYears: 4,
    skills: ["Node.js", "PostgreSQL"],
    salary: { min: 2000, target: 3000, currency: "USD", period: "month" },

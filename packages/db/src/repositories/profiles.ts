@@ -25,7 +25,6 @@ export function createProfilesRepository(db: Drizzle): ProfilesRepository {
             profile: {
                contacts: row.contacts,
                titles: row.titles,
-               seniority: row.seniority ?? undefined,
                experienceYears: row.experienceYears ?? undefined,
                skills: row.skills,
                salary:
@@ -50,7 +49,6 @@ export function createProfilesRepository(db: Drizzle): ProfilesRepository {
          const columns = {
             contacts: p.contacts,
             titles: p.titles,
-            seniority: p.seniority ?? null,
             experienceYears: p.experienceYears ?? null,
             skills: p.skills,
             salaryMin: p.salary ? Math.round(p.salary.min) : null,

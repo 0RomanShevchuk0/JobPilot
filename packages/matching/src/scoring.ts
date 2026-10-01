@@ -11,7 +11,7 @@ import {
 import type { LlmRequest } from "@jobpilot/llm";
 
 /** Bump on any change to the prompt or the schema: stored next to each assessment. */
-export const SCORING_PROMPT_VERSION = 1;
+export const SCORING_PROMPT_VERSION = 2;
 
 /** The parts of a vacancy the model reads. Empty arrays and undefined mean "not stated". */
 export interface VacancyForScoring {
@@ -64,7 +64,6 @@ function describeProfile(p: Profile): string {
    const s = p.salary;
    return lines([
       ["Looking for", list(p.titles)],
-      ["Level", p.seniority],
       ["Experience", p.experienceYears !== undefined ? `${p.experienceYears} years` : undefined],
       ["Skills", list(p.skills)],
       [

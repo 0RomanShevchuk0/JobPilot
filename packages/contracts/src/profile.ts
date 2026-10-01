@@ -36,7 +36,6 @@ export type HardFilters = z.infer<typeof hardFiltersSchema>;
 export const profileSchema = z.object({
    contacts: profileContactsSchema.default({}),
    titles: z.array(z.string().min(1)).default([]),
-   seniority: z.enum(seniorities).optional(), // my own level
    experienceYears: z.number().int().nonnegative().optional(), // total professional experience in whole years
    skills: z.array(z.string().min(1)).default([]), // as written: "Node.js", "React"...
    // expectations in one currency and period; min drives the prefilter, target is for AI scoring
