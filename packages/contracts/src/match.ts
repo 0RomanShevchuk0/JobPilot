@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export type PrefilterCheck =
    | "seniority"
    | "work_mode"
@@ -20,7 +22,37 @@ export interface PrefilterResult {
    rejectedBy: RejectReason[];
 }
 
-/** What is stored in vacancy_matches.analysis. The AI part is added with AI scoring. */
+/**
+ * What the model returns when it scores a vacancy against the profile.
+ * The descriptions go into the JSON schema the model sees, so they are written for the model.
+ */
+export const aiAssessmentSchema = z.object({
+   score: z
+      .number()
+      .int()
+      .min(0)
+      .max(100)
+      .describe("How worth applying this vacancy is for the candidate, 0-100"),
+   verdict: z
+      .enum(["apply", "stretch", "skip"])
+      .describe(
+         "apply: meets the main requirements; stretch: asks somewhat more than the candidate has but is realistic; skip: clear mismatch or a deal-breaker",
+      ),
+   matchedSkills: z.array(z.string()).describe("Required skills the candidate has"),
+   missingSkills: z
+      .array(z.string())
+      .describe("Required (not nice-to-have) skills the candidate lacks"),
+   concerns: z
+      .array(z.string())
+      .describe(
+         "Risks found in the text, e.g. people management experience, a higher language level, relocation, salary below target; empty if none",
+      ),
+   summary: z.string().describe("1-2 sentences: why this score"),
+});
+export type AiAssessment = z.infer<typeof aiAssessmentSchema>;
+
+/** What is stored in vacancy_matches.analysis. ai is absent until the vacancy is scored. */
 export interface MatchAnalysis {
    prefilter: PrefilterResult;
+   ai?: AiAssessment;
 }

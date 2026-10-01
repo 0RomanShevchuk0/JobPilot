@@ -1,5 +1,5 @@
 {
-   "name": "@jobpilot/matching",
+   "name": "@jobpilot/llm",
    "private": true,
    "type": "module",
    "exports": {
@@ -11,16 +11,14 @@
    "scripts": {
       "build": "tsc -p tsconfig.build.json",
       "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
-      "typecheck": "tsc",
-      "test": "vitest run"
+      "typecheck": "tsc"
    },
    "dependencies": {
-      "@jobpilot/contracts": "workspace:*",
-      "@jobpilot/llm": "workspace:*",
-      "@jobpilot/vacancies": "workspace:*"
+      "@google/genai": "^2.24.0",
+      "zod": "^4.6.5"
    },
    "devDependencies": {
-      "typescript": "~6.0.3",
-      "vitest": "^5.0.2"
+      "@types/node": "^24.13.6",
+      "typescript": "~6.0.3"
    }
 }
