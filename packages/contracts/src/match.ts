@@ -35,6 +35,12 @@ export const aiAssessmentSchema = z.object({
       .describe(
          'Minimum years of professional experience the description asks for ("5+ years" → 5, "3-5 years" → 3); null if it doesn\'t say',
       ),
+   roleMismatch: z
+      .string()
+      .nullable()
+      .describe(
+         'null when the job is the kind of work the candidate looks for; otherwise why not, e.g. "people management role", "not software development: reviewing AI-generated code"',
+      ),
    score: z
       .number()
       .int()
