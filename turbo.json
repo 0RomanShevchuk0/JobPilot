@@ -1,5 +1,7 @@
 {
    "$schema": "https://turborepo.com/schema.json",
+   // every package's dev task runs at once (tsc --watch, api, worker, web): room for all of them and more
+   "concurrency": "20",
    "tasks": {
       "build": {
          "dependsOn": ["^build"],
