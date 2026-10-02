@@ -1,0 +1,23 @@
+{
+   "name": "@jobpilot/storage",
+   "private": true,
+   "type": "module",
+   "exports": {
+      ".": {
+         "types": "./dist/index.d.ts",
+         "default": "./dist/index.js"
+      }
+   },
+   "scripts": {
+      "build": "tsc -p tsconfig.build.json",
+      "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+      "typecheck": "tsc"
+   },
+   "devDependencies": {
+      "@types/node": "^24.13.6",
+      "typescript": "~6.0.3"
+   },
+   "dependencies": {
+      "@aws-sdk/client-s3": "^3.1144.0"
+   }
+}
