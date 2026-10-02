@@ -1,0 +1,1 @@
+ALTER TABLE "vacancy_matches" ADD COLUMN "status" text;

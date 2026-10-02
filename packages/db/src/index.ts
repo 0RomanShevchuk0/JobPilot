@@ -3,6 +3,7 @@
 export * from "./client.js";
 export type {
    Assessment,
+   MatchListOptions,
    MatchesRepository,
    MatchInput,
    StoredMatch,

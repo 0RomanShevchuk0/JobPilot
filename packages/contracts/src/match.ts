@@ -72,6 +72,10 @@ export interface MatchAnalysis {
    ai?: AiAssessment;
 }
 
+/** What the user did with a vacancy; null = new, not looked at yet. */
+export const matchStatusSchema = z.enum(["applied", "hidden"]).nullable();
+export type MatchStatus = z.infer<typeof matchStatusSchema>;
+
 /**
  * One vacancy in GET /matches: how it was evaluated against the user's current profile.
  * The API's wire format, so dates are ISO strings.
@@ -94,5 +98,6 @@ export interface MatchListItem {
    rejectedBy: RejectReason[];
    salary: Salary | null;
    workModes: WorkMode[];
+   status: MatchStatus;
    evaluatedAt: string;
 }
