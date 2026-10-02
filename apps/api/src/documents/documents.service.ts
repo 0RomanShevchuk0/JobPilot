@@ -1,8 +1,9 @@
 import type { DocumentListItem } from "@jobpilot/contracts";
 import type { StoredDocumentFile } from "@jobpilot/db";
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { Database } from "../infra/database.js";
 import { Storage } from "../infra/storage.js";
+import { pdfText } from "./pdf-text.js";
 
 export interface DocumentFile extends StoredDocumentFile {
    body: Uint8Array;
@@ -21,18 +22,29 @@ export class DocumentsService {
    }
 
    /**
-    * One CV per user: a new upload overwrites the file and the record in place.
-    * The file goes first, so a failed upload leaves the previous CV intact.
+    * One CV per user: a new upload overwrites the file and the record in place. The text is read first
+    * (an unreadable PDF is refused before anything changes), then the file goes up, then the record:
+    * a failed upload leaves the previous CV intact.
     */
-   async saveCv(userId: string, file: { fileName: string; body: Uint8Array }): Promise<string> {
+   async saveCv(
+      userId: string,
+      file: { fileName: string; body: Uint8Array },
+   ): Promise<{ id: string; hasText: boolean }> {
+      let content: string;
+      try {
+         content = await pdfText(file.body);
+      } catch {
+         throw new BadRequestException("The PDF can't be read: it may be damaged");
+      }
       const filePath = `users/${userId}/cv.pdf`;
       await this.storage.put(filePath, file.body, "application/pdf");
-      // the text is extracted in the next step; until then generation has nothing to read
-      return this.db.documents.saveBaseCv(userId, {
+      const id = await this.db.documents.saveBaseCv(userId, {
          filePath,
          fileName: file.fileName,
-         content: "",
+         content,
       });
+      // no text (a scan, an image export): the file still works for applications, not for generation
+      return { id, hasText: content.length > 0 };
    }
 
    /** undefined when the user has no such document or its file is gone */

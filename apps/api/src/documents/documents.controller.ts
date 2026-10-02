@@ -51,11 +51,7 @@ export class DocumentsController {
          throw new BadRequestException("The CV must be a PDF");
       }
       const userId = await this.user.id();
-      const id = await this.documents.saveCv(userId, {
-         fileName: file.originalname,
-         body: file.buffer,
-      });
-      return { id };
+      return this.documents.saveCv(userId, { fileName: file.originalname, body: file.buffer });
    }
 
    @Get(":id/file")
