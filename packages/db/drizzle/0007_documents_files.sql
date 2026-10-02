@@ -1,0 +1,2 @@
+ALTER TABLE "documents" ADD COLUMN "file_name" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "documents_base_cv_uq" ON "documents" USING btree ("user_id") WHERE "documents"."type" = 'cv' AND "documents"."is_base";
