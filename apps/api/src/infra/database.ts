@@ -26,6 +26,10 @@ export class Database implements OnApplicationShutdown {
       return this.client.matches;
    }
 
+   get documents() {
+      return this.client.documents;
+   }
+
    ping() {
       return this.client.ping();
    }

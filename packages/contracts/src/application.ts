@@ -38,3 +38,14 @@ export const formFieldSchema = z.object({
    editedByUser: z.boolean(),
 });
 export type FormField = z.infer<typeof formFieldSchema>;
+
+/** One document in GET /documents. The API's wire format, so dates are ISO strings. */
+export interface DocumentListItem {
+   id: string;
+   type: DocumentType;
+   /** the user's own CV, the one generated documents start from */
+   isBase: boolean;
+   /** null for generated documents that have no file yet */
+   fileName: string | null;
+   createdAt: string;
+}

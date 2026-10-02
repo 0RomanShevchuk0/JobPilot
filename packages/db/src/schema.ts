@@ -26,6 +26,7 @@ import {
    text,
    timestamp,
    unique,
+   uniqueIndex,
    uuid,
 } from "drizzle-orm/pg-core";
 
@@ -197,15 +198,25 @@ export const applications = pgTable("applications", {
       .$onUpdate(() => new Date()),
 });
 
-export const documents = pgTable("documents", {
-   id: id(),
-   userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }), // deleting a user deletes their data
-   type: text("type").$type<DocumentType>().notNull(),
-   isBase: boolean("is_base").notNull().default(false),
-   content: text("content").notNull(), // markdown
-   filePath: text("file_path"),
-   model: text("model"), // null = uploaded by the user
-   createdAt: tstz("created_at").notNull().defaultNow(),
-});
+export const documents = pgTable(
+   "documents",
+   {
+      id: id(),
+      userId: uuid("user_id")
+         .notNull()
+         .references(() => users.id, { onDelete: "cascade" }), // deleting a user deletes their data
+      type: text("type").$type<DocumentType>().notNull(),
+      isBase: boolean("is_base").notNull().default(false),
+      content: text("content").notNull(), // markdown
+      filePath: text("file_path"), // key in the file storage
+      fileName: text("file_name"), // as uploaded, for downloads
+      model: text("model"), // null = uploaded by the user
+      createdAt: tstz("created_at").notNull().defaultNow(),
+   },
+   // one base CV per user: uploading a new one replaces it
+   (t) => [
+      uniqueIndex("documents_base_cv_uq")
+         .on(t.userId)
+         .where(sql`${t.type} = 'cv' AND ${t.isBase}`),
+   ],
+);
