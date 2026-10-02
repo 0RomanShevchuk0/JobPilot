@@ -7,6 +7,7 @@ import type {
    Language,
    Location,
    MatchAnalysis,
+   MatchStatus,
    NormalizedPosting,
    ProfileContacts,
    RawContentType,
@@ -169,6 +170,8 @@ export const vacancyMatches = pgTable(
       model: text("model"),
       promptVersion: integer("prompt_version"),
       evaluatedAt: tstz("evaluated_at").notNull().defaultNow(),
+      // the user's mark (applied / hidden), null = new; re-evaluations keep it
+      status: text("status").$type<Exclude<MatchStatus, null>>(),
    },
    (t) => [primaryKey({ columns: [t.userId, t.vacancyId] })],
 );

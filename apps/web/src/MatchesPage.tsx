@@ -1,33 +1,59 @@
-import type { MatchListItem, Salary } from "@jobpilot/contracts";
-import { useQuery } from "@tanstack/react-query";
+import type { MatchListItem, MatchStatus, Salary } from "@jobpilot/contracts";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { apiGet } from "./api";
+import { apiGet, apiPatch } from "./api";
 
-/** Vacancies evaluated for my current profile, best first; skipped ones on request. */
+type Tab = "new" | "applied" | "hidden";
+const tabs: Tab[] = ["new", "applied", "hidden"];
+
+/** Vacancies evaluated for my current profile, best first: new ones, or the ones I marked. */
 export function MatchesPage() {
+   const [tab, setTab] = useState<Tab>("new");
    const [showSkipped, setShowSkipped] = useState(false);
    const matches = useQuery({
-      queryKey: ["matches", { showSkipped }],
-      queryFn: () => apiGet<MatchListItem[]>(`/matches${showSkipped ? "?include=skipped" : ""}`),
+      queryKey: ["matches", { tab, showSkipped }],
+      queryFn: () => {
+         const query = new URLSearchParams({ status: tab });
+         if (tab === "new" && showSkipped) query.set("include", "skipped");
+         return apiGet<MatchListItem[]>(`/matches?${query}`);
+      },
    });
 
    return (
       <main className="mx-auto max-w-4xl p-6">
          <header className="mb-6 flex items-center justify-between">
             <h1 className="text-2xl font-semibold">Matches</h1>
-            <label className="flex items-center gap-2 text-sm text-gray-600">
-               <input
-                  type="checkbox"
-                  checked={showSkipped}
-                  onChange={(e) => setShowSkipped(e.target.checked)}
-               />
-               Show skipped
-            </label>
+            {tab === "new" && (
+               <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <input
+                     type="checkbox"
+                     checked={showSkipped}
+                     onChange={(e) => setShowSkipped(e.target.checked)}
+                  />
+                  Show skipped
+               </label>
+            )}
          </header>
+
+         <nav className="mb-4 flex gap-2">
+            {tabs.map((t) => (
+               <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`rounded px-3 py-1 text-sm capitalize ${
+                     t === tab
+                        ? "bg-gray-900 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+               >
+                  {t}
+               </button>
+            ))}
+         </nav>
 
          {matches.isPending && <p className="text-gray-500">Loading…</p>}
          {matches.isError && <p className="text-red-600">{matches.error.message}</p>}
-         {matches.data?.length === 0 && <p className="text-gray-500">No matches yet.</p>}
+         {matches.data?.length === 0 && <p className="text-gray-500">Nothing here.</p>}
 
          <ul className="space-y-4">
             {matches.data?.map((match) => (
@@ -47,6 +73,12 @@ const verdictStyles: Record<string, string> = {
 };
 
 function MatchCard({ match }: { match: MatchListItem }) {
+   const queryClient = useQueryClient();
+   const mark = useMutation({
+      mutationFn: (status: MatchStatus) => apiPatch(`/matches/${match.vacancyId}`, { status }),
+      // the vacancy moves to another tab: every list may have changed
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["matches"] }),
+   });
    const status = match.verdict ?? (match.rejectedBy.length > 0 ? "rejected" : "pending");
    const details = [
       match.company,
@@ -75,7 +107,24 @@ function MatchCard({ match }: { match: MatchListItem }) {
                </a>
                {details && <p className="text-sm text-gray-500">{details}</p>}
             </div>
+            <div className="ml-auto flex shrink-0 gap-2">
+               {match.status === null ? (
+                  <>
+                     <MarkButton onClick={() => mark.mutate("applied")} disabled={mark.isPending}>
+                        Applied
+                     </MarkButton>
+                     <MarkButton onClick={() => mark.mutate("hidden")} disabled={mark.isPending}>
+                        Hide
+                     </MarkButton>
+                  </>
+               ) : (
+                  <MarkButton onClick={() => mark.mutate(null)} disabled={mark.isPending}>
+                     Back to new
+                  </MarkButton>
+               )}
+            </div>
          </div>
+         {mark.isError && <p className="mt-2 text-sm text-red-600">{mark.error.message}</p>}
 
          {match.summary && <p className="mt-3 text-sm">{match.summary}</p>}
 
@@ -97,6 +146,18 @@ function MatchCard({ match }: { match: MatchListItem }) {
             </ul>
          )}
       </li>
+   );
+}
+
+function MarkButton(props: { onClick: () => void; disabled: boolean; children: string }) {
+   return (
+      <button
+         onClick={props.onClick}
+         disabled={props.disabled}
+         className="rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+      >
+         {props.children}
+      </button>
    );
 }
 

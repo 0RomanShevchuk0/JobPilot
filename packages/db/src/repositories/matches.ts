@@ -1,4 +1,4 @@
-import type { AiAssessment, MatchAnalysis, MatchListItem } from "@jobpilot/contracts";
+import type { AiAssessment, MatchAnalysis, MatchListItem, MatchStatus } from "@jobpilot/contracts";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { companies, postings, profiles, vacancies, vacancyMatches } from "../schema.js";
@@ -30,15 +30,27 @@ export interface Assessment {
    promptVersion: number;
 }
 
+export interface MatchListOptions {
+   /** which of the user's marks to list: null = new vacancies */
+   status: MatchStatus;
+   /** new vacancies only: add AI skips, prefilter rejections and the ones waiting for a score */
+   includeSkipped: boolean;
+}
+
 export interface MatchesRepository {
    /**
-    * Open vacancies evaluated for the user's current profile version, best score first. By default only
-    * the ones worth a look (verdict apply or stretch); includeSkipped adds AI skips, prefilter rejections
-    * and the ones still waiting for a score.
+    * Open vacancies evaluated for the user's current profile version, best score first. New ones are
+    * by default only those worth a look (verdict apply or stretch); marked ones are listed whatever
+    * their verdict, since the user has already decided about them.
     */
-   listForUser(userId: string, options: { includeSkipped: boolean }): Promise<MatchListItem[]>;
+   listForUser(userId: string, options: MatchListOptions): Promise<MatchListItem[]>;
+   /** Marks a vacancy (null clears the mark). Returns false when it has no evaluation for the user. */
+   setStatus(userId: string, vacancyId: string, status: MatchStatus): Promise<boolean>;
    get(userId: string, vacancyId: string): Promise<StoredMatch | undefined>;
-   /** Stores the prefilter evaluation, replacing the previous one (and its AI part) for this user and vacancy. */
+   /**
+    * Stores the prefilter evaluation, replacing the previous one (and its AI part) for this user and
+    * vacancy. The user's status is not part of the evaluation and stays as it is.
+    */
    save(match: MatchInput): Promise<void>;
    /**
     * Adds the AI part to the evaluation it was made for: only if that evaluation is still there, made for
@@ -54,7 +66,7 @@ export interface MatchesRepository {
 
 export function createMatchesRepository(db: Drizzle): MatchesRepository {
    return {
-      async listForUser(userId, { includeSkipped }) {
+      async listForUser(userId, { status, includeSkipped }) {
          const verdict = sql`${vacancyMatches.analysis}->'ai'->>'verdict'`;
          const rows = await db
             .select({
@@ -68,6 +80,7 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
                salaryCurrency: vacancies.salaryCurrency,
                salaryPeriod: vacancies.salaryPeriod,
                workModes: vacancies.workModes,
+               status: vacancyMatches.status,
                evaluatedAt: vacancyMatches.evaluatedAt,
             })
             .from(vacancyMatches)
@@ -85,7 +98,12 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
                and(
                   eq(vacancyMatches.userId, userId),
                   isNull(vacancies.closedAt),
-                  includeSkipped ? undefined : inArray(verdict, ["apply", "stretch"]),
+                  status === null
+                     ? isNull(vacancyMatches.status)
+                     : eq(vacancyMatches.status, status),
+                  status === null && !includeSkipped
+                     ? inArray(verdict, ["apply", "stretch"])
+                     : undefined,
                ),
             )
             .orderBy(
@@ -145,6 +163,15 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
             .from(vacancyMatches)
             .where(and(eq(vacancyMatches.userId, userId), eq(vacancyMatches.vacancyId, vacancyId)));
          return row;
+      },
+
+      async setStatus(userId, vacancyId, status) {
+         const rows = await db
+            .update(vacancyMatches)
+            .set({ status })
+            .where(and(eq(vacancyMatches.userId, userId), eq(vacancyMatches.vacancyId, vacancyId)))
+            .returning({ vacancyId: vacancyMatches.vacancyId });
+         return rows.length > 0;
       },
 
       async save(m) {
