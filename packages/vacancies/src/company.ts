@@ -28,7 +28,7 @@ export function normalizeCompanyName(name: string): string {
       .toLowerCase()
       .replace(/\([^)]*\)/g, " ") // "PAR Retail (formerly Stuzo)"
       .replace(/[.,'"«»“”]/g, "") // "s.r.o." → "sro", "Ltd." → "ltd"
-      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .replace(/[^\p{L}\p{N}]+/gu, " ") // anything but letters and digits (any alphabet) → a space
       .trim()
       .split(" ")
       .filter(Boolean);

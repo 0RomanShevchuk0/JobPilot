@@ -101,8 +101,8 @@ function toMarkdown(html: string): string {
       .turndown(html)
       .replace(/ /g, " ") // &nbsp; that Djinni editors leave after <br>
       .replace(/^(\s*)([-*]|\d+\.) {2,}/gm, "$1$2 ") // turndown pads list markers: "-   item"
-      .replace(/[ \t]+$/gm, "")
-      .replace(/\n{3,}/g, "\n\n")
+      .replace(/[ \t]+$/gm, "") // spaces and tabs at the end of every line
+      .replace(/\n{3,}/g, "\n\n") // 3+ line breaks in a row → one empty line between blocks
       .trim();
 }
 
@@ -118,9 +118,10 @@ function workModes($: cheerio.CheerioAPI, ld: JobPostingLd): WorkMode[] {
       .filter((_, el) => $(el).find(".location-text").length === 0)
       .map((_, el) => $(el).text().trim())
       .get()
-      .find((text) => /remote|office|hybrid/i.test(text));
+      .find((text) => /remote|office|hybrid/i.test(text)); // the label that names a work mode, any case
 
    if (label) {
+      // the word anywhere in the label, any case: "Hybrid Remote" → hybrid, "Office or Remote" → onsite + remote
       if (/hybrid/i.test(label)) return ["hybrid"];
       const modes: WorkMode[] = [];
       if (/office/i.test(label)) modes.push("onsite");
@@ -167,7 +168,7 @@ function candidateLocations($: cheerio.CheerioAPI, ld: JobPostingLd): Location[]
    // JSON-LD omits some cases, e.g. "Worldwide"; the page still shows them under
    // "Countries where we consider candidates"
    return $(".location-text")
-      .map((_, el) => $(el).text().replace(/\s+/g, " ").trim())
+      .map((_, el) => $(el).text().replace(/\s+/g, " ").trim()) // runs of spaces and line breaks → one space
       .get()
       .filter(Boolean)
       .map((raw) => ({ kind: "candidate" as const, raw }));
@@ -204,7 +205,7 @@ function languages($: cheerio.CheerioAPI): Language[] {
    return detailRows($, "Required languages").flatMap(({ name, value }) => {
       const code = LANGUAGE_CODES[name.toLowerCase()];
       if (!code) return [];
-      // "B2 - Upper Intermediate" → "B2"; "Native" stays as is
+      // a CEFR level as a separate word (A1…C2): "B2 - Upper Intermediate" → "B2"; "Native" stays as is
       const level = /\b[ABC][12]\b/.exec(value)?.[0] ?? (value || undefined);
       return [{ code, level }];
    });
@@ -232,6 +233,7 @@ function detailRows($: cheerio.CheerioAPI, heading: string): { name: string; val
 
 /** Djinni's datePosted has no offset; it is Kyiv wall-clock time. */
 export function kyivTimeToIso(value: string): string {
+   // already ends with an offset ("…Z" or "…+03:00"): nothing to convert
    if (/(Z|[+-]\d{2}:\d{2})$/.test(value)) return new Date(value).toISOString();
    const asUtc = new Date(`${value.slice(0, 23)}Z`); // JS dates keep milliseconds only
    const offsetMinutes = timeZoneOffsetMinutes(asUtc, "Europe/Kyiv");
@@ -242,7 +244,7 @@ function timeZoneOffsetMinutes(date: Date, timeZone: string): number {
    const name = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "longOffset" })
       .formatToParts(date)
       .find((p) => p.type === "timeZoneName")?.value;
-   const m = /GMT([+-])(\d{2}):(\d{2})/.exec(name ?? "");
+   const m = /GMT([+-])(\d{2}):(\d{2})/.exec(name ?? ""); // "GMT+03:00" → sign, hours, minutes
    if (!m) return 0;
    return (m[1] === "-" ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3]));
 }
