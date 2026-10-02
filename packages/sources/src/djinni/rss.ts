@@ -10,6 +10,7 @@ export function rssUrl(keyword?: string): string {
    return url.toString();
 }
 
+// "https://djinni.co/jobs/850091-strong-middle-…/" → "850091"
 const JOB_ID_IN_URL = /\/jobs\/(\d+)-/;
 
 export function parseRss(xml: string): PostingRef[] {

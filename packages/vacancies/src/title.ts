@@ -4,10 +4,11 @@ import type { Seniority } from "@jobpilot/contracts";
 export function normalizeTitle(title: string): string {
    return title
       .toLowerCase()
-      .replace(/[^\p{L}\p{N}+#]+/gu, " ")
+      .replace(/[^\p{L}\p{N}+#]+/gu, " ") // anything but letters, digits, + and # → a space: "Node.js (Sr.)" → "node js sr"
       .trim();
 }
 
+// \b = whole words only: "senior" matches "senior backend", "sr" doesn't match "src"
 const LEVEL_WORDS: [RegExp, Seniority][] = [
    [/\b(intern|internship|trainee)\b/, "intern"],
    [/\b(junior|jr)\b/, "junior"],

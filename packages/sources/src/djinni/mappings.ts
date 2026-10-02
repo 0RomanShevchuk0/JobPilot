@@ -78,8 +78,8 @@ export const COUNTRY_CODES: Record<string, string> = {
 /** A country as Djinni writes it → ISO 3166-1 alpha-2: "UA", "UKR" and "Ukraine" all give "UA". */
 export function countryCode(value: string): string | undefined {
    const v = value.trim();
-   if (/^[A-Za-z]{2}$/.test(v)) return v.toUpperCase();
-   if (/^[A-Za-z]{3}$/.test(v)) return ALPHA3_TO_ALPHA2[v.toUpperCase()];
+   if (/^[A-Za-z]{2}$/.test(v)) return v.toUpperCase(); // exactly two letters: "UA", "pl"
+   if (/^[A-Za-z]{3}$/.test(v)) return ALPHA3_TO_ALPHA2[v.toUpperCase()]; // exactly three: "UKR", "POL"
    return COUNTRY_CODES[v.toLowerCase()];
 }
 

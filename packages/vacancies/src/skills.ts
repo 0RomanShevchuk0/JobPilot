@@ -43,6 +43,7 @@ const ALIASES: Record<string, string> = {
 
 export function normalizeSkill(skill: string): string {
    const trimmed = skill.trim().toLowerCase();
+   // the alias key drops spaces and dots ("Node.js", "node js" → "nodejs"); otherwise runs of spaces → one
    return ALIASES[trimmed.replace(/[\s.]+/g, "")] ?? trimmed.replace(/\s+/g, " ");
 }
 
