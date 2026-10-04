@@ -26,6 +26,16 @@ export class ApplicationsController {
       return this.applications.prepare(userId, body.vacancyId);
    }
 
+   /** Fills the prepared answers into the form in a visible browser; you send it (or close the window). */
+   @Post(":id/fill")
+   @HttpCode(202)
+   async fill(@Param("id", new ZodValidationPipe(z.uuid())) id: string) {
+      const userId = await this.user.id();
+      if (!(await this.applications.fill(userId, id))) {
+         throw new NotFoundException("No such application");
+      }
+   }
+
    @Get(":id")
    async get(@Param("id", new ZodValidationPipe(z.uuid())) id: string) {
       const userId = await this.user.id();

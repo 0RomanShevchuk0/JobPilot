@@ -13,6 +13,11 @@ export interface ApplicationToPrepare {
    vacancyId: string | null;
 }
 
+/** What the worker needs to fill an application into the form. */
+export interface ApplicationToFill extends ApplicationToPrepare {
+   fields: FormField[];
+}
+
 export interface ApplicationsRepository {
    /** The vacancy's active posting on one of these sources (the ones we can apply through), if any. */
    findPostingToApply(vacancyId: string, sources: string[]): Promise<string | undefined>;
@@ -26,6 +31,11 @@ export interface ApplicationsRepository {
    /** The form was read and answered: ready for the user to review. */
    setPrepared(applicationId: string, fields: FormField[]): Promise<void>;
    setFailed(applicationId: string, reason: string): Promise<void>;
+   getToFill(applicationId: string): Promise<ApplicationToFill | undefined>;
+   /** The user sent the form. */
+   setSubmitted(applicationId: string): Promise<void>;
+   /** Filling went wrong: the answers stay ready for review, the reason is shown with them. */
+   setFillProblem(applicationId: string, reason: string): Promise<void>;
 }
 
 export function createApplicationsRepository(db: Drizzle): ApplicationsRepository {
@@ -107,6 +117,36 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
          await db
             .update(applications)
             .set({ status: "ready_for_review", formFields: fields, failureReason: null })
+            .where(eq(applications.id, applicationId));
+      },
+
+      async getToFill(applicationId) {
+         const [row] = await db
+            .select({
+               userId: applications.userId,
+               status: applications.status,
+               postingUrl: postings.url,
+               source: postings.sourceId,
+               vacancyId: postings.vacancyId,
+               fields: applications.formFields,
+            })
+            .from(applications)
+            .innerJoin(postings, eq(postings.id, applications.postingId))
+            .where(eq(applications.id, applicationId));
+         return row;
+      },
+
+      async setSubmitted(applicationId) {
+         await db
+            .update(applications)
+            .set({ status: "submitted", submittedAt: sql`now()`, failureReason: null })
+            .where(eq(applications.id, applicationId));
+      },
+
+      async setFillProblem(applicationId, reason) {
+         await db
+            .update(applications)
+            .set({ failureReason: reason })
             .where(eq(applications.id, applicationId));
       },
 
