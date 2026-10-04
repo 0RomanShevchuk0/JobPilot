@@ -1,6 +1,7 @@
 // Public API of the package. The Drizzle schema (./schema.ts) is internal: it is used by
 // drizzle-kit for migrations and by repositories, never imported by apps directly.
 export * from "./client.js";
+export type { ApplicationsRepository, ApplicationToPrepare } from "./repositories/applications.js";
 export type { DocumentsRepository, StoredDocumentFile } from "./repositories/documents.js";
 export type {
    Assessment,

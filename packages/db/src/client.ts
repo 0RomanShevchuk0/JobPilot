@@ -1,5 +1,9 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
+import {
+   createApplicationsRepository,
+   type ApplicationsRepository,
+} from "./repositories/applications.js";
 import { createDocumentsRepository, type DocumentsRepository } from "./repositories/documents.js";
 import { createMatchesRepository, type MatchesRepository } from "./repositories/matches.js";
 import { createPostingsRepository, type PostingsRepository } from "./repositories/postings.js";
@@ -21,6 +25,7 @@ export interface DatabaseClient {
    readonly profiles: ProfilesRepository;
    readonly matches: MatchesRepository;
    readonly documents: DocumentsRepository;
+   readonly applications: ApplicationsRepository;
    ping(): Promise<void>;
    close(): Promise<void>;
 }
@@ -37,6 +42,7 @@ export function createDatabase(connectionString: string): DatabaseClient {
       profiles: createProfilesRepository(db),
       matches: createMatchesRepository(db),
       documents: createDocumentsRepository(db),
+      applications: createApplicationsRepository(db),
       async ping() {
          await pool.query("SELECT 1");
       },

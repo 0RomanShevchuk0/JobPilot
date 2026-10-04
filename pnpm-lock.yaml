@@ -273,6 +273,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@jobpilot/apply':
+        specifier: workspace:*
+        version: link:../../packages/apply
       '@jobpilot/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -297,6 +300,9 @@ importers:
       ioredis:
         specifier: ^6.0.0
         version: 6.0.0(supports-color@10.2.2)
+      playwright:
+        specifier: ^1.63.0
+        version: 1.63.0
     devDependencies:
       '@types/node':
         specifier: ^24.13.6
@@ -304,6 +310,22 @@ importers:
       concurrently:
         specifier: ^10.0.5
         version: 10.0.5
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+
+  packages/apply:
+    dependencies:
+      '@jobpilot/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      playwright:
+        specifier: ^1.63.0
+        version: 1.63.0
+    devDependencies:
+      '@types/node':
+        specifier: ^24.13.6
+        version: 24.13.6
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
@@ -370,6 +392,9 @@ importers:
       '@jobpilot/vacancies':
         specifier: workspace:*
         version: link:../vacancies
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
     devDependencies:
       typescript:
         specifier: ~6.0.3
@@ -2696,6 +2721,16 @@ packages:
   picomatch@4.0.7:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
+
+  playwright-core@1.63.0:
+    resolution: {integrity: sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.63.0:
+    resolution: {integrity: sha512-+7ziBLidS4NaNCdt57SUDT+wYmmd5fmiQejUic/kb+YsYSCPyOOE9sebzMjNmQrsnNpDJqd4WHvV/8lfKfUDUg==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   pluralize@8.0.0:
     resolution: {integrity: sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==}
@@ -5127,6 +5162,12 @@ snapshots:
   picomatch@4.0.5: {}
 
   picomatch@4.0.7: {}
+
+  playwright-core@1.63.0: {}
+
+  playwright@1.63.0:
+    dependencies:
+      playwright-core: 1.63.0
 
   pluralize@8.0.0: {}
 

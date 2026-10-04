@@ -17,7 +17,8 @@
    "dependencies": {
       "@jobpilot/contracts": "workspace:*",
       "@jobpilot/llm": "workspace:*",
-      "@jobpilot/vacancies": "workspace:*"
+      "@jobpilot/vacancies": "workspace:*",
+      "zod": "^4.6.5"
    },
    "devDependencies": {
       "typescript": "~6.0.3",

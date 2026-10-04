@@ -4,6 +4,8 @@
 //                                                  ↑
 //   match-user (profile changed) ──────────────────┘
 //
+//   prepare-application (the user asked to apply): read the form on the job site, answer it
+//
 // How jobs are retried and kept (BullMQ options) is the worker's business and lives there.
 
 /** Queues with a fixed name. */
@@ -16,6 +18,8 @@ export const QueueNames = {
    matchVacancy: "match-vacancy",
    /** Scores one prefiltered vacancy for one user with an LLM. Rate-limited by the provider. */
    scoreVacancy: "score-vacancy",
+   /** Opens an application form on the job site and answers it with an LLM. Added by the API. */
+   prepareApplication: "prepare-application",
    /** Re-evaluates every open vacancy for a user, e.g. after their profile changed. Added by the API. */
    matchUser: "match-user",
 } as const;
@@ -46,6 +50,10 @@ export interface MatchVacancyJobData {
 export interface ScoreVacancyJobData {
    userId: string;
    vacancyId: string;
+}
+
+export interface PrepareApplicationJobData {
+   applicationId: string;
 }
 
 export interface MatchUserJobData {

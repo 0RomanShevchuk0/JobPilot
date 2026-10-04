@@ -28,6 +28,8 @@ export type FormFieldValueSource = (typeof formFieldValueSources)[number];
 
 /** One field of an application form, as found by the browser agent. Array order = order in the form. */
 export const formFieldSchema = z.object({
+   /** the input's name in the form, to fill it in */
+   name: z.string().min(1),
    label: z.string().min(1),
    kind: z.enum(formFieldKinds),
    options: z.array(z.string()).optional(),
@@ -48,4 +50,19 @@ export interface DocumentListItem {
    /** null for generated documents that have no file yet */
    fileName: string | null;
    createdAt: string;
+}
+
+/** An application in GET /applications/:id. The API's wire format, so dates are ISO strings. */
+export interface ApplicationView {
+   id: string;
+   vacancyId: string | null;
+   /** the job page the application goes through */
+   postingUrl: string;
+   status: ApplicationStatus;
+   /** why preparing or submitting failed */
+   failureReason: string | null;
+   /** the form's questions and the message, with the proposed answers */
+   fields: FormField[];
+   createdAt: string;
+   updatedAt: string;
 }

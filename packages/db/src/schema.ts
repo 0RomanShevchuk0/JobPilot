@@ -148,6 +148,7 @@ export const profiles = pgTable("profiles", {
    languages: jsonb("languages").$type<Language[]>().notNull().default([]),
    hardFilters: jsonb("hard_filters").$type<HardFilters>().notNull().default({}),
    notes: text("notes").notNull().default(""), // free-form facts for AI: notice period, work permit, relocation...
+   applicationMessage: text("application_message").notNull().default(""),
    updatedAt: tstz("updated_at")
       .notNull()
       .defaultNow()
@@ -178,26 +179,31 @@ export const vacancyMatches = pgTable(
    (t) => [primaryKey({ columns: [t.userId, t.vacancyId] })],
 );
 
-export const applications = pgTable("applications", {
-   id: id(),
-   userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }), // deleting a user deletes their data
-   postingId: uuid("posting_id")
-      .notNull()
-      .references(() => postings.id),
-   status: text("status").$type<ApplicationStatus>().notNull().default("draft"),
-   failureReason: text("failure_reason"),
-   cvDocumentId: uuid("cv_document_id").references(() => documents.id),
-   coverLetterDocumentId: uuid("cover_letter_document_id").references(() => documents.id),
-   formFields: jsonb("form_fields").$type<FormField[]>().notNull().default([]),
-   submittedAt: tstz("submitted_at"),
-   createdAt: tstz("created_at").notNull().defaultNow(),
-   updatedAt: tstz("updated_at")
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-});
+export const applications = pgTable(
+   "applications",
+   {
+      id: id(),
+      userId: uuid("user_id")
+         .notNull()
+         .references(() => users.id, { onDelete: "cascade" }), // deleting a user deletes their data
+      postingId: uuid("posting_id")
+         .notNull()
+         .references(() => postings.id),
+      status: text("status").$type<ApplicationStatus>().notNull().default("draft"),
+      failureReason: text("failure_reason"),
+      cvDocumentId: uuid("cv_document_id").references(() => documents.id),
+      coverLetterDocumentId: uuid("cover_letter_document_id").references(() => documents.id),
+      formFields: jsonb("form_fields").$type<FormField[]>().notNull().default([]),
+      submittedAt: tstz("submitted_at"),
+      createdAt: tstz("created_at").notNull().defaultNow(),
+      updatedAt: tstz("updated_at")
+         .notNull()
+         .defaultNow()
+         .$onUpdate(() => new Date()),
+   },
+   // one application per job posting: preparing again reuses it
+   (t) => [unique("applications_user_posting_uq").on(t.userId, t.postingId)],
+);
 
 export const documents = pgTable(
    "documents",

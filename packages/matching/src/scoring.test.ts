@@ -1,6 +1,7 @@
 import { profileSchema, type AiAssessment } from "@jobpilot/contracts";
 import { describe, expect, it } from "vitest";
-import { applyHardLimits, buildScoringRequest, type VacancyForScoring } from "./scoring.js";
+import type { VacancyForPrompt } from "./describe.js";
+import { applyHardLimits, buildScoringRequest } from "./scoring.js";
 
 const profile = profileSchema.parse({
    contacts: { fullName: "Jane Doe", email: "jane@example.com", phone: "+491234567" },
@@ -14,7 +15,7 @@ const profile = profileSchema.parse({
    hardFilters: { maxRequiredYears: 4 },
 });
 
-const vacancy: VacancyForScoring = {
+const vacancy: VacancyForPrompt = {
    title: "Backend Developer (Node.js)",
    description: "We build **payments**.",
    workModes: [],

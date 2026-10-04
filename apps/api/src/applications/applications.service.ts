@@ -1,0 +1,32 @@
+import type { ApplicationView } from "@jobpilot/contracts";
+import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { Database } from "../infra/database.js";
+import { ApplicationQueue } from "./application-queue.service.js";
+
+// job sites the browser agent can apply on
+const APPLY_SOURCES = ["djinni"];
+
+@Injectable()
+export class ApplicationsService {
+   constructor(
+      private readonly db: Database,
+      private readonly queue: ApplicationQueue,
+   ) {}
+
+   /**
+    * Starts preparing an application to a vacancy: the worker reads the form and answers it.
+    * Preparing the same vacancy again starts over with fresh answers.
+    */
+   async prepare(userId: string, vacancyId: string): Promise<{ id: string }> {
+      const postingId = await this.db.applications.findPostingToApply(vacancyId, APPLY_SOURCES);
+      if (!postingId) throw new NotFoundException("No open Djinni posting for this vacancy");
+      const application = await this.db.applications.startPreparing(userId, postingId);
+      if (!application) throw new ConflictException("Already applied to this vacancy");
+      await this.queue.prepare(application.id);
+      return application;
+   }
+
+   get(userId: string, applicationId: string): Promise<ApplicationView | undefined> {
+      return this.db.applications.get(userId, applicationId);
+   }
+}

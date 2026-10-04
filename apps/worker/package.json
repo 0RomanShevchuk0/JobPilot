@@ -10,9 +10,12 @@
       "vacancies:rebuild": "tsc && node dist/rebuild-vacancies.js",
       "postings:reparse": "tsc && node dist/reparse-postings.js",
       "matches:refresh": "tsc && node dist/refresh-matches.js",
+      "djinni:login": "tsc && node dist/djinni-login.js",
+      "djinni:read-form": "tsc && node dist/djinni-read-form.js",
       "typecheck": "tsc --noEmit"
    },
    "dependencies": {
+      "@jobpilot/apply": "workspace:*",
       "@jobpilot/contracts": "workspace:*",
       "@jobpilot/db": "workspace:*",
       "@jobpilot/llm": "workspace:*",
@@ -20,7 +23,8 @@
       "@jobpilot/sources": "workspace:*",
       "@jobpilot/vacancies": "workspace:*",
       "bullmq": "^6.3.8",
-      "ioredis": "^6.0.0"
+      "ioredis": "^6.0.0",
+      "playwright": "^1.63.0"
    },
    "devDependencies": {
       "@types/node": "^24.13.6",
