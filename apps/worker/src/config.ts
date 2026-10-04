@@ -20,13 +20,6 @@ export const config = {
    discoverEveryMs: Number(process.env.DISCOVER_EVERY_MINUTES ?? 180) * 60_000,
    // until user profiles exist, what to look for comes from the environment
    djinniKeywords: list("DJINNI_KEYWORDS"),
-   storage: {
-      endpoint: required("S3_ENDPOINT"),
-      region: required("S3_REGION"),
-      bucket: required("S3_BUCKET"),
-      accessKeyId: required("S3_ACCESS_KEY_ID"),
-      secretAccessKey: required("S3_SECRET_ACCESS_KEY"),
-   },
    // single-user for now: one Djinni session, saved by `pnpm djinni:login` (.data/ is gitignored)
    djinniSessionPath: "../../.data/sessions/djinni.json",
    llm: {

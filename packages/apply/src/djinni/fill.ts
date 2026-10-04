@@ -8,7 +8,7 @@ export interface FillValue {
 }
 
 export type FillOutcome =
-   | { status: "submitted"; screenshot?: Uint8Array }
+   | { status: "submitted" }
    /** the user closed the window or let it sit too long: nothing was sent */
    | { status: "cancelled" };
 
@@ -78,25 +78,21 @@ function waitForUser(page: Page, jobId: string): Promise<FillOutcome> {
             );
             return;
          }
-         // sent: from here on it counts as submitted, whatever happens to the screenshot
-         finish(
-            () =>
-               void screenshotOf(page).then((screenshot) =>
-                  resolve({ status: "submitted", screenshot }),
-               ),
-         );
+         // sent: from here on it counts as submitted, whatever happens to the page
+         finish(() => void showResult(page).then(() => resolve({ status: "submitted" })));
       });
    });
 }
 
-/** The page after sending, as proof; undefined when the user closed it too soon. */
-async function screenshotOf(page: Page): Promise<Uint8Array | undefined> {
+// after sending, the window stays a moment so the user sees Djinni's answer
+const RESULT_PAUSE_MS = 3000;
+
+/** Lets the page after sending load and stay on screen for a moment; the user may have closed it already. */
+async function showResult(page: Page): Promise<void> {
    try {
       await page.waitForLoadState("load");
-      const screenshot = await page.screenshot({ fullPage: true });
-      await page.close();
-      return screenshot;
+      await page.waitForTimeout(RESULT_PAUSE_MS);
    } catch {
-      return undefined;
+      // closed by the user: nothing to show
    }
 }

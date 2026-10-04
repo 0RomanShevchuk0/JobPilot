@@ -6,7 +6,6 @@ import {
    openDjinniContext,
 } from "@jobpilot/apply";
 import type { DatabaseClient } from "@jobpilot/db";
-import type { FileStorage } from "@jobpilot/storage";
 import type { Job } from "bullmq";
 import { config } from "../config.js";
 import { log } from "../log.js";
@@ -21,7 +20,6 @@ const SLOW_MO_MS = 150;
 export async function handleFillApplication(
    job: Job<FillApplicationJobData>,
    database: DatabaseClient,
-   storage: FileStorage,
 ) {
    const { applicationId } = job.data;
    const application = await database.applications.getToFill(applicationId);
@@ -41,10 +39,6 @@ export async function handleFillApplication(
          return "cancelled";
       }
       await database.applications.setSubmitted(applicationId);
-      if (outcome.screenshot) {
-         const key = `users/${application.userId}/applications/${applicationId}/sent.png`;
-         await storage.put(key, outcome.screenshot, "image/png");
-      }
       log("fill-application", `${application.postingUrl}: sent`);
       return "submitted";
    } catch (err) {
