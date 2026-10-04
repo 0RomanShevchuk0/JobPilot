@@ -1,4 +1,8 @@
-import { QueueNames, type PrepareApplicationJobData } from "@jobpilot/contracts";
+import {
+   QueueNames,
+   type FillApplicationJobData,
+   type PrepareApplicationJobData,
+} from "@jobpilot/contracts";
 import { Injectable, type OnApplicationShutdown } from "@nestjs/common";
 import { Queue } from "bullmq";
 import { RedisService } from "../infra/redis.service.js";
@@ -7,9 +11,11 @@ import { RedisService } from "../infra/redis.service.js";
 @Injectable()
 export class ApplicationQueue implements OnApplicationShutdown {
    private readonly queue: Queue<PrepareApplicationJobData>;
+   private readonly fillQueue: Queue<FillApplicationJobData>;
 
    constructor(redis: RedisService) {
       this.queue = new Queue(QueueNames.prepareApplication, { connection: redis.client });
+      this.fillQueue = new Queue(QueueNames.fillApplication, { connection: redis.client });
    }
 
    /** One preparation per application at a time; a failed one can be started again. */
@@ -27,7 +33,24 @@ export class ApplicationQueue implements OnApplicationShutdown {
       );
    }
 
+   /**
+    * One fill per application at a time and no retries: a retry would pop the browser window up again
+    * on its own. The user starts it again if they want to.
+    */
+   async fill(applicationId: string) {
+      await this.fillQueue.add(
+         "fill-application",
+         { applicationId },
+         {
+            deduplication: { id: applicationId },
+            attempts: 1,
+            removeOnComplete: 100,
+            removeOnFail: 100,
+         },
+      );
+   }
+
    async onApplicationShutdown() {
-      await this.queue.close();
+      await Promise.all([this.queue.close(), this.fillQueue.close()]);
    }
 }

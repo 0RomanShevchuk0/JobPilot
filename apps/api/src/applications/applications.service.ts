@@ -26,6 +26,22 @@ export class ApplicationsService {
       return application;
    }
 
+   /**
+    * Opens the prepared application in a visible browser on this machine, filled in: the user reviews it
+    * there and sends it themselves. Returns false when there is no such application.
+    */
+   async fill(userId: string, applicationId: string): Promise<boolean> {
+      const application = await this.db.applications.get(userId, applicationId);
+      if (!application) return false;
+      if (application.status !== "ready_for_review") {
+         throw new ConflictException(
+            `The application is ${application.status}, not ready_for_review`,
+         );
+      }
+      await this.queue.fill(applicationId);
+      return true;
+   }
+
    get(userId: string, applicationId: string): Promise<ApplicationView | undefined> {
       return this.db.applications.get(userId, applicationId);
    }

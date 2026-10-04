@@ -5,3 +5,4 @@ export {
    loginToDjinni,
    openDjinniContext,
 } from "./djinni/session.js";
+export { fillDjinniApplication, type FillOutcome, type FillValue } from "./djinni/fill.js";

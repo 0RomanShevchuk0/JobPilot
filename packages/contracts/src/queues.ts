@@ -5,6 +5,7 @@
 //   match-user (profile changed) ──────────────────┘
 //
 //   prepare-application (the user asked to apply): read the form on the job site, answer it
+//   fill-application (the user approved the answers): fill the form in a visible browser, they send it
 //
 // How jobs are retried and kept (BullMQ options) is the worker's business and lives there.
 
@@ -20,6 +21,8 @@ export const QueueNames = {
    scoreVacancy: "score-vacancy",
    /** Opens an application form on the job site and answers it with an LLM. Added by the API. */
    prepareApplication: "prepare-application",
+   /** Fills a prepared application into the form in a visible browser; the user sends it. Added by the API. */
+   fillApplication: "fill-application",
    /** Re-evaluates every open vacancy for a user, e.g. after their profile changed. Added by the API. */
    matchUser: "match-user",
 } as const;
@@ -53,6 +56,10 @@ export interface ScoreVacancyJobData {
 }
 
 export interface PrepareApplicationJobData {
+   applicationId: string;
+}
+
+export interface FillApplicationJobData {
    applicationId: string;
 }
 
