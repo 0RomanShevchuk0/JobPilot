@@ -291,9 +291,6 @@ importers:
       '@jobpilot/sources':
         specifier: workspace:*
         version: link:../../packages/sources
-      '@jobpilot/storage':
-        specifier: workspace:*
-        version: link:../../packages/storage
       '@jobpilot/vacancies':
         specifier: workspace:*
         version: link:../../packages/vacancies

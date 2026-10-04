@@ -11,7 +11,6 @@ import {
    type FillApplicationJobData,
 } from "@jobpilot/contracts";
 import { createDatabase } from "@jobpilot/db";
-import { S3FileStorage } from "@jobpilot/storage";
 import { Queue, UnrecoverableError, Worker } from "bullmq";
 import { Redis } from "ioredis";
 import { config } from "./config.js";
@@ -32,7 +31,6 @@ import { sources } from "./sources.js";
 const connection = new Redis(config.redisUrl, { maxRetriesPerRequest: null });
 const database = createDatabase(config.databaseUrl);
 const scoring = createScoringLlm();
-const storage = new S3FileStorage(config.storage);
 
 const discoverQueue = new Queue<DiscoverJobData>(QueueNames.discover, { connection });
 const fetchQueues = new Map(
@@ -108,7 +106,7 @@ workers.push(
    ),
    new Worker<FillApplicationJobData>(
       QueueNames.fillApplication,
-      (job) => handleFillApplication(job, database, storage),
+      (job) => handleFillApplication(job, database),
       // one visible window at a time; a job can wait up to 30 min for the user, the lock is renewed meanwhile
       { connection, concurrency: 1 },
    ),
