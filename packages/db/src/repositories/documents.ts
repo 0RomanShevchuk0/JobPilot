@@ -13,11 +13,19 @@ export interface DocumentsRepository {
    listForUser(userId: string): Promise<DocumentListItem[]>;
    /** Where the document's file is; undefined when the user has no such document or it has no file. */
    getFile(userId: string, documentId: string): Promise<StoredDocumentFile | undefined>;
+   /** The text of the user's base CV; undefined when there is no CV or no text was found in it. */
+   getBaseCvText(userId: string): Promise<string | undefined>;
    /** Creates the user's base CV or replaces it in place (same id). Returns the id. */
    saveBaseCv(userId: string, file: StoredDocumentFile & { content: string }): Promise<string>;
    /** Returns the deleted document's file, or undefined when the user has no such document. */
-   delete(userId: string, documentId: string): Promise<{ filePath: string | null } | undefined>;
+   delete(
+      userId: string,
+      documentId: string,
+   ): Promise<{ filePath: string | null; wasBaseCv: boolean } | undefined>;
 }
+
+// the condition of the documents_base_cv_uq index: the user's own CV
+const baseCv = sql`${documents.type} = 'cv' AND ${documents.isBase}`;
 
 export function createDocumentsRepository(db: Drizzle): DocumentsRepository {
    const own = (userId: string, documentId: string) =>
@@ -48,13 +56,21 @@ export function createDocumentsRepository(db: Drizzle): DocumentsRepository {
          return { filePath: row.filePath, fileName: row.fileName };
       },
 
+      async getBaseCvText(userId) {
+         const [row] = await db
+            .select({ content: documents.content })
+            .from(documents)
+            .where(and(eq(documents.userId, userId), baseCv));
+         return row?.content || undefined;
+      },
+
       async saveBaseCv(userId, { filePath, fileName, content }) {
          const [row] = await db
             .insert(documents)
             .values({ userId, type: "cv", isBase: true, filePath, fileName, content })
             .onConflictDoUpdate({
                target: documents.userId,
-               targetWhere: sql`${documents.type} = 'cv' AND ${documents.isBase}`,
+               targetWhere: baseCv,
                set: { filePath, fileName, content, createdAt: sql`now()` },
             })
             .returning({ id: documents.id });
@@ -62,11 +78,12 @@ export function createDocumentsRepository(db: Drizzle): DocumentsRepository {
       },
 
       async delete(userId, documentId) {
-         const [row] = await db
-            .delete(documents)
-            .where(own(userId, documentId))
-            .returning({ filePath: documents.filePath });
-         return row;
+         const [row] = await db.delete(documents).where(own(userId, documentId)).returning({
+            filePath: documents.filePath,
+            type: documents.type,
+            isBase: documents.isBase,
+         });
+         return row && { filePath: row.filePath, wasBaseCv: row.type === "cv" && row.isBase };
       },
    };
 }

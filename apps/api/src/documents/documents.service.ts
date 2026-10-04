@@ -3,6 +3,7 @@ import type { StoredDocumentFile } from "@jobpilot/db";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { Database } from "../infra/database.js";
 import { Storage } from "../infra/storage.js";
+import { MatchQueue } from "../matching/match-queue.service.js";
 import { pdfText } from "./pdf-text.js";
 
 export interface DocumentFile extends StoredDocumentFile {
@@ -15,6 +16,7 @@ export class DocumentsService {
    constructor(
       private readonly db: Database,
       private readonly storage: Storage,
+      private readonly matchQueue: MatchQueue,
    ) {}
 
    list(userId: string): Promise<DocumentListItem[]> {
@@ -43,6 +45,7 @@ export class DocumentsService {
          fileName: file.fileName,
          content,
       });
+      await this.cvChanged(userId);
       // no text (a scan, an image export): the file still works for applications, not for generation
       return { id, hasText: content.length > 0 };
    }
@@ -68,6 +71,13 @@ export class DocumentsService {
       const deleted = await this.db.documents.delete(userId, documentId);
       if (!deleted) return false;
       if (deleted.filePath) await this.storage.delete(deleted.filePath);
+      if (deleted.wasBaseCv) await this.cvChanged(userId);
       return true;
+   }
+
+   /** Scoring reads the CV: like a profile change, it makes every evaluation stale. */
+   private async cvChanged(userId: string) {
+      const version = await this.db.profiles.bumpVersion(userId);
+      if (version !== undefined) await this.matchQueue.rematchUser(userId); // no profile, nothing to rematch
    }
 }

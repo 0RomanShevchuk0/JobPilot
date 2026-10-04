@@ -9,9 +9,10 @@ import {
    type WorkMode,
 } from "@jobpilot/contracts";
 import type { LlmRequest } from "@jobpilot/llm";
+import { redactContacts } from "./redact.js";
 
 /** Bump on any change to the prompt or the schema: stored next to each assessment. */
-export const SCORING_PROMPT_VERSION = 5;
+export const SCORING_PROMPT_VERSION = 6;
 
 /** The parts of a vacancy the model reads. Empty arrays and undefined mean "not stated". */
 export interface VacancyForScoring {
@@ -30,9 +31,12 @@ export interface VacancyForScoring {
 
 // a few long postings shouldn't eat the tokens-per-minute limit; real ones are 2-6k characters
 const MAX_DESCRIPTION_CHARS = 15_000;
+// a one or two page CV is 3-6k characters
+const MAX_CV_CHARS = 10_000;
 
 const SYSTEM = `You help a software developer decide which job vacancies are worth applying to.
-You get the candidate's profile and one vacancy, and assess the fit from the candidate's side.
+You get the candidate's profile (what they look for), their CV (what they have done) and one vacancy,
+and assess the fit from the candidate's side. Judge skills and experience by the CV and the profile together.
 
 Code has already dropped vacancies that clearly fail the candidate's hard filters (level, work mode,
 location, language level, minimum salary, required years), but only using fields the job site stated.
@@ -83,16 +87,22 @@ export function applyHardLimits(profile: Profile, ai: AiAssessment): AiAssessmen
    };
 }
 
-/** The model request that scores one vacancy. Contacts never leave the profile. */
+/**
+ * The model request that scores one vacancy. cv is the text of the candidate's CV, when they uploaded
+ * one with a text layer. Contacts never reach the model: not from the profile, not from the CV.
+ */
 export function buildScoringRequest(
    profile: Profile,
    vacancy: VacancyForScoring,
+   cv?: string,
 ): LlmRequest<AiAssessment> {
-   return {
-      system: SYSTEM,
-      prompt: `# Candidate\n${describeProfile(profile)}\n\n# Vacancy\n${describeVacancy(vacancy)}`,
-      schema: aiAssessmentSchema,
-   };
+   const sections = [`# Candidate\n${describeProfile(profile)}`];
+   if (cv) {
+      const text = cut(redactContacts(cv, profile.contacts), MAX_CV_CHARS);
+      sections.push(`# Candidate's CV\n<cv>\n${text}\n</cv>`);
+   }
+   sections.push(`# Vacancy\n${describeVacancy(vacancy)}`);
+   return { system: SYSTEM, prompt: sections.join("\n\n"), schema: aiAssessmentSchema };
 }
 
 function describeProfile(p: Profile): string {
@@ -114,10 +124,7 @@ function describeProfile(p: Profile): string {
 }
 
 function describeVacancy(v: VacancyForScoring): string {
-   const description =
-      v.description.length > MAX_DESCRIPTION_CHARS
-         ? `${v.description.slice(0, MAX_DESCRIPTION_CHARS)}\n[cut]`
-         : v.description;
+   const description = cut(v.description, MAX_DESCRIPTION_CHARS);
    return `${lines([
       ["Title", v.title],
       ["Company", v.companyName ?? "hidden"],
@@ -136,6 +143,10 @@ function describeVacancy(v: VacancyForScoring): string {
       ["Salary", v.salary ? salary(v.salary) : "not stated"],
       ["Skill tags", list(v.skills)],
    ])}\n\nDescription:\n<description>\n${description}\n</description>`;
+}
+
+function cut(text: string, max: number): string {
+   return text.length > max ? `${text.slice(0, max)}\n[cut]` : text;
 }
 
 /** "Key: value" lines; empty values are left out. */

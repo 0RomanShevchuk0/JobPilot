@@ -1,4 +1,5 @@
 export { prefilter, type VacancyForPrefilter } from "./prefilter.js";
+export { redactContacts } from "./redact.js";
 export { toUsdPerMonth } from "./salary.js";
 export {
    applyHardLimits,
