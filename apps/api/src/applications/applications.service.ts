@@ -15,14 +15,15 @@ export class ApplicationsService {
 
    /**
     * Starts preparing an application to a vacancy: the worker reads the form and answers it.
-    * Preparing the same vacancy again starts over with fresh answers.
+    * Preparing the same vacancy again answers the same questions anew, without opening the job site;
+    * refreshForm reads the form again first.
     */
-   async prepare(userId: string, vacancyId: string): Promise<{ id: string }> {
+   async prepare(userId: string, vacancyId: string, refreshForm: boolean): Promise<{ id: string }> {
       const postingId = await this.db.applications.findPostingToApply(vacancyId, APPLY_SOURCES);
       if (!postingId) throw new NotFoundException("No open Djinni posting for this vacancy");
       const application = await this.db.applications.startPreparing(userId, postingId);
       if (!application) throw new ConflictException("Already applied to this vacancy");
-      await this.queue.prepare(application.id);
+      await this.queue.prepare(application.id, refreshForm);
       return application;
    }
 

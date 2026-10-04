@@ -1,6 +1,7 @@
 import type { FormField, PrepareApplicationJobData, Profile } from "@jobpilot/contracts";
 import {
    DjinniSessionExpiredError,
+   launchBrowser,
    openDjinniContext,
    readDjinniApplyForm,
    type ApplyForm,
@@ -10,7 +11,6 @@ import type { ApplicationToPrepare, DatabaseClient, VacancyForMatching } from "@
 import type { LlmProvider } from "@jobpilot/llm";
 import { applicationMessage, buildApplicationAnswersRequest } from "@jobpilot/matching";
 import { type Job, UnrecoverableError } from "bullmq";
-import { chromium } from "playwright";
 import { config } from "../config.js";
 import { log } from "../log.js";
 
@@ -24,12 +24,12 @@ export async function handlePrepareApplication(
    database: DatabaseClient,
    llm: LlmProvider,
 ) {
-   const { applicationId } = job.data;
+   const { applicationId, refreshForm = false } = job.data;
    const application = await database.applications.getToPrepare(applicationId);
    if (!application || application.status !== "preparing") return "not preparing";
 
    try {
-      return await prepare(applicationId, application, database, llm);
+      return await prepare(applicationId, application, refreshForm, database, llm);
    } catch (err) {
       const lastAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
       const reason =
@@ -52,6 +52,7 @@ export async function handlePrepareApplication(
 async function prepare(
    applicationId: string,
    application: ApplicationToPrepare,
+   refreshForm: boolean,
    database: DatabaseClient,
    llm: LlmProvider,
 ) {
@@ -63,7 +64,11 @@ async function prepare(
    const vacancy = vacancyId ? await database.vacancies.getForMatching(vacancyId) : undefined;
    if (!vacancy) throw new UnrecoverableError("The vacancy is gone");
 
-   const form = await readForm(postingUrl);
+   // the questions are read from the job site once; answering again reuses them
+   const form =
+      refreshForm || application.fields.length === 0
+         ? await readForm(postingUrl)
+         : storedForm(application.fields);
    const answers =
       form.questions.length > 0
          ? await answerQuestions(database, llm, userId, stored.profile, vacancy, form.questions)
@@ -107,8 +112,41 @@ async function answerQuestions(
    return answers;
 }
 
+// Djinni sees one account opening application forms: automated opens are spaced out at random,
+// like a person going through jobs. Jobs run one at a time, so a plain variable is enough.
+const MIN_GAP_MS = 60_000;
+const MAX_GAP_MS = 150_000;
+let nextOpenAt = 0;
+
+/** Waits until the previous automated open is far enough behind; no wait after a quiet spell. */
+async function waitForTurn(): Promise<void> {
+   const wait = nextOpenAt - Date.now();
+   if (wait > 0) {
+      log("prepare-application", `waiting ${Math.round(wait / 1000)}s before opening Djinni again`);
+      await new Promise((resolve) => setTimeout(resolve, wait));
+   }
+   nextOpenAt = Date.now() + MIN_GAP_MS + Math.random() * (MAX_GAP_MS - MIN_GAP_MS);
+}
+
+/** The questions and the message field as read before, without their answers. */
+function storedForm(fields: FormField[]): Pick<ApplyForm, "questions" | "message"> {
+   const asFormField = ({ name, label, kind, required, options }: FormField): ApplyFormField => ({
+      name,
+      label,
+      kind,
+      required,
+      options,
+   });
+   const message = fields.find((f) => f.valueSource === "profile");
+   return {
+      questions: fields.filter((f) => f.valueSource === "ai").map(asFormField),
+      message: message && asFormField(message),
+   };
+}
+
 async function readForm(jobUrl: string): Promise<ApplyForm> {
-   const browser = await chromium.launch();
+   await waitForTurn();
+   const browser = await launchBrowser();
    try {
       return await readDjinniApplyForm(
          await openDjinniContext(browser, config.djinniSessionPath),

@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { launchBrowser } from "../browser.js";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 
 export const DJINNI_URL = "https://djinni.co";
@@ -48,7 +49,7 @@ export async function loginToDjinni(sessionPath: string): Promise<void> {
       await rm(profile, { recursive: true, force: true });
    }
 
-   const browser = await chromium.launch();
+   const browser = await launchBrowser();
    try {
       const page = await (await openDjinniContext(browser, sessionPath)).newPage();
       if (!(await isLoggedIn(page))) throw new DjinniSessionExpiredError();
