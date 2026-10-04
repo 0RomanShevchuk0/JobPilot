@@ -133,7 +133,8 @@ export const profiles = pgTable("profiles", {
    userId: uuid("user_id")
       .primaryKey()
       .references(() => users.id, { onDelete: "cascade" }),
-   version: integer("version").notNull().default(1), // +1 on every change; stale matches have a lower profile_version
+   // +1 on every change of the profile or the CV; stale matches have a lower profile_version
+   version: integer("version").notNull().default(1),
    contacts: jsonb("contacts").$type<ProfileContacts>().notNull().default({}),
    titles: text("titles").array().notNull().default(emptyTextArray),
    experienceYears: integer("experience_years"), // total, whole years

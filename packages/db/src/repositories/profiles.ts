@@ -13,6 +13,11 @@ export interface ProfilesRepository {
    get(userId: string): Promise<StoredProfile | undefined>;
    /** Creates or replaces the profile. Returns its new version. */
    save(userId: string, profile: Profile): Promise<number>;
+   /**
+    * +1 to the version without changing the profile: something else matching reads changed (the CV),
+    * so every evaluation is stale. Returns the new version, or undefined when there is no profile yet.
+    */
+   bumpVersion(userId: string): Promise<number | undefined>;
 }
 
 export function createProfilesRepository(db: Drizzle): ProfilesRepository {
@@ -70,6 +75,15 @@ export function createProfilesRepository(db: Drizzle): ProfilesRepository {
             })
             .returning({ version: profiles.version });
          return row.version;
+      },
+
+      async bumpVersion(userId) {
+         const [row] = await db
+            .update(profiles)
+            .set({ version: sql`${profiles.version} + 1`, updatedAt: sql`now()` })
+            .where(eq(profiles.userId, userId))
+            .returning({ version: profiles.version });
+         return row?.version;
       },
    };
 }

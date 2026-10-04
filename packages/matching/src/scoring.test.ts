@@ -40,6 +40,22 @@ describe("buildScoringRequest", () => {
       expect(prompt).toContain("<description>\nWe build **payments**.\n</description>");
    });
 
+   it("adds the CV without contacts", () => {
+      const { prompt } = buildScoringRequest(
+         profile,
+         vacancy,
+         "Jane Doe\njane@example.com | +49 151 23456789\nBuilt a canvas editor with Node.js",
+      );
+      expect(prompt).toContain(
+         "# Candidate's CV\n<cv>\n[removed]\n[removed] | [removed]\nBuilt a canvas editor",
+      );
+      expect(prompt.indexOf("# Candidate's CV")).toBeLessThan(prompt.indexOf("# Vacancy"));
+   });
+
+   it("leaves the CV section out when there is no CV", () => {
+      expect(buildScoringRequest(profile, vacancy).prompt).not.toContain("# Candidate's CV");
+   });
+
    it("cuts a very long description", () => {
       const { prompt } = buildScoringRequest(profile, {
          ...vacancy,

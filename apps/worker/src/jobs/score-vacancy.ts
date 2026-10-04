@@ -23,7 +23,8 @@ export async function handleScoreVacancy(
    if (match.promptVersion === SCORING_PROMPT_VERSION) return "up to date";
 
    // errors (rate limits, timeouts, an answer that fails the schema) throw here and the queue retries
-   const answer = await llm.generate(buildScoringRequest(stored.profile, vacancy));
+   const cv = await database.documents.getBaseCvText(userId);
+   const answer = await llm.generate(buildScoringRequest(stored.profile, vacancy, cv));
    const ai = applyHardLimits(stored.profile, answer);
 
    const saved = await database.matches.saveAssessment(userId, vacancyId, stored.version, {
