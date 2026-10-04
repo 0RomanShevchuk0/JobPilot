@@ -19,10 +19,10 @@ export class ApplicationQueue implements OnApplicationShutdown {
    }
 
    /** One preparation per application at a time; a failed one can be started again. */
-   async prepare(applicationId: string) {
+   async prepare(applicationId: string, refreshForm: boolean) {
       await this.queue.add(
          "prepare-application",
-         { applicationId },
+         { applicationId, refreshForm },
          {
             deduplication: { id: applicationId },
             attempts: 2,

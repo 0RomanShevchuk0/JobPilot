@@ -57,6 +57,8 @@ export interface ScoreVacancyJobData {
 
 export interface PrepareApplicationJobData {
    applicationId: string;
+   /** read the form on the job site again instead of reusing the questions read before */
+   refreshForm?: boolean;
 }
 
 export interface FillApplicationJobData {

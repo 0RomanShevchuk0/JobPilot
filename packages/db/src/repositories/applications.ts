@@ -11,19 +11,19 @@ export interface ApplicationToPrepare {
    postingUrl: string;
    source: string;
    vacancyId: string | null;
+   /** what was read and answered before; empty until the form is read for the first time */
+   fields: FormField[];
 }
 
 /** What the worker needs to fill an application into the form. */
-export interface ApplicationToFill extends ApplicationToPrepare {
-   fields: FormField[];
-}
+export type ApplicationToFill = ApplicationToPrepare;
 
 export interface ApplicationsRepository {
    /** The vacancy's active posting on one of these sources (the ones we can apply through), if any. */
    findPostingToApply(vacancyId: string, sources: string[]): Promise<string | undefined>;
    /**
-    * Starts preparing the application to a posting: a new one, or the existing one again (its old
-    * answers are dropped). Returns undefined when it was already submitted: there is nothing to prepare.
+    * Starts preparing the application to a posting: a new one, or the existing one again (its fields
+    * stay until new answers replace them). Returns undefined when it was already submitted.
     */
    startPreparing(userId: string, postingId: string): Promise<{ id: string } | undefined>;
    get(userId: string, applicationId: string): Promise<ApplicationView | undefined>;
@@ -62,12 +62,8 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
             .values({ userId, postingId, status: "preparing" })
             .onConflictDoUpdate({
                target: [applications.userId, applications.postingId],
-               set: {
-                  status: "preparing",
-                  failureReason: null,
-                  formFields: [],
-                  updatedAt: sql`now()`,
-               },
+               // the fields stay: the new answers replace them, or the questions are reused
+               set: { status: "preparing", failureReason: null, updatedAt: sql`now()` },
                setWhere: ne(applications.status, "submitted"),
             })
             .returning({ id: applications.id });
@@ -106,6 +102,7 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
                postingUrl: postings.url,
                source: postings.sourceId,
                vacancyId: postings.vacancyId,
+               fields: applications.formFields,
             })
             .from(applications)
             .innerJoin(postings, eq(postings.id, applications.postingId))
@@ -121,19 +118,7 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
       },
 
       async getToFill(applicationId) {
-         const [row] = await db
-            .select({
-               userId: applications.userId,
-               status: applications.status,
-               postingUrl: postings.url,
-               source: postings.sourceId,
-               vacancyId: postings.vacancyId,
-               fields: applications.formFields,
-            })
-            .from(applications)
-            .innerJoin(postings, eq(postings.id, applications.postingId))
-            .where(eq(applications.id, applicationId));
-         return row;
+         return this.getToPrepare(applicationId);
       },
 
       async setSubmitted(applicationId) {

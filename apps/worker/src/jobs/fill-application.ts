@@ -2,12 +2,12 @@ import type { FillApplicationJobData } from "@jobpilot/contracts";
 import {
    DjinniSessionExpiredError,
    fillDjinniApplication,
+   launchBrowser,
    openDjinniContext,
 } from "@jobpilot/apply";
 import type { DatabaseClient } from "@jobpilot/db";
 import type { FileStorage } from "@jobpilot/storage";
 import type { Job } from "bullmq";
-import { chromium } from "playwright";
 import { config } from "../config.js";
 import { log } from "../log.js";
 
@@ -32,7 +32,7 @@ export async function handleFillApplication(
       value: f.finalValue ?? f.proposedValue ?? "",
    }));
 
-   const browser = await chromium.launch({ headless: false, slowMo: SLOW_MO_MS });
+   const browser = await launchBrowser({ visible: true, slowMo: SLOW_MO_MS });
    try {
       const context = await openDjinniContext(browser, config.djinniSessionPath);
       const outcome = await fillDjinniApplication(context, application.postingUrl, values);
