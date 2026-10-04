@@ -7,6 +7,7 @@ import {
    type MatchVacancyJobData,
    type MatchUserJobData,
    type ScoreVacancyJobData,
+   type PrepareApplicationJobData,
 } from "@jobpilot/contracts";
 import { createDatabase } from "@jobpilot/db";
 import { Queue, UnrecoverableError, Worker } from "bullmq";
@@ -18,6 +19,7 @@ import { handleBuildVacancy } from "./jobs/build-vacancy.js";
 import { handleMatchUser } from "./jobs/match-user.js";
 import { handleMatchVacancy } from "./jobs/match-vacancy.js";
 import { handleScoreVacancy } from "./jobs/score-vacancy.js";
+import { handlePrepareApplication } from "./jobs/prepare-application.js";
 import { createScoringLlm } from "./llm.js";
 import { log } from "./log.js";
 import { discoverJobOptions } from "./queues.js";
@@ -93,6 +95,12 @@ workers.push(
       QueueNames.scoreVacancy,
       (job) => handleScoreVacancy(job, database, scoring.llm),
       { connection, concurrency: scoring.concurrency, limiter: scoring.limiter },
+   ),
+   new Worker<PrepareApplicationJobData>(
+      QueueNames.prepareApplication,
+      (job) => handlePrepareApplication(job, database, scoring.llm),
+      // one browser at a time: a person applies to one job at a time too
+      { connection, concurrency: 1 },
    ),
 );
 

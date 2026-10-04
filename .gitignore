@@ -12,3 +12,6 @@ coverage/
 
 # local scratch files (research dumps etc.)
 tmp/
+
+# browser sessions (cookies of logged-in job site accounts): secrets, never commit
+.data/

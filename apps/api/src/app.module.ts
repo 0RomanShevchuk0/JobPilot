@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { ApplicationsModule } from "./applications/applications.module.js";
 import { DocumentsModule } from "./documents/documents.module.js";
 import { HealthController } from "./health/health.controller.js";
 import { InfraModule } from "./infra/infra.module.js";
@@ -12,6 +13,7 @@ import { ProfileModule } from "./profile/profile.module.js";
       InfraModule,
       ProfileModule,
       DocumentsModule,
+      ApplicationsModule,
    ],
    controllers: [HealthController],
 })

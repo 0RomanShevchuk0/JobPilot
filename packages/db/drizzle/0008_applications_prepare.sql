@@ -1,0 +1,2 @@
+ALTER TABLE "profiles" ADD COLUMN "application_message" text DEFAULT '' NOT NULL;--> statement-breakpoint
+ALTER TABLE "applications" ADD CONSTRAINT "applications_user_posting_uq" UNIQUE("user_id","posting_id");

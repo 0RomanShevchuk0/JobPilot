@@ -20,6 +20,8 @@ export const config = {
    discoverEveryMs: Number(process.env.DISCOVER_EVERY_MINUTES ?? 180) * 60_000,
    // until user profiles exist, what to look for comes from the environment
    djinniKeywords: list("DJINNI_KEYWORDS"),
+   // single-user for now: one Djinni session, saved by `pnpm djinni:login` (.data/ is gitignored)
+   djinniSessionPath: "../../.data/sessions/djinni.json",
    llm: {
       provider: required("LLM_PROVIDER"),
       model: process.env.LLM_MODEL || undefined, // the provider's default when empty

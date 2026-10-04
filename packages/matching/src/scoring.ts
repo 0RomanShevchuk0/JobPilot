@@ -1,38 +1,9 @@
-import {
-   aiAssessmentSchema,
-   type AiAssessment,
-   type Language,
-   type Location,
-   type Profile,
-   type Salary,
-   type Seniority,
-   type WorkMode,
-} from "@jobpilot/contracts";
+import { aiAssessmentSchema, type AiAssessment, type Profile } from "@jobpilot/contracts";
 import type { LlmRequest } from "@jobpilot/llm";
-import { redactContacts } from "./redact.js";
+import { describeCv, describeProfile, describeVacancy, type VacancyForPrompt } from "./describe.js";
 
 /** Bump on any change to the prompt or the schema: stored next to each assessment. */
 export const SCORING_PROMPT_VERSION = 6;
-
-/** The parts of a vacancy the model reads. Empty arrays and undefined mean "not stated". */
-export interface VacancyForScoring {
-   title: string;
-   /** undefined when the employer is hidden */
-   companyName?: string;
-   description: string; // markdown
-   seniority?: Seniority;
-   experienceYears?: number;
-   workModes: WorkMode[];
-   locations: Location[];
-   languages: Language[];
-   salary?: Salary;
-   skills: string[];
-}
-
-// a few long postings shouldn't eat the tokens-per-minute limit; real ones are 2-6k characters
-const MAX_DESCRIPTION_CHARS = 15_000;
-// a one or two page CV is 3-6k characters
-const MAX_CV_CHARS = 10_000;
 
 const SYSTEM = `You help a software developer decide which job vacancies are worth applying to.
 You get the candidate's profile (what they look for), their CV (what they have done) and one vacancy,
@@ -93,79 +64,11 @@ export function applyHardLimits(profile: Profile, ai: AiAssessment): AiAssessmen
  */
 export function buildScoringRequest(
    profile: Profile,
-   vacancy: VacancyForScoring,
+   vacancy: VacancyForPrompt,
    cv?: string,
 ): LlmRequest<AiAssessment> {
    const sections = [`# Candidate\n${describeProfile(profile)}`];
-   if (cv) {
-      const text = cut(redactContacts(cv, profile.contacts), MAX_CV_CHARS);
-      sections.push(`# Candidate's CV\n<cv>\n${text}\n</cv>`);
-   }
+   if (cv) sections.push(`# Candidate's CV\n${describeCv(cv, profile)}`);
    sections.push(`# Vacancy\n${describeVacancy(vacancy)}`);
    return { system: SYSTEM, prompt: sections.join("\n\n"), schema: aiAssessmentSchema };
-}
-
-function describeProfile(p: Profile): string {
-   const s = p.salary;
-   return lines([
-      ["Looking for", list(p.titles)],
-      ["Experience", p.experienceYears !== undefined ? `${p.experienceYears} years` : undefined],
-      ["Skills", list(p.skills)],
-      [
-         "Salary",
-         s && `min ${s.min}${s.target ? `, target ${s.target}` : ""} ${s.currency} per ${s.period}`,
-      ],
-      ["Works from", list(p.locations.filter((l) => l.kind === "candidate").map((l) => l.raw))],
-      ["Office cities", list(p.locations.filter((l) => l.kind === "office").map((l) => l.raw))],
-      ["Work modes", list(p.workModes)],
-      ["Languages", list(p.languages.map(language))],
-      ["Notes", p.notes || undefined],
-   ]);
-}
-
-function describeVacancy(v: VacancyForScoring): string {
-   const description = cut(v.description, MAX_DESCRIPTION_CHARS);
-   return `${lines([
-      ["Title", v.title],
-      ["Company", v.companyName ?? "hidden"],
-      ["Level", v.seniority ?? "not stated"],
-      [
-         "Required experience",
-         v.experienceYears !== undefined ? `${v.experienceYears}+ years` : "not stated",
-      ],
-      ["Work modes", list(v.workModes) ?? "not stated"],
-      ["Office", list(v.locations.filter((l) => l.kind === "office").map((l) => l.raw))],
-      [
-         "Candidates from",
-         list(v.locations.filter((l) => l.kind === "candidate").map((l) => l.raw)),
-      ],
-      ["Languages", list(v.languages.map(language))],
-      ["Salary", v.salary ? salary(v.salary) : "not stated"],
-      ["Skill tags", list(v.skills)],
-   ])}\n\nDescription:\n<description>\n${description}\n</description>`;
-}
-
-function cut(text: string, max: number): string {
-   return text.length > max ? `${text.slice(0, max)}\n[cut]` : text;
-}
-
-/** "Key: value" lines; empty values are left out. */
-function lines(entries: [string, string | undefined][]): string {
-   return entries
-      .filter((e): e is [string, string] => Boolean(e[1]))
-      .map(([key, value]) => `${key}: ${value}`)
-      .join("\n");
-}
-
-function list(items: string[]): string | undefined {
-   return items.length > 0 ? items.join(", ") : undefined;
-}
-
-function language(l: Language): string {
-   return l.level ? `${l.code} ${l.level}` : l.code;
-}
-
-function salary(s: Salary): string {
-   const range = [s.min, s.max].filter((n) => n !== undefined).join("-");
-   return range ? `${range} ${s.currency} per ${s.period}` : "not stated";
 }

@@ -56,5 +56,7 @@ export const profileSchema = z.object({
    languages: z.array(languageSchema).default([]),
    hardFilters: hardFiltersSchema.default({}),
    notes: z.string().default(""), // free-form facts for AI: notice period, work permit, relocation...
+   // my usual short message to recruiters; the application message is this, lightly adapted to each vacancy
+   applicationMessage: z.string().default(""),
 });
 export type Profile = z.infer<typeof profileSchema>;

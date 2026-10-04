@@ -46,6 +46,7 @@ export function createProfilesRepository(db: Drizzle): ProfilesRepository {
                languages: row.languages,
                hardFilters: row.hardFilters,
                notes: row.notes,
+               applicationMessage: row.applicationMessage,
             },
          };
       },
@@ -65,6 +66,7 @@ export function createProfilesRepository(db: Drizzle): ProfilesRepository {
             languages: p.languages,
             hardFilters: p.hardFilters,
             notes: p.notes,
+            applicationMessage: p.applicationMessage,
          };
          const [row] = await db
             .insert(profiles)
