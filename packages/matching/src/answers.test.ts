@@ -1,6 +1,6 @@
 import { profileSchema } from "@jobpilot/contracts";
 import { describe, expect, it } from "vitest";
-import { applicationMessage, buildApplicationAnswersRequest } from "./answers.js";
+import { applicationMessage, buildApplicationAnswersRequest, tidyAnswer } from "./answers.js";
 import type { VacancyForPrompt } from "./describe.js";
 
 const profile = profileSchema.parse({
@@ -48,5 +48,13 @@ describe("applicationMessage", () => {
       expect(applicationMessage({ ...profile, applicationMessage: "  " })).toMatch(
          /^I'm interested/,
       ); // the default one
+   });
+});
+
+describe("tidyAnswer", () => {
+   it("turns long and medium dashes into hyphens", () => {
+      expect(tidyAnswer(" 4 years — across all roles, 2022–2026 ")).toBe(
+         "4 years - across all roles, 2022-2026",
+      );
    });
 });
