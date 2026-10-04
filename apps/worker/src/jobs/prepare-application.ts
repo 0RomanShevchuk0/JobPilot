@@ -9,7 +9,7 @@ import {
 } from "@jobpilot/apply";
 import type { ApplicationToPrepare, DatabaseClient, VacancyForMatching } from "@jobpilot/db";
 import type { LlmProvider } from "@jobpilot/llm";
-import { applicationMessage, buildApplicationAnswersRequest } from "@jobpilot/matching";
+import { applicationMessage, buildApplicationAnswersRequest, tidyAnswer } from "@jobpilot/matching";
 import { type Job, UnrecoverableError } from "bullmq";
 import { config } from "../config.js";
 import { log } from "../log.js";
@@ -109,7 +109,7 @@ async function answerQuestions(
    if (answers.length !== questions.length) {
       throw new Error(`the model answered ${answers.length} of ${questions.length} questions`);
    }
-   return answers;
+   return answers.map(tidyAnswer);
 }
 
 // Djinni sees one account opening application forms: automated opens are spaced out at random,

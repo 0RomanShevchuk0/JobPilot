@@ -7,5 +7,6 @@ export {
    applicationAnswersSchema,
    applicationMessage,
    buildApplicationAnswersRequest,
+   tidyAnswer,
    type ApplicationAnswers,
 } from "./answers.js";
