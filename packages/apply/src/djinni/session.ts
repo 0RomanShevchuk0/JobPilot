@@ -88,16 +88,35 @@ async function saveDjinniCookies(profile: string, sessionPath: string): Promise<
    }
 }
 
-/** A browser context with the saved Djinni session. */
+/** A browser context with the saved Djinni session, introducing itself as an ordinary desktop Chrome. */
 export async function openDjinniContext(
    browser: Browser,
    sessionPath: string,
 ): Promise<BrowserContext> {
    try {
-      return await browser.newContext({ storageState: sessionPath });
+      return await browser.newContext({
+         storageState: sessionPath,
+         userAgent: desktopUserAgent(browser),
+      });
    } catch {
       throw new DjinniSessionExpiredError(); // no session file yet
    }
+}
+
+/**
+ * The User-Agent of a regular desktop Chrome of the same version. Headless Chromium sends
+ * "HeadlessChrome/…" by default: the first thing bot checks look at.
+ */
+function desktopUserAgent(browser: Browser): string {
+   const major = browser.version().split(".")[0]; // "153.0.8010.12" → "153"
+   const os =
+      process.platform === "darwin"
+         ? "Macintosh; Intel Mac OS X 10_15_7"
+         : process.platform === "win32"
+           ? "Windows NT 10.0; Win64; x64"
+           : "X11; Linux x86_64";
+   // Chrome itself reports only the major version, the rest as zeros
+   return `Mozilla/5.0 (${os}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${major}.0.0.0 Safari/537.36`;
 }
 
 /** Djinni shows "Log In" links to anonymous visitors only. */
