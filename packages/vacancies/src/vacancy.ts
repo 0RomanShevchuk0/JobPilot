@@ -36,6 +36,8 @@ export function mergeVacancy(postings: PostingForMerge[]): VacancyFields {
 
    const goneAt = ordered.map((p) => p.goneAt);
    const allGone = goneAt.every((d) => d !== null);
+   const lastGoneAt = Math.max(...goneAt.map((d) => d?.getTime() ?? 0));
+   const skills = all.flatMap((p) => p.skills ?? []);
 
    return {
       title: all[0].title,
@@ -46,8 +48,8 @@ export function mergeVacancy(postings: PostingForMerge[]): VacancyFields {
       locations: first((p) => p.locations) ?? [],
       languages: first((p) => p.languages) ?? [],
       salary: first((p) => p.salary),
-      skills: normalizeSkills(all.flatMap((p) => p.skills ?? [])),
+      skills: normalizeSkills(skills),
       experienceYears: first((p) => p.experienceYears),
-      closedAt: allGone ? new Date(Math.max(...goneAt.map((d) => d!.getTime()))) : null,
+      closedAt: allGone ? new Date(lastGoneAt) : null,
    };
 }

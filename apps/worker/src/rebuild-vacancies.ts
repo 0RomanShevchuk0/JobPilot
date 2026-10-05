@@ -12,13 +12,12 @@ const database = createDatabase(config.databaseUrl);
 const queue = new Queue<BuildVacancyJobData>(QueueNames.buildVacancy, { connection });
 
 const ids = await database.postings.listParsedIds();
-await queue.addBulk(
-   ids.map((postingId) => ({
-      name: "build-vacancy",
-      data: { postingId },
-      opts: buildVacancyJobOptions(postingId),
-   })),
-);
+const jobs = ids.map((postingId) => ({
+   name: "build-vacancy",
+   data: { postingId },
+   opts: buildVacancyJobOptions(postingId),
+}));
+await queue.addBulk(jobs);
 console.log(`queued build-vacancy for ${ids.length} postings`);
 
 await queue.close();

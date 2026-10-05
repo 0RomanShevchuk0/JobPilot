@@ -46,7 +46,10 @@ export async function openApplyForm(page: Page, jobUrl: string): Promise<void> {
    await page.goto(jobUrl);
    if ((await page.locator("a.sign-in-link").count()) > 0) throw new DjinniSessionExpiredError();
    const button = page.locator(APPLY_BUTTON).first();
-   if ((await button.count()) === 0) throw new DjinniCannotApplyError(await whyNoApplyButton(page));
+   if ((await button.count()) === 0) {
+      const reason = await whyNoApplyButton(page);
+      throw new DjinniCannotApplyError(reason);
+   }
    await button.click();
    await page.locator("#apply_form").waitFor({ state: "visible" });
 }

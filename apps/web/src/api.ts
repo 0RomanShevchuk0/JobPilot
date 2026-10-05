@@ -11,7 +11,10 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       headers: body === undefined || isForm ? undefined : { "content-type": "application/json" },
       body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
    });
-   if (!response.ok) throw new Error(await errorMessage(response, `${method} ${path}`));
+   if (!response.ok) {
+      const message = await errorMessage(response, `${method} ${path}`);
+      throw new Error(message);
+   }
    // 204 and some 202s come with no body
    const text = await response.text();
    return (text ? JSON.parse(text) : undefined) as T;

@@ -83,7 +83,8 @@ async function prepare(
 
    const fields = form.questions.map((q, i) => formField(q, "ai", answers[i]));
    if (form.message) {
-      fields.push(formField(form.message, "profile", applicationMessage(stored.profile)));
+      const message = applicationMessage(stored.profile);
+      fields.push(formField(form.message, "profile", message));
    }
    await database.applications.setPrepared(applicationId, fields);
    log(
@@ -176,10 +177,8 @@ async function readForm(jobUrl: string): Promise<ApplyForm> {
    await waitForTurn();
    const browser = await launchBrowser();
    try {
-      return await readDjinniApplyForm(
-         await openDjinniContext(browser, config.djinniSessionPath),
-         jobUrl,
-      );
+      const context = await openDjinniContext(browser, config.djinniSessionPath);
+      return await readDjinniApplyForm(context, jobUrl);
    } finally {
       await browser.close();
    }

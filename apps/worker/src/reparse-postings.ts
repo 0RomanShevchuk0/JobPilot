@@ -28,13 +28,12 @@ for (const { adapter } of sources) {
          console.error(`${adapter.source}: ${raw.url} failed to parse: ${(err as Error).message}`);
       }
    }
-   await queue.addBulk(
-      reparsed.map((postingId) => ({
-         name: "build-vacancy",
-         data: { postingId },
-         opts: buildVacancyJobOptions(postingId),
-      })),
-   );
+   const jobs = reparsed.map((postingId) => ({
+      name: "build-vacancy",
+      data: { postingId },
+      opts: buildVacancyJobOptions(postingId),
+   }));
+   await queue.addBulk(jobs);
    console.log(
       `${adapter.source}: ${reparsed.length} of ${ids.length} postings re-parsed with v${adapter.parserVersion}, build-vacancy queued`,
    );

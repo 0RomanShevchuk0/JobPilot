@@ -19,18 +19,17 @@ export async function handleDiscover(
    const refs = await entry.adapter.discover({ keywords });
    const toFetch = await database.postings.markSeen(source, refs);
 
-   await fetchQueue.addBulk(
-      toFetch.map(({ postingId, ref }) => ({
-         name: "fetch",
-         data: { postingId, ref: { ...ref, updatedAt: ref.updatedAt?.toISOString() } },
-         // same posting + same bump + same parser = same job id, so a posting is never queued twice;
-         // a new parserVersion gets a new id, so postings that failed to parse are retried after a fix
-         opts: {
-            ...fetchJobOptions,
-            jobId: `${postingId}_${ref.updatedAt?.getTime() ?? 0}_v${entry.adapter.parserVersion}`,
-         },
-      })),
-   );
+   const jobs = toFetch.map(({ postingId, ref }) => ({
+      name: "fetch",
+      data: { postingId, ref: { ...ref, updatedAt: ref.updatedAt?.toISOString() } },
+      // same posting + same bump + same parser = same job id, so a posting is never queued twice;
+      // a new parserVersion gets a new id, so postings that failed to parse are retried after a fix
+      opts: {
+         ...fetchJobOptions,
+         jobId: `${postingId}_${ref.updatedAt?.getTime() ?? 0}_v${entry.adapter.parserVersion}`,
+      },
+   }));
+   await fetchQueue.addBulk(jobs);
 
    log(
       "discover",
