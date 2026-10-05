@@ -36,6 +36,7 @@ Answers:
 - Total professional experience is the profile's "Experience". A technology used in every role in the
   CV has that same experience. For any other one, count from the CV's dates and round naturally.
 - Answer in the language of the question.
+- A question with options takes exactly one of them, copied as written, and nothing else.
 
 Style:
 - The only punctuation is commas, periods and hyphens. No dashes, semicolons, colons, brackets or quotes.
@@ -53,6 +54,24 @@ export function tidyAnswer(answer: string): string {
    return answer.replace(DASHES, "-").trim();
 }
 
+// a period the model may add to a one-word option: "Так." → "Так"
+const TRAILING_PERIOD = /\.$/;
+
+/**
+ * The option a choice answer names, as the form writes it; undefined when it names none of them. Case
+ * and a trailing period don't matter: the model was asked to copy the option, not always does exactly.
+ */
+export function pickOption(answer: string, options: string[]): string | undefined {
+   const normalize = (text: string) => text.trim().replace(TRAILING_PERIOD, "").toLowerCase();
+   return options.find((option) => normalize(option) === normalize(answer));
+}
+
+/** A recruiter's question; a choice one comes with its options, to answer with one of them. */
+export interface ApplicationQuestion {
+   label: string;
+   options?: string[];
+}
+
 /**
  * The model request that answers the recruiter's questions of an application form. matchedSkills are
  * the scoring's strongest matches, to lead with; gaps are deliberately not passed in.
@@ -62,7 +81,7 @@ export function buildApplicationAnswersRequest(input: {
    vacancy: VacancyForPrompt;
    cv?: string;
    matchedSkills: string[];
-   questions: string[];
+   questions: ApplicationQuestion[];
 }): LlmRequest<ApplicationAnswers> {
    const { profile, vacancy, cv, matchedSkills, questions } = input;
    const sections = [`# Candidate\n${describeProfile(profile)}`];
@@ -71,6 +90,12 @@ export function buildApplicationAnswersRequest(input: {
    if (matchedSkills.length > 0) {
       sections.push(`# Strongest matches with this vacancy\n${matchedSkills.join(", ")}`);
    }
-   sections.push(`# Questions\n${questions.map((q, i) => `${i + 1}. ${q}`).join("\n")}`);
+   const questionLines = questions.map(describeQuestion).join("\n");
+   sections.push(`# Questions\n${questionLines}`);
    return { system: SYSTEM, prompt: sections.join("\n\n"), schema: applicationAnswersSchema };
+}
+
+function describeQuestion({ label, options }: ApplicationQuestion, index: number): string {
+   const line = `${index + 1}. ${label}`;
+   return options ? `${line}\n   Options: ${options.join(" | ")}` : line;
 }

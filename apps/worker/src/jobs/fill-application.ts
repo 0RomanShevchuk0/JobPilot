@@ -27,6 +27,7 @@ export async function handleFillApplication(
 
    const values = application.fields.map((f) => ({
       name: f.name,
+      kind: f.kind,
       value: f.finalValue ?? f.proposedValue ?? "",
    }));
 
