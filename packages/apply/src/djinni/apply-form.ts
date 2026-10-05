@@ -53,7 +53,8 @@ export async function openApplyForm(page: Page, jobUrl: string): Promise<void> {
 
 /** Why a job page has no "Apply" button, as the page tells it. */
 async function whyNoApplyButton(page: Page): Promise<string> {
-   if ((await page.locator(ALREADY_APPLIED).count()) > 0) return "Already applied to this job on Djinni";
+   if ((await page.locator(ALREADY_APPLIED).count()) > 0)
+      return "Already applied to this job on Djinni";
    if ((await page.locator(JOB_CLOSED).count()) > 0) return "The job is no longer active on Djinni";
    const unmet = (await page.locator(UNMET_REQUIREMENTS).allInnerTexts())
       .map((text) => text.replace(/\s+/g, " ").trim()) // "English\n   C1 - Advanced" → "English C1 - Advanced"

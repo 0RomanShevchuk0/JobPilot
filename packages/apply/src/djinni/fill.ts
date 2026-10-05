@@ -1,9 +1,12 @@
+import type { FormFieldKind } from "@jobpilot/contracts";
 import type { BrowserContext, Page } from "playwright";
 import { openApplyForm } from "./apply-form.js";
 
 export interface FillValue {
    /** the input's name in the form */
    name: string;
+   kind: FormFieldKind;
+   /** for a choice field, the label of the option to pick */
    value: string;
 }
 
@@ -37,10 +40,8 @@ export async function fillDjinniApplication(
       throw err;
    }
 
-   for (const { name, value } of values) {
-      const field = page.locator(`#apply_form [name="${name}"]`).first();
-      await field.scrollIntoViewIfNeeded();
-      await field.fill(value);
+   for (const value of values) {
+      await fillField(page, value);
       await page.waitForTimeout(STEP_PAUSE_MS);
    }
    await page.locator("#job_apply").scrollIntoViewIfNeeded();
@@ -48,6 +49,43 @@ export async function fillDjinniApplication(
    const jobId = JOB_ID_IN_URL.exec(jobUrl)?.[1];
    if (!jobId) throw new Error(`not a Djinni job URL: ${jobUrl}`);
    return waitForUser(page, jobId);
+}
+
+/** Puts one value into the form the way its kind takes it: typed in, an option checked or selected. */
+async function fillField(page: Page, { name, kind, value }: FillValue): Promise<void> {
+   const inputs = page.locator(`#apply_form [name="${name}"]`);
+   switch (kind) {
+      case "text":
+      case "textarea":
+      case "number": {
+         const field = inputs.first();
+         await field.scrollIntoViewIfNeeded();
+         await field.fill(value);
+         return;
+      }
+      case "select":
+         await inputs.first().selectOption({ label: value });
+         return;
+      case "radio": {
+         // the options of a group share the name: the one to check is the one labelled with the value
+         for (const option of await inputs.all()) {
+            const label = await option.evaluate((el) =>
+               // runs of whitespace → one space: "\n   Так  " → "Так"
+               ((el as HTMLInputElement).labels?.[0]?.textContent ?? "")
+                  .replace(/\s+/g, " ")
+                  .trim(),
+            );
+            if (label === value) {
+               await option.scrollIntoViewIfNeeded();
+               await option.check();
+               return;
+            }
+         }
+         throw new Error(`No option "${value}" in the form for "${name}"`);
+      }
+      default:
+         throw new Error(`Filling a ${kind} field is not supported yet ("${name}")`);
+   }
 }
 
 /**

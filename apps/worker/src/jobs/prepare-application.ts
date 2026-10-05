@@ -10,7 +10,12 @@ import {
 } from "@jobpilot/apply";
 import type { ApplicationToPrepare, DatabaseClient, VacancyForMatching } from "@jobpilot/db";
 import type { LlmProvider } from "@jobpilot/llm";
-import { applicationMessage, buildApplicationAnswersRequest, tidyAnswer } from "@jobpilot/matching";
+import {
+   applicationMessage,
+   buildApplicationAnswersRequest,
+   pickOption,
+   tidyAnswer,
+} from "@jobpilot/matching";
 import { type Job, UnrecoverableError } from "bullmq";
 import { config } from "../config.js";
 import { log } from "../log.js";
@@ -88,7 +93,13 @@ async function prepare(
    return fields.length;
 }
 
-/** One answer per question, in their order, from the CV, the profile and the vacancy. */
+// questions answered with one of their options; their options go to the model and the answer is one
+const CHOICE_KINDS: ApplyFormField["kind"][] = ["radio", "select"];
+
+/**
+ * One answer per question, in their order, from the CV, the profile and the vacancy. A choice question's
+ * answer is one of its options, as the form writes it.
+ */
 async function answerQuestions(
    database: DatabaseClient,
    llm: LlmProvider,
@@ -99,19 +110,34 @@ async function answerQuestions(
 ): Promise<string[]> {
    const match = await database.matches.get(userId, vacancy.id);
    const cv = await database.documents.getBaseCvText(userId);
-   const { answers } = await llm.generate(
-      buildApplicationAnswersRequest({
-         profile,
-         vacancy,
-         cv,
-         matchedSkills: match?.analysis.ai?.matchedSkills ?? [],
-         questions: questions.map((q) => q.label),
-      }),
-   );
+   const questionsForModel = questions.map((q) => ({
+      label: q.label,
+      options: CHOICE_KINDS.includes(q.kind) ? q.options : undefined,
+   }));
+   const request = buildApplicationAnswersRequest({
+      profile,
+      vacancy,
+      cv,
+      matchedSkills: match?.analysis.ai?.matchedSkills ?? [],
+      questions: questionsForModel,
+   });
+   const { answers } = await llm.generate(request);
    if (answers.length !== questions.length) {
       throw new Error(`the model answered ${answers.length} of ${questions.length} questions`);
    }
-   return answers.map(tidyAnswer);
+   return questions.map((question, i) => {
+      const answer = tidyAnswer(answers[i]!);
+      if (!CHOICE_KINDS.includes(question.kind) || !question.options) return answer;
+      const option = pickOption(answer, question.options);
+      // thrown, so the job retries: the model usually gets it right the next time
+      if (!option) {
+         const expected = question.options.join(", ");
+         throw new Error(
+            `the model answered "${answer}" to "${question.label}", not one of: ${expected}`,
+         );
+      }
+      return option;
+   });
 }
 
 // Djinni sees one account opening application forms: automated opens are spaced out at random,

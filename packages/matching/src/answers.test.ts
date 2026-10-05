@@ -1,6 +1,11 @@
 import { profileSchema } from "@jobpilot/contracts";
 import { describe, expect, it } from "vitest";
-import { applicationMessage, buildApplicationAnswersRequest, tidyAnswer } from "./answers.js";
+import {
+   applicationMessage,
+   buildApplicationAnswersRequest,
+   pickOption,
+   tidyAnswer,
+} from "./answers.js";
 import type { VacancyForPrompt } from "./describe.js";
 
 const profile = profileSchema.parse({
@@ -23,13 +28,19 @@ describe("buildApplicationAnswersRequest", () => {
       vacancy,
       cv: "Jane Doe\njane@example.com\nBuilt a CRM with React",
       matchedSkills: ["Node.js", "React"],
-      questions: ["Have you worked with Angular?", "Years with Node.js?"],
+      questions: [
+         { label: "Have you worked with Angular?", options: ["Так", "Ні"] },
+         { label: "Years with Node.js?" },
+      ],
    });
 
-   it("numbers the questions and passes the strongest matches", () => {
+   it("numbers the questions, with the options of a choice one", () => {
       expect(prompt).toContain(
-         "# Questions\n1. Have you worked with Angular?\n2. Years with Node.js?",
+         "# Questions\n1. Have you worked with Angular?\n   Options: Так | Ні\n2. Years with Node.js?",
       );
+   });
+
+   it("passes the strongest matches", () => {
       expect(prompt).toContain("# Strongest matches with this vacancy\nNode.js, React");
    });
 
@@ -56,5 +67,16 @@ describe("tidyAnswer", () => {
       expect(tidyAnswer(" 4 years — across all roles, 2022–2026 ")).toBe(
          "4 years - across all roles, 2022-2026",
       );
+   });
+});
+
+describe("pickOption", () => {
+   it("finds the option the answer names, as the form writes it", () => {
+      expect(pickOption("Так", ["Так", "Ні"])).toBe("Так");
+      expect(pickOption(" так. ", ["Так", "Ні"])).toBe("Так");
+   });
+
+   it("is undefined for an answer that names no option", () => {
+      expect(pickOption("Yes, I have shipped Next.js apps.", ["Так", "Ні"])).toBeUndefined();
    });
 });
