@@ -7,6 +7,7 @@ import { applicationStatusLabels } from "./applicationStatus";
 
 type Tab = "new" | "applied" | "hidden";
 const tabs: Tab[] = ["new", "applied", "hidden"];
+const PREPARING_POLL_MS = 3000;
 
 /** Vacancies evaluated for my current profile, best first: new ones, or the ones I marked. */
 export function MatchesPage() {
@@ -19,6 +20,11 @@ export function MatchesPage() {
          if (tab === "new" && showSkipped) query.set("include", "skipped");
          return apiGet<MatchListItem[]>(`/matches?${query}`);
       },
+      // an application being prepared changes its status within seconds or minutes: keep the card current
+      refetchInterval: (query) =>
+         query.state.data?.some((m) => m.application?.status === "preparing")
+            ? PREPARING_POLL_MS
+            : false,
    });
 
    return (
