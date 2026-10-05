@@ -12,8 +12,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
    });
    if (!response.ok) throw new Error(await errorMessage(response, `${method} ${path}`));
-   if (response.status === 204) return undefined as T;
-   return (await response.json()) as T;
+   // 204 and some 202s come with no body
+   const text = await response.text();
+   return (text ? JSON.parse(text) : undefined) as T;
 }
 
 /** The API's own message ("The CV must be a PDF") when it sent one, the status otherwise. */
@@ -28,6 +29,7 @@ async function errorMessage(response: Response, what: string): Promise<string> {
 }
 
 export const apiGet = <T>(path: string) => request<T>("GET", path);
+export const apiPost = <T>(path: string, body?: unknown) => request<T>("POST", path, body);
 export const apiPatch = <T>(path: string, body: unknown) => request<T>("PATCH", path, body);
 export const apiPut = <T>(path: string, body: unknown) => request<T>("PUT", path, body);
 export const apiDelete = (path: string) => request<void>("DELETE", path);

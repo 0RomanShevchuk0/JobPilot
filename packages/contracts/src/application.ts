@@ -56,6 +56,8 @@ export interface DocumentListItem {
 export interface ApplicationView {
    id: string;
    vacancyId: string | null;
+   /** the vacancy's title; null when the vacancy is gone */
+   title: string | null;
    /** the job page the application goes through */
    postingUrl: string;
    status: ApplicationStatus;
@@ -66,3 +68,6 @@ export interface ApplicationView {
    createdAt: string;
    updatedAt: string;
 }
+
+/** An application in GET /applications, newest activity first: the view without the answers. */
+export type ApplicationListItem = Omit<ApplicationView, "fields">;

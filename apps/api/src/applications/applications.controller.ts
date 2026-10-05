@@ -40,6 +40,13 @@ export class ApplicationsController {
       }
    }
 
+   /** My applications, the latest activity first. */
+   @Get()
+   async list() {
+      const userId = await this.user.id();
+      return this.applications.list(userId);
+   }
+
    @Get(":id")
    async get(@Param("id", new ZodValidationPipe(z.uuid())) id: string) {
       const userId = await this.user.id();

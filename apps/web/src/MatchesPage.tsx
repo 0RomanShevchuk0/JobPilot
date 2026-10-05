@@ -1,7 +1,9 @@
 import type { MatchListItem, MatchStatus, Salary } from "@jobpilot/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { apiGet, apiPatch } from "./api";
+import { Link, useNavigate } from "react-router";
+import { apiGet, apiPatch, apiPost } from "./api";
+import { applicationStatusLabels } from "./applicationStatus";
 
 type Tab = "new" | "applied" | "hidden";
 const tabs: Tab[] = ["new", "applied", "hidden"];
@@ -79,6 +81,17 @@ function MatchCard({ match }: { match: MatchListItem }) {
       // the vacancy moves to another tab: every list may have changed
       onSuccess: () => queryClient.invalidateQueries({ queryKey: ["matches"] }),
    });
+   const navigate = useNavigate();
+   const apply = useMutation({
+      mutationFn: () => apiPost<{ id: string }>("/applications", { vacancyId: match.vacancyId }),
+      onSuccess: async ({ id }) => {
+         await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["matches"] }),
+            queryClient.invalidateQueries({ queryKey: ["applications"] }),
+         ]);
+         await navigate(`/applications/${id}`);
+      },
+   });
    const status = match.verdict ?? (match.rejectedBy.length > 0 ? "rejected" : "pending");
    const details = [
       match.company,
@@ -108,6 +121,22 @@ function MatchCard({ match }: { match: MatchListItem }) {
                {details && <p className="text-sm text-gray-500">{details}</p>}
             </div>
             <div className="ml-auto flex shrink-0 gap-2">
+               {match.application ? (
+                  <Link
+                     to={`/applications/${match.application.id}`}
+                     className="rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                     Application: {applicationStatusLabels[match.application.status]}
+                  </Link>
+               ) : (
+                  <button
+                     onClick={() => apply.mutate()}
+                     disabled={apply.isPending}
+                     className="rounded bg-gray-900 px-2 py-1 text-sm text-white hover:bg-gray-700 disabled:opacity-50"
+                  >
+                     Apply
+                  </button>
+               )}
                {match.status === null ? (
                   <>
                      <MarkButton onClick={() => mark.mutate("applied")} disabled={mark.isPending}>
@@ -125,6 +154,7 @@ function MatchCard({ match }: { match: MatchListItem }) {
             </div>
          </div>
          {mark.isError && <p className="mt-2 text-sm text-red-600">{mark.error.message}</p>}
+         {apply.isError && <p className="mt-2 text-sm text-red-600">{apply.error.message}</p>}
 
          {match.summary && <p className="mt-3 text-sm">{match.summary}</p>}
 
