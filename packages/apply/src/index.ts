@@ -1,5 +1,10 @@
 export { launchBrowser, type LaunchOptions } from "./browser.js";
-export { readDjinniApplyForm, type ApplyForm, type ApplyFormField } from "./djinni/apply-form.js";
+export {
+   DjinniCannotApplyError,
+   readDjinniApplyForm,
+   type ApplyForm,
+   type ApplyFormField,
+} from "./djinni/apply-form.js";
 export {
    DjinniSessionExpiredError,
    isLoggedIn,

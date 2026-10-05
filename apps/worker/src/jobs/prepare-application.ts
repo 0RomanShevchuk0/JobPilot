@@ -1,5 +1,6 @@
 import type { FormField, PrepareApplicationJobData, Profile } from "@jobpilot/contracts";
 import {
+   DjinniCannotApplyError,
    DjinniSessionExpiredError,
    launchBrowser,
    openDjinniContext,
@@ -40,6 +41,7 @@ export async function handlePrepareApplication(
       if (
          err instanceof UnrecoverableError ||
          err instanceof DjinniSessionExpiredError ||
+         err instanceof DjinniCannotApplyError ||
          lastAttempt
       ) {
          await database.applications.setFailed(applicationId, reason);
