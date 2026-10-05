@@ -61,8 +61,9 @@ export class DocumentsController {
       if (!file) throw new NotFoundException("No such document");
       return new StreamableFile(file.body, {
          type: file.contentType,
+         // inline: the browser shows the PDF itself; a link with the download attribute still saves it.
          // filename* keeps non-ASCII names ("Резюме.pdf") intact
-         disposition: `attachment; filename*=UTF-8''${encodeURIComponent(file.fileName)}`,
+         disposition: `inline; filename*=UTF-8''${encodeURIComponent(file.fileName)}`,
       });
    }
 
