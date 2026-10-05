@@ -1,5 +1,5 @@
 import type { BrowserContext, Page } from "playwright";
-import { DjinniSessionExpiredError } from "./session.js";
+import { openApplyForm } from "./apply-form.js";
 
 export interface FillValue {
    /** the input's name in the form */
@@ -17,7 +17,7 @@ const REVIEW_TIMEOUT_MS = 30 * 60_000;
 // "https://djinni.co/jobs/850626-full-stack-…/" → "850626"
 const JOB_ID_IN_URL = /\/jobs\/(\d+)-/;
 // a pause between fields, so the user can follow what is being filled in
-const STEP_PAUSE_MS = 400;
+const STEP_PAUSE_MS = 200;
 
 /**
  * Opens a job's application form in the given (visible) browser, fills in the values and hands over to
@@ -30,13 +30,12 @@ export async function fillDjinniApplication(
    values: FillValue[],
 ): Promise<FillOutcome> {
    const page = await context.newPage();
-   await page.goto(jobUrl);
-   if ((await page.locator("a.sign-in-link").count()) > 0) {
+   try {
+      await openApplyForm(page, jobUrl);
+   } catch (err) {
       await page.close();
-      throw new DjinniSessionExpiredError();
+      throw err;
    }
-   await page.locator("button.js-inbox-toggle-reply-form").first().click();
-   await page.locator("#apply_form").waitFor({ state: "visible" });
 
    for (const { name, value } of values) {
       const field = page.locator(`#apply_form [name="${name}"]`).first();

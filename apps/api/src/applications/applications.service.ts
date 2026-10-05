@@ -35,8 +35,10 @@ export class ApplicationsService {
       const application = await this.db.applications.get(userId, applicationId);
       if (!application) return false;
       if (application.status !== "ready_for_review") {
+         // a failed one says why, so the user knows whether preparing again can help
+         const reason = application.failureReason ? `: ${application.failureReason}` : "";
          throw new ConflictException(
-            `The application is ${application.status}, not ready_for_review`,
+            `The application is ${application.status}, not ready_for_review${reason}`,
          );
       }
       await this.queue.fill(applicationId);
