@@ -12,13 +12,12 @@ export async function handleMatchUser(
 ) {
    const { userId } = job.data;
    const vacancyIds = await database.vacancies.listOpenIds();
-   await matchVacancyQueue.addBulk(
-      vacancyIds.map((vacancyId) => ({
-         name: "match-vacancy",
-         data: { userId, vacancyId },
-         opts: matchVacancyJobOptions(userId, vacancyId),
-      })),
-   );
+   const jobs = vacancyIds.map((vacancyId) => ({
+      name: "match-vacancy",
+      data: { userId, vacancyId },
+      opts: matchVacancyJobOptions(userId, vacancyId),
+   }));
+   await matchVacancyQueue.addBulk(jobs);
    log("match-user", `${userId}: ${vacancyIds.length} open vacancies queued for evaluation`);
    return vacancyIds.length;
 }

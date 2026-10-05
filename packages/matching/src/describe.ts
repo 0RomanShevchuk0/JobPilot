@@ -25,7 +25,8 @@ export interface VacancyForPrompt {
 
 /** The CV text for a prompt: without contacts, cut to a sane length, wrapped in <cv> tags. */
 export function describeCv(cv: string, profile: Profile): string {
-   return `<cv>\n${cut(redactContacts(cv, profile.contacts), MAX_CV_CHARS)}\n</cv>`;
+   const redacted = redactContacts(cv, profile.contacts);
+   return `<cv>\n${cut(redacted, MAX_CV_CHARS)}\n</cv>`;
 }
 
 export function describeProfile(p: Profile): string {
@@ -38,8 +39,8 @@ export function describeProfile(p: Profile): string {
          "Salary",
          s && `min ${s.min}${s.target ? `, target ${s.target}` : ""} ${s.currency} per ${s.period}`,
       ],
-      ["Works from", list(p.locations.filter((l) => l.kind === "candidate").map((l) => l.raw))],
-      ["Office cities", list(p.locations.filter((l) => l.kind === "office").map((l) => l.raw))],
+      ["Works from", places(p.locations, "candidate")],
+      ["Office cities", places(p.locations, "office")],
       ["Work modes", list(p.workModes)],
       ["Languages", list(p.languages.map(language))],
       ["Notes", p.notes || undefined],
@@ -57,11 +58,8 @@ export function describeVacancy(v: VacancyForPrompt): string {
          v.experienceYears !== undefined ? `${v.experienceYears}+ years` : "not stated",
       ],
       ["Work modes", list(v.workModes) ?? "not stated"],
-      ["Office", list(v.locations.filter((l) => l.kind === "office").map((l) => l.raw))],
-      [
-         "Candidates from",
-         list(v.locations.filter((l) => l.kind === "candidate").map((l) => l.raw)),
-      ],
+      ["Office", places(v.locations, "office")],
+      ["Candidates from", places(v.locations, "candidate")],
       ["Languages", list(v.languages.map(language))],
       ["Salary", v.salary ? salary(v.salary) : "not stated"],
       ["Skill tags", list(v.skills)],
@@ -82,6 +80,12 @@ function lines(entries: [string, string | undefined][]): string {
 
 function list(items: string[]): string | undefined {
    return items.length > 0 ? items.join(", ") : undefined;
+}
+
+/** The locations of one kind, as written in the source, in one line. */
+function places(locations: Location[], kind: Location["kind"]): string | undefined {
+   const raw = locations.filter((l) => l.kind === kind).map((l) => l.raw);
+   return list(raw);
 }
 
 function language(l: Language): string {

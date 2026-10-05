@@ -38,7 +38,8 @@ export function normalizeCompanyName(name: string): string {
    while (stripped && words.length > 1) {
       stripped = false;
       for (const size of [3, 2, 1]) {
-         if (words.length > size && LEGAL_FORMS.has(words.slice(-size).join(" "))) {
+         const tail = words.slice(-size).join(" ");
+         if (words.length > size && LEGAL_FORMS.has(tail)) {
             words = words.slice(0, -size);
             stripped = true;
             break;

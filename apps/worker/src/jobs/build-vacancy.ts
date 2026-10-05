@@ -36,13 +36,12 @@ export async function handleBuildVacancy(
 
    if (!vacancy.closedAt) {
       const userIds = await database.users.listIds();
-      await matchVacancyQueue.addBulk(
-         userIds.map((userId) => ({
-            name: "match-vacancy",
-            data: { userId, vacancyId },
-            opts: matchVacancyJobOptions(userId, vacancyId),
-         })),
-      );
+      const jobs = userIds.map((userId) => ({
+         name: "match-vacancy",
+         data: { userId, vacancyId },
+         opts: matchVacancyJobOptions(userId, vacancyId),
+      }));
+      await matchVacancyQueue.addBulk(jobs);
    }
 
    log(

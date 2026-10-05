@@ -49,5 +49,6 @@ export function normalizeSkill(skill: string): string {
 
 /** Canonical names, duplicates removed, order kept. */
 export function normalizeSkills(skills: string[]): string[] {
-   return [...new Set(skills.map(normalizeSkill).filter(Boolean))];
+   const normalized = skills.map(normalizeSkill).filter(Boolean);
+   return [...new Set(normalized)];
 }

@@ -25,6 +25,7 @@ const LEVEL_WORDS: [RegExp, Seniority][] = [
  */
 export function seniorityFromTitle(title: string): Seniority | undefined {
    const text = normalizeTitle(title);
-   const found = new Set(LEVEL_WORDS.filter(([re]) => re.test(text)).map(([, level]) => level));
+   const levels = LEVEL_WORDS.filter(([re]) => re.test(text)).map(([, level]) => level);
+   const found = new Set(levels);
    return found.size === 1 ? [...found][0] : undefined;
 }

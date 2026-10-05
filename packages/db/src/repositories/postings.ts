@@ -40,7 +40,8 @@ export function createPostingsRepository(db: Drizzle): PostingsRepository {
    return {
       async markSeen(sourceId, refs) {
          // one row per external id: Postgres rejects an upsert that touches the same row twice
-         const unique = [...new Map(refs.map((r) => [r.externalId, r])).values()];
+         const byExternalId = new Map(refs.map((r) => [r.externalId, r]));
+         const unique = [...byExternalId.values()];
          if (unique.length === 0) return [];
 
          const rows = await db

@@ -11,19 +11,18 @@ const database = createDatabase(config.databaseUrl);
 const queue = new Queue<MatchUserJobData>(QueueNames.matchUser, { connection });
 
 const userIds = await database.users.listIds();
-await queue.addBulk(
-   userIds.map((userId) => ({
-      name: "match-user",
-      data: { userId },
-      // as the API adds it after a profile change
-      opts: {
-         deduplication: { id: userId, keepLastIfActive: true },
-         attempts: 3,
-         removeOnComplete: 100,
-         removeOnFail: 100,
-      },
-   })),
-);
+const jobs = userIds.map((userId) => ({
+   name: "match-user",
+   data: { userId },
+   // as the API adds it after a profile change
+   opts: {
+      deduplication: { id: userId, keepLastIfActive: true },
+      attempts: 3,
+      removeOnComplete: 100,
+      removeOnFail: 100,
+   },
+}));
+await queue.addBulk(jobs);
 console.log(`queued match-user for ${userIds.length} users`);
 
 await queue.close();
