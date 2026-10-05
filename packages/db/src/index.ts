@@ -5,6 +5,7 @@ export type {
    ApplicationsRepository,
    ApplicationToFill,
    ApplicationToPrepare,
+   StoredApplication,
 } from "./repositories/applications.js";
 export type { DocumentsRepository, StoredDocumentFile } from "./repositories/documents.js";
 export type {

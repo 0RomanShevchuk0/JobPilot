@@ -52,8 +52,8 @@ export interface DocumentListItem {
    createdAt: string;
 }
 
-/** An application in GET /applications/:id. The API's wire format, so dates are ISO strings. */
-export interface ApplicationView {
+/** An application in GET /applications, newest activity first. The API's wire format: ISO dates. */
+export interface ApplicationListItem {
    id: string;
    vacancyId: string | null;
    /** the vacancy's title; null when the vacancy is gone */
@@ -63,11 +63,14 @@ export interface ApplicationView {
    status: ApplicationStatus;
    /** why preparing or submitting failed */
    failureReason: string | null;
-   /** the form's questions and the message, with the proposed answers */
-   fields: FormField[];
    createdAt: string;
    updatedAt: string;
 }
 
-/** An application in GET /applications, newest activity first: the view without the answers. */
-export type ApplicationListItem = Omit<ApplicationView, "fields">;
+/** An application in GET /applications/:id: with its answers. */
+export interface ApplicationView extends ApplicationListItem {
+   /** the form's questions and the message, with the proposed answers */
+   fields: FormField[];
+   /** the form is open in a browser window right now, for the user to send or close */
+   filling: boolean;
+}

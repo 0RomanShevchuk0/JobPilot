@@ -4,16 +4,11 @@ import { Link } from "react-router";
 import { apiGet } from "./api";
 import { applicationStatusLabels, applicationStatusStyles } from "./applicationStatus";
 
-// while one is being prepared, its status changes within seconds
-const PREPARING_POLL_MS = 3000;
-
 /** My applications, the latest activity first. */
 export function ApplicationsPage() {
    const applications = useQuery({
       queryKey: ["applications"],
       queryFn: () => apiGet<ApplicationListItem[]>("/applications"),
-      refetchInterval: (query) =>
-         query.state.data?.some((a) => a.status === "preparing") ? PREPARING_POLL_MS : false,
    });
 
    return (
