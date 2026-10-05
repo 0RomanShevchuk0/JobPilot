@@ -1,7 +1,12 @@
-import type { ApplicationStatus, ApplicationView, FormField } from "@jobpilot/contracts";
+import type {
+   ApplicationListItem,
+   ApplicationStatus,
+   ApplicationView,
+   FormField,
+} from "@jobpilot/contracts";
 import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
-import { applications, postings } from "../schema.js";
+import { applications, postings, vacancies } from "../schema.js";
 
 /** What the worker needs to prepare an application. */
 export interface ApplicationToPrepare {
@@ -26,6 +31,8 @@ export interface ApplicationsRepository {
     * stay until new answers replace them). Returns undefined when it was already submitted.
     */
    startPreparing(userId: string, postingId: string): Promise<{ id: string } | undefined>;
+   /** My applications, the latest activity first. */
+   listForUser(userId: string): Promise<ApplicationListItem[]>;
    get(userId: string, applicationId: string): Promise<ApplicationView | undefined>;
    getToPrepare(applicationId: string): Promise<ApplicationToPrepare | undefined>;
    /** The form was read and answered: ready for the user to review. */
@@ -36,6 +43,22 @@ export interface ApplicationsRepository {
    setSubmitted(applicationId: string): Promise<void>;
    /** Filling went wrong: the answers stay ready for review, the reason is shown with them. */
    setFillProblem(applicationId: string, reason: string): Promise<void>;
+}
+
+// what the user sees of an application, its answers aside
+const listColumns = {
+   id: applications.id,
+   vacancyId: postings.vacancyId,
+   title: vacancies.title,
+   postingUrl: postings.url,
+   status: applications.status,
+   failureReason: applications.failureReason,
+   createdAt: applications.createdAt,
+   updatedAt: applications.updatedAt,
+};
+
+function withIsoDates<T extends { createdAt: Date; updatedAt: Date }>(row: T) {
+   return { ...row, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() };
 }
 
 export function createApplicationsRepository(db: Drizzle): ApplicationsRepository {
@@ -70,28 +93,25 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
          return row;
       },
 
-      async get(userId, applicationId) {
-         const [row] = await db
-            .select({
-               id: applications.id,
-               vacancyId: postings.vacancyId,
-               postingUrl: postings.url,
-               status: applications.status,
-               failureReason: applications.failureReason,
-               fields: applications.formFields,
-               createdAt: applications.createdAt,
-               updatedAt: applications.updatedAt,
-            })
+      async listForUser(userId) {
+         const rows = await db
+            .select(listColumns)
             .from(applications)
             .innerJoin(postings, eq(postings.id, applications.postingId))
+            .leftJoin(vacancies, eq(vacancies.id, postings.vacancyId))
+            .where(eq(applications.userId, userId))
+            .orderBy(desc(applications.updatedAt));
+         return rows.map(withIsoDates);
+      },
+
+      async get(userId, applicationId) {
+         const [row] = await db
+            .select({ ...listColumns, fields: applications.formFields })
+            .from(applications)
+            .innerJoin(postings, eq(postings.id, applications.postingId))
+            .leftJoin(vacancies, eq(vacancies.id, postings.vacancyId))
             .where(and(eq(applications.userId, userId), eq(applications.id, applicationId)));
-         return (
-            row && {
-               ...row,
-               createdAt: row.createdAt.toISOString(),
-               updatedAt: row.updatedAt.toISOString(),
-            }
-         );
+         return row && withIsoDates(row);
       },
 
       async getToPrepare(applicationId) {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ApplicationStatus } from "./application.js";
 import type { Salary, WorkMode } from "./posting.js";
 
 export type PrefilterCheck =
@@ -100,4 +101,6 @@ export interface MatchListItem {
    workModes: WorkMode[];
    status: MatchStatus;
    evaluatedAt: string;
+   /** my application to it through JobPilot, once started */
+   application: { id: string; status: ApplicationStatus } | null;
 }

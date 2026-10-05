@@ -1,7 +1,20 @@
-import type { AiAssessment, MatchAnalysis, MatchListItem, MatchStatus } from "@jobpilot/contracts";
+import type {
+   AiAssessment,
+   ApplicationStatus,
+   MatchAnalysis,
+   MatchListItem,
+   MatchStatus,
+} from "@jobpilot/contracts";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
-import { companies, postings, profiles, vacancies, vacancyMatches } from "../schema.js";
+import {
+   applications,
+   companies,
+   postings,
+   profiles,
+   vacancies,
+   vacancyMatches,
+} from "../schema.js";
 
 export interface MatchInput {
    userId: string;
@@ -126,12 +139,34 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
                  )
                  .orderBy(postings.firstSeenAt)
             : [];
+         // a vacancy can have several postings, each with its own application: the latest one counts
+         const userApplications = rows.length
+            ? await db
+                 .select({
+                    vacancyId: postings.vacancyId,
+                    id: applications.id,
+                    status: applications.status,
+                 })
+                 .from(applications)
+                 .innerJoin(postings, eq(postings.id, applications.postingId))
+                 .where(
+                    and(
+                       eq(applications.userId, userId),
+                       inArray(
+                          postings.vacancyId,
+                          rows.map((r) => r.vacancyId),
+                       ),
+                    ),
+                 )
+                 .orderBy(desc(applications.updatedAt))
+            : [];
 
          return rows.map(
             ({ analysis, salaryMin, salaryMax, salaryCurrency, salaryPeriod, ...r }) => ({
                ...r,
                evaluatedAt: r.evaluatedAt.toISOString(),
                urls: urls.filter((u) => u.vacancyId === r.vacancyId).map((u) => u.url),
+               application: applicationOf(userApplications, r.vacancyId),
                verdict: analysis.ai?.verdict ?? null,
                summary: analysis.ai?.summary ?? null,
                concerns: analysis.ai?.concerns ?? [],
@@ -206,4 +241,12 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
          return rows.length > 0;
       },
    };
+}
+
+function applicationOf(
+   userApplications: { vacancyId: string | null; id: string; status: ApplicationStatus }[],
+   vacancyId: string,
+): MatchListItem["application"] {
+   const found = userApplications.find((a) => a.vacancyId === vacancyId);
+   return found ? { id: found.id, status: found.status } : null;
 }

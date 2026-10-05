@@ -1,9 +1,12 @@
 import { Navigate, NavLink, Route, Routes } from "react-router";
+import { ApplicationPage } from "./ApplicationPage";
+import { ApplicationsPage } from "./ApplicationsPage";
 import { DocumentsPage } from "./DocumentsPage";
 import { MatchesPage } from "./MatchesPage";
 
 const pages = [
    { path: "/matches", title: "Matches" },
+   { path: "/applications", title: "Applications" },
    { path: "/documents", title: "Documents" },
 ];
 
@@ -28,6 +31,8 @@ export function App() {
          </nav>
          <Routes>
             <Route path="/matches" element={<MatchesPage />} />
+            <Route path="/applications" element={<ApplicationsPage />} />
+            <Route path="/applications/:id" element={<ApplicationPage />} />
             <Route path="/documents" element={<DocumentsPage />} />
             <Route path="*" element={<Navigate to="/matches" replace />} />
          </Routes>

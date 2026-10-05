@@ -1,4 +1,4 @@
-import type { ApplicationView } from "@jobpilot/contracts";
+import type { ApplicationListItem, ApplicationView } from "@jobpilot/contracts";
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Database } from "../infra/database.js";
 import { ApplicationQueue } from "./application-queue.service.js";
@@ -43,6 +43,10 @@ export class ApplicationsService {
       }
       await this.queue.fill(applicationId);
       return true;
+   }
+
+   list(userId: string): Promise<ApplicationListItem[]> {
+      return this.db.applications.listForUser(userId);
    }
 
    get(userId: string, applicationId: string): Promise<ApplicationView | undefined> {
