@@ -1,11 +1,10 @@
 import type { ApplicationView, FormField } from "@jobpilot/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { apiGet, apiPost } from "./api";
 
 // how often to check on the worker: answering takes seconds, sending is up to the user
-const PREPARING_POLL_MS = 2000;
+const PREPARING_POLL_MS = 3000;
 const FILLING_POLL_MS = 5000;
 
 /**
@@ -15,16 +14,15 @@ const FILLING_POLL_MS = 5000;
 export function ApplicationPage() {
    const { id } = useParams<{ id: string }>();
    const queryClient = useQueryClient();
-   // the browser window is open: watch for the user sending the form there
-   const [filling, setFilling] = useState(false);
 
    const application = useQuery({
       queryKey: ["application", id],
       queryFn: () => apiGet<ApplicationView>(`/applications/${id}`),
       refetchInterval: (query) => {
-         const status = query.state.data?.status;
-         if (status === "preparing") return PREPARING_POLL_MS;
-         if (status === "ready_for_review" && filling) return FILLING_POLL_MS;
+         const app = query.state.data;
+         if (app?.status === "preparing") return PREPARING_POLL_MS;
+         // the window is open: watch for the user sending the form or closing it
+         if (app?.filling) return FILLING_POLL_MS;
          return false;
       },
    });
@@ -38,17 +36,11 @@ export function ApplicationPage() {
       ]);
    const prepareAgain = useMutation({
       mutationFn: (vacancyId: string) => apiPost("/applications", { vacancyId }),
-      onSuccess: () => {
-         setFilling(false);
-         return refresh();
-      },
+      onSuccess: refresh,
    });
    const fill = useMutation({
       mutationFn: () => apiPost(`/applications/${id}/fill`),
-      onSuccess: () => {
-         setFilling(true);
-         return refresh();
-      },
+      onSuccess: refresh,
    });
 
    const app = application.data;
@@ -98,14 +90,14 @@ export function ApplicationPage() {
                      Sent on {new Date(app.updatedAt).toLocaleDateString()}.
                   </p>
                )}
-               {app.status === "ready_for_review" && filling && (
+               {app.status === "ready_for_review" && app.filling && (
                   <p className="text-gray-600">
                      The form is open in a browser window on this machine: check it there and send
                      it, or close the window.
                   </p>
                )}
                {/* a problem with the last filling: the answers are still here to try again */}
-               {app.status === "ready_for_review" && app.failureReason && !filling && (
+               {app.status === "ready_for_review" && app.failureReason && !app.filling && (
                   <p className="text-red-600">{app.failureReason}</p>
                )}
 
@@ -121,7 +113,7 @@ export function ApplicationPage() {
                   {app.status === "ready_for_review" && (
                      <button
                         onClick={() => fill.mutate()}
-                        disabled={busy}
+                        disabled={busy || app.filling}
                         className="rounded bg-gray-900 px-3 py-1 text-sm text-white hover:bg-gray-700 disabled:opacity-50"
                      >
                         Open in browser
@@ -131,7 +123,7 @@ export function ApplicationPage() {
                      app.vacancyId && (
                         <button
                            onClick={() => prepareAgain.mutate(app.vacancyId!)}
-                           disabled={busy}
+                           disabled={busy || app.filling}
                            className="rounded bg-gray-100 px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-50"
                         >
                            {app.status === "failed" ? "Try again" : "Answer again"}

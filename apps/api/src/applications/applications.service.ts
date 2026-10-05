@@ -49,7 +49,8 @@ export class ApplicationsService {
       return this.db.applications.listForUser(userId);
    }
 
-   get(userId: string, applicationId: string): Promise<ApplicationView | undefined> {
-      return this.db.applications.get(userId, applicationId);
+   async get(userId: string, applicationId: string): Promise<ApplicationView | undefined> {
+      const application = await this.db.applications.get(userId, applicationId);
+      return application && { ...application, filling: await this.queue.isFilling(applicationId) };
    }
 }

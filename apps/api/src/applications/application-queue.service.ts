@@ -4,8 +4,16 @@ import {
    type PrepareApplicationJobData,
 } from "@jobpilot/contracts";
 import { Injectable, type OnApplicationShutdown } from "@nestjs/common";
-import { Queue } from "bullmq";
+import { Queue, type JobState } from "bullmq";
 import { RedisService } from "../infra/redis.service.js";
+
+// a fill job in one of these states has not finished: its browser window is open, or about to open
+const UNFINISHED_JOB_STATES: readonly (JobState | "unknown")[] = [
+   "waiting",
+   "prioritized",
+   "delayed",
+   "active",
+];
 
 /** The API only adds jobs; the worker opens the browser and calls the model. */
 @Injectable()
@@ -48,6 +56,18 @@ export class ApplicationQueue implements OnApplicationShutdown {
             removeOnFail: 100,
          },
       );
+   }
+
+   /**
+    * The application's form is open in a browser window: its fill job is still queued or running.
+    * The job ends when the user sends the form, closes the window or lets it time out, so this needs
+    * no state of its own, and a crashed worker's job is cleaned up by BullMQ, not left "open".
+    */
+   async isFilling(applicationId: string): Promise<boolean> {
+      const jobId = await this.fillQueue.getDeduplicationJobId(applicationId);
+      if (!jobId) return false;
+      const state = await this.fillQueue.getJobState(jobId);
+      return UNFINISHED_JOB_STATES.includes(state);
    }
 
    async onApplicationShutdown() {

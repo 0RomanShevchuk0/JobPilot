@@ -1,12 +1,12 @@
-import type {
-   ApplicationListItem,
-   ApplicationStatus,
-   ApplicationView,
-   FormField,
-} from "@jobpilot/contracts";
+import type { ApplicationListItem, ApplicationStatus, FormField } from "@jobpilot/contracts";
 import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { applications, postings, vacancies } from "../schema.js";
+
+/** An application with its answers, as stored. */
+export interface StoredApplication extends ApplicationListItem {
+   fields: FormField[];
+}
 
 /** What the worker needs to prepare an application. */
 export interface ApplicationToPrepare {
@@ -33,7 +33,7 @@ export interface ApplicationsRepository {
    startPreparing(userId: string, postingId: string): Promise<{ id: string } | undefined>;
    /** My applications, the latest activity first. */
    listForUser(userId: string): Promise<ApplicationListItem[]>;
-   get(userId: string, applicationId: string): Promise<ApplicationView | undefined>;
+   get(userId: string, applicationId: string): Promise<StoredApplication | undefined>;
    getToPrepare(applicationId: string): Promise<ApplicationToPrepare | undefined>;
    /** The form was read and answered: ready for the user to review. */
    setPrepared(applicationId: string, fields: FormField[]): Promise<void>;
@@ -58,7 +58,11 @@ const listColumns = {
 };
 
 function withIsoDates<T extends { createdAt: Date; updatedAt: Date }>(row: T) {
-   return { ...row, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() };
+   return {
+      ...row,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+   };
 }
 
 export function createApplicationsRepository(db: Drizzle): ApplicationsRepository {
