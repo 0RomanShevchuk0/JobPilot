@@ -3,7 +3,7 @@
    "private": true,
    "type": "module",
    "scripts": {
-      "dev": "tsc && concurrently --kill-others --names tsc,worker --prefix-colors blue,magenta \"tsc --watch --preserveWatchOutput\" \"node --watch dist/main.js\"",
+      "dev": "tsc && concurrently --kill-others --names tsc,worker --prefix-colors blue,magenta \"tsc --watch --preserveWatchOutput\" \"node --watch --watch-preserve-output dist/main.js\"",
       "build": "tsc",
       "start": "node dist/main.js",
       "discover:now": "tsc && node dist/discover-now.js",
