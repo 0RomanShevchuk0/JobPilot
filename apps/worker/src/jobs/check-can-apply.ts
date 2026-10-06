@@ -1,5 +1,10 @@
-import type { ApplyCheck, CheckCanApplyJobData, ScoreVacancyJobData } from "@jobpilot/contracts";
-import { checkCanApply, DjinniSessionExpiredError } from "@jobpilot/apply";
+import {
+   SourceIds,
+   type CheckCanApplyJobData,
+   type JobPageCheck,
+   type ScoreVacancyJobData,
+} from "@jobpilot/contracts";
+import { checkDjinniJobPage, DjinniSessionExpiredError } from "@jobpilot/apply";
 import type { DatabaseClient } from "@jobpilot/db";
 import { SCORING_PROMPT_VERSION } from "@jobpilot/matching";
 import type { Job, Queue } from "bullmq";
@@ -8,12 +13,13 @@ import { log } from "../log.js";
 import { scoreVacancyJobOptions } from "../queues.js";
 
 // job sites that tell a logged-in user whether they can apply
-const CHECKED_SOURCES = ["djinni"];
+const CHECKED_SOURCES = [SourceIds.djinni];
 
 /**
  * One prefiltered vacancy × one user → asks the job site whether they can apply → what they can't
- * (applied already, the job is closed, unmet requirements) is dropped; the rest goes to scoring.
- * Without a session the check is skipped, not the vacancy: it is scored as before.
+ * (applied already, the job is closed, unmet requirements) is dropped; the rest goes to scoring, with
+ * what the site said of the salary against their expectations. Without a session the check is skipped,
+ * not the vacancy: it is scored as before.
  */
 export async function handleCheckCanApply(
    job: Job<CheckCanApplyJobData>,
@@ -30,16 +36,17 @@ export async function handleCheckCanApply(
 
    const posting = await database.applications.findPostingToApply(vacancyId, CHECKED_SOURCES);
    // undefined: not asked, the vacancy has no Djinni posting or there is no session
-   const applyCheck = posting ? await checkOnDjinni(posting.url) : undefined;
-   if (applyCheck) {
-      const saved = await database.matches.saveApplyCheck(
+   const pageCheck = posting ? await checkOnDjinni(posting.url) : undefined;
+   if (pageCheck) {
+      const saved = await database.matches.saveJobPageCheck(
          userId,
          vacancyId,
          stored.version,
-         applyCheck,
+         pageCheck,
       );
       if (!saved) return "stale";
    }
+   const applyCheck = pageCheck?.applyCheck;
    if (posting && applyCheck && !applyCheck.canApply) {
       log("check-can-apply", `✗ ${posting.url} — ${applyCheck.reason}`);
       return "cannot apply";
@@ -56,9 +63,9 @@ export async function handleCheckCanApply(
 }
 
 /** Asks Djinni; undefined when it can't be asked: no session, or it's over. */
-async function checkOnDjinni(url: string): Promise<ApplyCheck | undefined> {
+async function checkOnDjinni(url: string): Promise<JobPageCheck | undefined> {
    try {
-      return await checkCanApply(url, config.djinniSessionPath);
+      return await checkDjinniJobPage(url, config.djinniSessionPath);
    } catch (err) {
       if (!(err instanceof DjinniSessionExpiredError)) throw err;
       log(

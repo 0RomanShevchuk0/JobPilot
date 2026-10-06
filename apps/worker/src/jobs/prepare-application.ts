@@ -1,4 +1,9 @@
-import type { FormField, PrepareApplicationJobData, Profile } from "@jobpilot/contracts";
+import {
+   SourceIds,
+   type FormField,
+   type PrepareApplicationJobData,
+   type Profile,
+} from "@jobpilot/contracts";
 import {
    DjinniCannotApplyError,
    DjinniSessionExpiredError,
@@ -64,7 +69,7 @@ async function prepare(
    llm: LlmProvider,
 ) {
    const { userId, vacancyId, postingUrl, source } = application;
-   if (source !== "djinni")
+   if (source !== SourceIds.djinni)
       throw new UnrecoverableError(`Applying through ${source} is not supported yet`);
    const stored = await database.profiles.get(userId);
    if (!stored) throw new UnrecoverableError("No profile yet");

@@ -1,11 +1,11 @@
-import type { PostingRef, SourceAdapter } from "@jobpilot/contracts";
+import { SourceIds, type PostingRef, type SourceAdapter } from "@jobpilot/contracts";
 import { getText } from "../http.js";
 import { isClosedPage, parseJobPage } from "./job-page.js";
 import { parseRss, rssUrl } from "./rss.js";
 
 export function createDjinniAdapter(): SourceAdapter {
    return {
-      source: "djinni",
+      source: SourceIds.djinni,
       parserVersion: 3,
 
       async discover({ keywords }) {

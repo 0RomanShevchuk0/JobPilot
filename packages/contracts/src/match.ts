@@ -74,12 +74,27 @@ export type AiAssessment = z.infer<typeof aiAssessmentSchema>;
 export type ApplyCheck = { canApply: true } | { canApply: false; reason: string };
 
 /**
- * What is stored in vacancy_matches.analysis. applyCheck is absent until the job site is asked (or when
- * it couldn't be, e.g. no session), ai until the vacancy is scored.
+ * How the job's salary range compares with the expectations in the user's profile on the job site.
+ * The site says so even when it hides the range, which is most of the time. fits includes a range above
+ * the expectations: the site words it differently but marks it the same way.
+ */
+export type SalaryFit = "fits" | "below_expectations";
+
+/** What a job page shows a user logged in to the job site. */
+export interface JobPageCheck {
+   applyCheck: ApplyCheck;
+   /** absent when the page doesn't say */
+   salaryFit?: SalaryFit;
+}
+
+/**
+ * What is stored in vacancy_matches.analysis. applyCheck and salaryFit are absent until the job site is
+ * asked (or when it couldn't be, e.g. no session), ai until the vacancy is scored.
  */
 export interface MatchAnalysis {
    prefilter: PrefilterResult;
    applyCheck?: ApplyCheck;
+   salaryFit?: SalaryFit;
    ai?: AiAssessment;
 }
 
@@ -109,6 +124,8 @@ export interface MatchListItem {
    rejectedBy: RejectReason[];
    /** why the job site won't let me apply; null when it will or wasn't asked */
    cannotApplyReason: string | null;
+   /** what the job site says of the salary against my expectations there; null when it wasn't asked */
+   salaryFit: SalaryFit | null;
    salary: Salary | null;
    workModes: WorkMode[];
    status: MatchStatus;

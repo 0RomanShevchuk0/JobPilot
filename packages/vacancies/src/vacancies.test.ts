@@ -1,4 +1,4 @@
-import type { NormalizedPosting } from "@jobpilot/contracts";
+import { SourceIds, type NormalizedPosting } from "@jobpilot/contracts";
 import { describe, expect, it } from "vitest";
 import {
    mergeVacancy,
@@ -79,7 +79,7 @@ const posting = (
 ): PostingForMerge => ({
    postingId: id,
    parsed: {
-      source: "djinni",
+      source: SourceIds.djinni,
       externalId: id,
       url: `https://djinni.co/jobs/${id}-x/`,
       title: "Senior Node.js Developer",

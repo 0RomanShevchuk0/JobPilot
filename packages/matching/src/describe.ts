@@ -1,4 +1,12 @@
-import type { Language, Location, Profile, Salary, Seniority, WorkMode } from "@jobpilot/contracts";
+import type {
+   Language,
+   Location,
+   Profile,
+   Salary,
+   SalaryFit,
+   Seniority,
+   WorkMode,
+} from "@jobpilot/contracts";
 import { redactContacts } from "./redact.js";
 
 // How the candidate and a vacancy are written into prompts: shared by scoring and application answers.
@@ -20,6 +28,8 @@ export interface VacancyForPrompt {
    locations: Location[];
    languages: Language[];
    salary?: Salary;
+   /** what the job site said of the salary against the candidate's expectations there, when asked */
+   salaryFit?: SalaryFit;
    skills: string[];
 }
 
@@ -62,9 +72,16 @@ export function describeVacancy(v: VacancyForPrompt): string {
       ["Candidates from", places(v.locations, "candidate")],
       ["Languages", list(v.languages.map(language))],
       ["Salary", v.salary ? salary(v.salary) : "not stated"],
+      ["Salary per the job site", v.salaryFit && SALARY_FIT_NOTES[v.salaryFit]],
       ["Skill tags", list(v.skills)],
    ])}\n\nDescription:\n<description>\n${description}\n</description>`;
 }
+
+// the job site compares the salary, a hidden one too, with the expectations in the candidate's profile there
+const SALARY_FIT_NOTES: Record<SalaryFit, string> = {
+   fits: "matches or exceeds the candidate's expectations",
+   below_expectations: "below the candidate's expectations, by how much is unknown",
+};
 
 function cut(text: string, max: number): string {
    return text.length > max ? `${text.slice(0, max)}\n[cut]` : text;

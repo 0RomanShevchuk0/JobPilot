@@ -1,6 +1,7 @@
 import type {
    AiAssessment,
    ApplyCheck,
+   JobPageCheck,
    ApplicationStatus,
    MatchAnalysis,
    MatchListItem,
@@ -77,14 +78,15 @@ export interface MatchesRepository {
       assessment: Assessment,
    ): Promise<boolean>;
    /**
-    * Adds whether the job site lets the user apply to the evaluation it was asked for, on the same terms
-    * as saveAssessment. Returns false when the evaluation was replaced meanwhile.
+    * Adds what the job page showed the user (whether they can apply, the salary against their
+    * expectations) to the evaluation it was asked for, on the same terms as saveAssessment. Returns
+    * false when the evaluation was replaced meanwhile.
     */
-   saveApplyCheck(
+   saveJobPageCheck(
       userId: string,
       vacancyId: string,
       profileVersion: number,
-      applyCheck: ApplyCheck,
+      check: JobPageCheck,
    ): Promise<boolean>;
 }
 
@@ -189,6 +191,7 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
                missingSkills: analysis.ai?.missingSkills ?? [],
                rejectedBy: analysis.prefilter.rejectedBy,
                cannotApplyReason: cannotApplyReason(analysis.applyCheck),
+               salaryFit: analysis.salaryFit ?? null,
                salary:
                   salaryCurrency && salaryPeriod && (salaryMin !== null || salaryMax !== null)
                      ? {
@@ -257,11 +260,12 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
          return rows.length > 0;
       },
 
-      async saveApplyCheck(userId, vacancyId, profileVersion, applyCheck) {
+      async saveJobPageCheck(userId, vacancyId, profileVersion, check) {
          const rows = await db
             .update(vacancyMatches)
             .set({
-               analysis: sql`${vacancyMatches.analysis} || jsonb_build_object('applyCheck', ${JSON.stringify(applyCheck)}::jsonb)`,
+               // its keys (applyCheck, salaryFit) go next to the prefilter's in the analysis
+               analysis: sql`${vacancyMatches.analysis} || ${JSON.stringify(check)}::jsonb`,
             })
             .where(
                and(
