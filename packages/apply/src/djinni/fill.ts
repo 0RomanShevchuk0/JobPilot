@@ -35,16 +35,17 @@ export async function fillDjinniApplication(
    const page = await context.newPage();
    try {
       await openApplyForm(page, jobUrl);
+      for (const value of values) {
+         await fillField(page, value);
+         await page.waitForTimeout(STEP_PAUSE_MS);
+      }
+      await page.locator("#job_apply").scrollIntoViewIfNeeded();
    } catch (err) {
+      // the user closed the window before the form was filled in: nothing was sent, as after filling
+      if (page.isClosed()) return { status: "cancelled" };
       await page.close();
       throw err;
    }
-
-   for (const value of values) {
-      await fillField(page, value);
-      await page.waitForTimeout(STEP_PAUSE_MS);
-   }
-   await page.locator("#job_apply").scrollIntoViewIfNeeded();
 
    const jobId = JOB_ID_IN_URL.exec(jobUrl)?.[1];
    if (!jobId) throw new Error(`not a Djinni job URL: ${jobUrl}`);
