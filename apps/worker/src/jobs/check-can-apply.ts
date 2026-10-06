@@ -1,7 +1,8 @@
 import {
    SourceIds,
+   type BuildVacancyJobData,
    type CheckCanApplyJobData,
-   type JobPageCheck,
+   type JobPageResult,
    type ScoreVacancyJobData,
 } from "@jobpilot/contracts";
 import { checkDjinniJobPage, DjinniSessionExpiredError } from "@jobpilot/apply";
@@ -10,7 +11,7 @@ import { SCORING_PROMPT_VERSION } from "@jobpilot/matching";
 import type { Job, Queue } from "bullmq";
 import { config } from "../config.js";
 import { log } from "../log.js";
-import { scoreVacancyJobOptions } from "../queues.js";
+import { buildVacancyJobOptions, scoreVacancyJobOptions } from "../queues.js";
 
 // job sites that tell a logged-in user whether they can apply
 const CHECKED_SOURCES = [SourceIds.djinni];
@@ -25,6 +26,7 @@ export async function handleCheckCanApply(
    job: Job<CheckCanApplyJobData>,
    database: DatabaseClient,
    scoreVacancyQueue: Queue<ScoreVacancyJobData>,
+   buildVacancyQueue: Queue<BuildVacancyJobData>,
 ) {
    const { userId, vacancyId } = job.data;
 
@@ -36,7 +38,20 @@ export async function handleCheckCanApply(
 
    const posting = await database.applications.findPostingToApply(vacancyId, CHECKED_SOURCES);
    // undefined: not asked, the vacancy has no Djinni posting or there is no session
-   const pageCheck = posting ? await checkOnDjinni(posting.url) : undefined;
+   const result = posting ? await checkOnDjinni(posting.url) : undefined;
+   if (posting && result?.status === "gone") {
+      // as when fetching finds the page gone: the posting is gone, its vacancy may now be closed
+      await database.postings.markGone(posting.id);
+      await buildVacancyQueue.add(
+         "build-vacancy",
+         { postingId: posting.id },
+         buildVacancyJobOptions(posting.id),
+      );
+      log("check-can-apply", `✗ ${posting.url} — gone (closed or removed)`);
+      return "gone";
+   }
+
+   const pageCheck = result?.status === "ok" ? result.check : undefined;
    if (pageCheck) {
       const saved = await database.matches.saveJobPageCheck(
          userId,
@@ -63,7 +78,7 @@ export async function handleCheckCanApply(
 }
 
 /** Asks Djinni; undefined when it can't be asked: no session, or it's over. */
-async function checkOnDjinni(url: string): Promise<JobPageCheck | undefined> {
+async function checkOnDjinni(url: string): Promise<JobPageResult | undefined> {
    try {
       return await checkDjinniJobPage(url, config.djinniSessionPath);
    } catch (err) {
