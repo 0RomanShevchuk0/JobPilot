@@ -45,6 +45,10 @@ export async function handleFillApplication(
          return "cancelled";
       }
       await database.applications.setSubmitted(applicationId);
+      // the vacancy moves to Applied in Matches, as if the user had marked it there
+      if (application.vacancyId) {
+         await database.matches.setStatus(application.userId, application.vacancyId, "applied");
+      }
       log("fill-application", `${application.postingUrl}: sent`);
       return "submitted";
    } catch (err) {
