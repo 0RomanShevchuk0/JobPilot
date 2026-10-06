@@ -1,5 +1,6 @@
 import type { FormFieldKind } from "@jobpilot/contracts";
 import type { BrowserContext, Page } from "playwright";
+import { APPLY_BUTTON, readApplyCheck, SIGN_IN_LINK } from "./job-page.js";
 import { DjinniSessionExpiredError } from "./session.js";
 
 /**
@@ -32,40 +33,16 @@ export interface ApplyForm {
 
 // Djinni names the recruiter's questions after their id: "answer_167872"
 const QUESTION_NAME = /^answer_\d+$/;
-// "Apply for the job": in the page's HTML from the start, no waiting for it
-const APPLY_BUTTON = "button.js-inbox-toggle-reply-form";
-// on a job applied to already, a card with a link to that dialog replaces the button
-const ALREADY_APPLIED = '.card-body a[href^="/my/inbox/"]';
-// on a closed job, an alert after the empty apply block: "The job ad is no longer active"
-const JOB_CLOSED = "#apply_job ~ .alert";
-// the requirements the profile fails, listed in the main column (the sidebar lists all of them)
-const UNMET_REQUIREMENTS = ".col-lg-8 .job-matching-info li strong";
 
 /** Opens a job page with the user's session and presses "Apply for the job": the form is then on screen. */
 export async function openApplyForm(page: Page, jobUrl: string): Promise<void> {
    await page.goto(jobUrl);
-   if ((await page.locator("a.sign-in-link").count()) > 0) throw new DjinniSessionExpiredError();
-   const button = page.locator(APPLY_BUTTON).first();
-   if ((await button.count()) === 0) {
-      const reason = await whyNoApplyButton(page);
-      throw new DjinniCannotApplyError(reason);
-   }
-   await button.click();
+   if ((await page.locator(SIGN_IN_LINK).count()) > 0) throw new DjinniSessionExpiredError();
+   const html = await page.content();
+   const applyCheck = readApplyCheck(html);
+   if (!applyCheck.canApply) throw new DjinniCannotApplyError(applyCheck.reason);
+   await page.locator(APPLY_BUTTON).first().click();
    await page.locator("#apply_form").waitFor({ state: "visible" });
-}
-
-/** Why a job page has no "Apply" button, as the page tells it. */
-async function whyNoApplyButton(page: Page): Promise<string> {
-   if ((await page.locator(ALREADY_APPLIED).count()) > 0)
-      return "Already applied to this job on Djinni";
-   if ((await page.locator(JOB_CLOSED).count()) > 0) return "The job is no longer active on Djinni";
-   const unmet = (await page.locator(UNMET_REQUIREMENTS).allInnerTexts())
-      .map((text) => text.replace(/\s+/g, " ").trim()) // "English\n   C1 - Advanced" → "English C1 - Advanced"
-      .filter(Boolean);
-   if (unmet.length > 0) {
-      return `Your Djinni profile doesn't meet the job's requirements: ${unmet.join(", ")}`;
-   }
-   return "Djinni shows no Apply button on this job";
 }
 
 /**

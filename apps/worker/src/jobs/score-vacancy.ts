@@ -20,6 +20,7 @@ export async function handleScoreVacancy(
    // match-vacancy decides what to score; if the evaluation changed since, a newer job is on its way
    const match = await database.matches.get(userId, vacancyId);
    if (!match || match.profileVersion !== stored.version || !match.prefilterPassed) return "stale";
+   if (match.analysis.applyCheck?.canApply === false) return "cannot apply";
    if (match.promptVersion === SCORING_PROMPT_VERSION) return "up to date";
 
    // errors (rate limits, timeouts, an answer that fails the schema) throw here and the queue retries

@@ -1,6 +1,6 @@
 // Every queue of the system and the data its jobs carry, in pipeline order:
 //
-//   discover → fetch-<source> → build-vacancy → match-vacancy → score-vacancy
+//   discover → fetch-<source> → build-vacancy → match-vacancy → check-can-apply → score-vacancy
 //                                                  ↑
 //   match-user (profile changed) ──────────────────┘
 //
@@ -15,8 +15,14 @@ export const QueueNames = {
    discover: "discover",
    /** Builds or updates the vacancy of a stored posting. */
    buildVacancy: "build-vacancy",
-   /** Evaluates one vacancy for one user with the prefilter; what passes goes to score-vacancy. */
+   /** Evaluates one vacancy for one user with the prefilter; what passes goes to check-can-apply. */
    matchVacancy: "match-vacancy",
+   /**
+    * Asks the job site whether the user can apply to a prefiltered vacancy (its job page with their
+    * session): what they can't is dropped, the rest goes to score-vacancy. Rate-limited: the requests
+    * are the user's.
+    */
+   checkCanApply: "check-can-apply",
    /** Scores one prefiltered vacancy for one user with an LLM. Rate-limited by the provider. */
    scoreVacancy: "score-vacancy",
    /** Opens an application form on the job site and answers it with an LLM. Added by the API. */
@@ -46,6 +52,11 @@ export interface BuildVacancyJobData {
 }
 
 export interface MatchVacancyJobData {
+   userId: string;
+   vacancyId: string;
+}
+
+export interface CheckCanApplyJobData {
    userId: string;
    vacancyId: string;
 }

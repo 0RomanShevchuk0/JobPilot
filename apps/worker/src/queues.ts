@@ -38,6 +38,15 @@ export const matchVacancyJobOptions = (userId: string, vacancyId: string): JobsO
    removeOnFail: 1000,
 });
 
+/** One pending can-apply check per user and vacancy, like match-vacancy. */
+export const checkCanApplyJobOptions = (userId: string, vacancyId: string): JobsOptions => ({
+   deduplication: { id: `${userId}_${vacancyId}`, keepLastIfActive: true },
+   attempts: 3,
+   backoff: { type: "exponential", delay: 30_000 },
+   removeOnComplete: 1000,
+   removeOnFail: 1000,
+});
+
 /**
  * One pending scoring per user and vacancy, like match-vacancy. The backoff is long: a failure is
  * usually the provider's rate limit or an outage, not something a quick retry fixes.

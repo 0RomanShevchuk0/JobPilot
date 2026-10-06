@@ -1,5 +1,6 @@
 import type {
    AiAssessment,
+   ApplyCheck,
    ApplicationStatus,
    MatchAnalysis,
    MatchListItem,
@@ -75,12 +76,24 @@ export interface MatchesRepository {
       profileVersion: number,
       assessment: Assessment,
    ): Promise<boolean>;
+   /**
+    * Adds whether the job site lets the user apply to the evaluation it was asked for, on the same terms
+    * as saveAssessment. Returns false when the evaluation was replaced meanwhile.
+    */
+   saveApplyCheck(
+      userId: string,
+      vacancyId: string,
+      profileVersion: number,
+      applyCheck: ApplyCheck,
+   ): Promise<boolean>;
 }
 
 export function createMatchesRepository(db: Drizzle): MatchesRepository {
    return {
       async listForUser(userId, { status, includeSkipped }) {
          const verdict = sql`${vacancyMatches.analysis}->'ai'->>'verdict'`;
+         // absent when the job site wasn't asked: such vacancies stay
+         const canApply = sql`(${vacancyMatches.analysis}->'applyCheck'->>'canApply') is distinct from 'false'`;
          const rows = await db
             .select({
                vacancyId: vacancies.id,
@@ -117,6 +130,8 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
                   status === null && !includeSkipped
                      ? inArray(verdict, ["apply", "stretch"])
                      : undefined,
+                  // what the job site won't let me apply to is no use among the new ones
+                  status === null && !includeSkipped ? canApply : undefined,
                ),
             )
             .orderBy(
@@ -173,6 +188,7 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
                matchedSkills: analysis.ai?.matchedSkills ?? [],
                missingSkills: analysis.ai?.missingSkills ?? [],
                rejectedBy: analysis.prefilter.rejectedBy,
+               cannotApplyReason: cannotApplyReason(analysis.applyCheck),
                salary:
                   salaryCurrency && salaryPeriod && (salaryMin !== null || salaryMax !== null)
                      ? {
@@ -240,6 +256,24 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
             .returning({ vacancyId: vacancyMatches.vacancyId });
          return rows.length > 0;
       },
+
+      async saveApplyCheck(userId, vacancyId, profileVersion, applyCheck) {
+         const rows = await db
+            .update(vacancyMatches)
+            .set({
+               analysis: sql`${vacancyMatches.analysis} || jsonb_build_object('applyCheck', ${JSON.stringify(applyCheck)}::jsonb)`,
+            })
+            .where(
+               and(
+                  eq(vacancyMatches.userId, userId),
+                  eq(vacancyMatches.vacancyId, vacancyId),
+                  eq(vacancyMatches.profileVersion, profileVersion),
+                  eq(vacancyMatches.prefilterPassed, true),
+               ),
+            )
+            .returning({ vacancyId: vacancyMatches.vacancyId });
+         return rows.length > 0;
+      },
    };
 }
 
@@ -249,4 +283,8 @@ function applicationOf(
 ): MatchListItem["application"] {
    const found = userApplications.find((a) => a.vacancyId === vacancyId);
    return found ? { id: found.id, status: found.status } : null;
+}
+
+function cannotApplyReason(applyCheck: ApplyCheck | undefined): string | null {
+   return applyCheck && !applyCheck.canApply ? applyCheck.reason : null;
 }

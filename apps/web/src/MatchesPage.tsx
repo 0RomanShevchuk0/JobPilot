@@ -92,7 +92,8 @@ function MatchCard({ match }: { match: MatchListItem }) {
          await navigate(`/applications/${id}`);
       },
    });
-   const status = match.verdict ?? (match.rejectedBy.length > 0 ? "rejected" : "pending");
+   const rejected = match.rejectedBy.length > 0 || match.cannotApplyReason !== null;
+   const status = match.verdict ?? (rejected ? "rejected" : "pending");
    const details = [
       match.company,
       match.salary && formatSalary(match.salary),
@@ -129,13 +130,16 @@ function MatchCard({ match }: { match: MatchListItem }) {
                      Application: {applicationStatusLabels[match.application.status]}
                   </Link>
                ) : (
-                  <button
-                     onClick={() => apply.mutate()}
-                     disabled={apply.isPending}
-                     className="rounded bg-gray-900 px-2 py-1 text-sm text-white hover:bg-gray-700 disabled:opacity-50"
-                  >
-                     Apply
-                  </button>
+                  // the job site won't take an application: the reason is shown below
+                  !match.cannotApplyReason && (
+                     <button
+                        onClick={() => apply.mutate()}
+                        disabled={apply.isPending}
+                        className="rounded bg-gray-900 px-2 py-1 text-sm text-white hover:bg-gray-700 disabled:opacity-50"
+                     >
+                        Apply
+                     </button>
+                  )
                )}
                {match.status === null ? (
                   <>
@@ -163,6 +167,10 @@ function MatchCard({ match }: { match: MatchListItem }) {
                <span className="text-gray-500">Missing: </span>
                {match.missingSkills.join(", ")}
             </p>
+         )}
+
+         {match.cannotApplyReason && (
+            <p className="mt-3 text-sm text-red-700">{match.cannotApplyReason}</p>
          )}
 
          {(match.concerns.length > 0 || match.rejectedBy.length > 0) && (

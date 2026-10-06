@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { launchBrowser } from "../browser.js";
@@ -87,6 +87,26 @@ async function saveDjinniCookies(profile: string, sessionPath: string): Promise<
    } finally {
       await context.close();
    }
+}
+
+/**
+ * The saved session as a Cookie header, for plain HTTP requests without a browser. Expired cookies are
+ * left out; whether Djinni still accepts the rest only a request tells.
+ */
+export async function djinniCookieHeader(sessionPath: string): Promise<string> {
+   let file: string;
+   try {
+      file = await readFile(sessionPath, "utf8");
+   } catch {
+      throw new DjinniSessionExpiredError(); // no session file yet
+   }
+   const { cookies } = JSON.parse(file) as {
+      cookies: { name: string; value: string; expires: number }[];
+   };
+   const nowSeconds = Date.now() / 1000;
+   // expires is in seconds, -1 for a cookie that lives as long as the browser session
+   const live = cookies.filter((c) => c.expires === -1 || c.expires > nowSeconds);
+   return live.map((c) => `${c.name}=${c.value}`).join("; ");
 }
 
 /** A browser context with the saved Djinni session, introducing itself as an ordinary desktop Chrome. */

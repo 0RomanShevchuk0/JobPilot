@@ -19,9 +19,9 @@ export class ApplicationsService {
     * refreshForm reads the form again first.
     */
    async prepare(userId: string, vacancyId: string, refreshForm: boolean): Promise<{ id: string }> {
-      const postingId = await this.db.applications.findPostingToApply(vacancyId, APPLY_SOURCES);
-      if (!postingId) throw new NotFoundException("No open Djinni posting for this vacancy");
-      const application = await this.db.applications.startPreparing(userId, postingId);
+      const posting = await this.db.applications.findPostingToApply(vacancyId, APPLY_SOURCES);
+      if (!posting) throw new NotFoundException("No open Djinni posting for this vacancy");
+      const application = await this.db.applications.startPreparing(userId, posting.id);
       if (!application) throw new ConflictException("Already applied to this vacancy");
       await this.queue.prepare(application.id, refreshForm);
       return application;
