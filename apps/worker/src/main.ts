@@ -5,6 +5,7 @@ import {
    type FetchJobData,
    type BuildVacancyJobData,
    type MatchVacancyJobData,
+   type CheckCanApplyJobData,
    type MatchUserJobData,
    type ScoreVacancyJobData,
    type PrepareApplicationJobData,
@@ -19,6 +20,7 @@ import { handleFetch } from "./jobs/fetch.js";
 import { handleBuildVacancy } from "./jobs/build-vacancy.js";
 import { handleMatchUser } from "./jobs/match-user.js";
 import { handleMatchVacancy } from "./jobs/match-vacancy.js";
+import { handleCheckCanApply } from "./jobs/check-can-apply.js";
 import { handleScoreVacancy } from "./jobs/score-vacancy.js";
 import { handlePrepareApplication } from "./jobs/prepare-application.js";
 import { handleFillApplication } from "./jobs/fill-application.js";
@@ -41,6 +43,9 @@ const fetchQueues = new Map(
 );
 const buildVacancyQueue = new Queue<BuildVacancyJobData>(QueueNames.buildVacancy, { connection });
 const matchVacancyQueue = new Queue<MatchVacancyJobData>(QueueNames.matchVacancy, { connection });
+const checkCanApplyQueue = new Queue<CheckCanApplyJobData>(QueueNames.checkCanApply, {
+   connection,
+});
 const scoreVacancyQueue = new Queue<ScoreVacancyJobData>(QueueNames.scoreVacancy, { connection });
 const workers: Worker[] = [];
 
@@ -90,8 +95,14 @@ workers.push(
    ),
    new Worker<MatchVacancyJobData>(
       QueueNames.matchVacancy,
-      (job) => handleMatchVacancy(job, database, scoreVacancyQueue),
+      (job) => handleMatchVacancy(job, database, checkCanApplyQueue, scoreVacancyQueue),
       { connection, concurrency: 1 },
+   ),
+   new Worker<CheckCanApplyJobData>(
+      QueueNames.checkCanApply,
+      (job) => handleCheckCanApply(job, database, scoreVacancyQueue),
+      // the requests are the user's own: one job page per 5 s at most, like a person going through jobs
+      { connection, concurrency: 1, limiter: { max: 1, duration: 5000 } },
    ),
    new Worker<ScoreVacancyJobData>(
       QueueNames.scoreVacancy,
@@ -159,6 +170,7 @@ async function shutdown(signal: string) {
       discoverQueue.close(),
       buildVacancyQueue.close(),
       matchVacancyQueue.close(),
+      checkCanApplyQueue.close(),
       scoreVacancyQueue.close(),
       ...[...fetchQueues.values()].map((q) => q.close()),
    ]);

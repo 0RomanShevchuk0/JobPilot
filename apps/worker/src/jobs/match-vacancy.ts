@@ -1,18 +1,24 @@
-import type { MatchVacancyJobData, ScoreVacancyJobData } from "@jobpilot/contracts";
+import type {
+   CheckCanApplyJobData,
+   MatchVacancyJobData,
+   ScoreVacancyJobData,
+} from "@jobpilot/contracts";
 import type { DatabaseClient } from "@jobpilot/db";
 import { prefilter, SCORING_PROMPT_VERSION } from "@jobpilot/matching";
 import type { Job, Queue } from "bullmq";
 import { log } from "../log.js";
-import { scoreVacancyJobOptions } from "../queues.js";
+import { checkCanApplyJobOptions, scoreVacancyJobOptions } from "../queues.js";
 
 /**
- * One vacancy × one user → prefilter → vacancy_matches → score-vacancy for what passes.
- * Re-evaluates only what is stale: the prefilter when the profile or the vacancy changed since the
- * last evaluation, the AI score when there is none for the current prompt version.
+ * One vacancy × one user → prefilter → vacancy_matches → check-can-apply for what passes, which
+ * sends it on to score-vacancy. Re-evaluates only what is stale: the prefilter when the profile or the vacancy
+ * changed since the last evaluation, the can-apply check when it wasn't made for this evaluation, the
+ * AI score when there is none for the current prompt version.
  */
 export async function handleMatchVacancy(
    job: Job<MatchVacancyJobData>,
    database: DatabaseClient,
+   checkCanApplyQueue: Queue<CheckCanApplyJobData>,
    scoreVacancyQueue: Queue<ScoreVacancyJobData>,
 ) {
    const { userId, vacancyId } = job.data;
@@ -52,8 +58,21 @@ export async function handleMatchVacancy(
       );
    }
 
-   // a fresh prefilter result has no AI part yet; an old one may lack it or come from an older prompt
-   const needsScore = passed && (!fresh || match.promptVersion !== SCORING_PROMPT_VERSION);
+   // a fresh prefilter result has no can-apply check yet; the check queues the scoring itself
+   const applyCheck = fresh ? match.analysis.applyCheck : undefined;
+   if (passed && !applyCheck) {
+      await checkCanApplyQueue.add(
+         "check-can-apply",
+         { userId, vacancyId },
+         checkCanApplyJobOptions(userId, vacancyId),
+      );
+      return fresh ? "check site" : "passed";
+   }
+   if (!fresh) return "rejected";
+
+   // an old evaluation may lack the AI part or have it from an older prompt
+   const needsScore =
+      passed && applyCheck?.canApply !== false && match.promptVersion !== SCORING_PROMPT_VERSION;
    if (needsScore) {
       await scoreVacancyQueue.add(
          "score-vacancy",
@@ -61,7 +80,5 @@ export async function handleMatchVacancy(
          scoreVacancyJobOptions(userId, vacancyId),
       );
    }
-
-   if (!fresh) return passed ? "passed" : "rejected";
    return needsScore ? "rescore" : "up to date";
 }

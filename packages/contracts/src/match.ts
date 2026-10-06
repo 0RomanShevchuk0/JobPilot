@@ -67,9 +67,19 @@ export const aiAssessmentSchema = z.object({
 });
 export type AiAssessment = z.infer<typeof aiAssessmentSchema>;
 
-/** What is stored in vacancy_matches.analysis. ai is absent until the vacancy is scored. */
+/**
+ * Whether the job site lets the user apply, as its job page shows it to them; the reason when it won't
+ * ("Already applied…", the job is closed, unmet requirements).
+ */
+export type ApplyCheck = { canApply: true } | { canApply: false; reason: string };
+
+/**
+ * What is stored in vacancy_matches.analysis. applyCheck is absent until the job site is asked (or when
+ * it couldn't be, e.g. no session), ai until the vacancy is scored.
+ */
 export interface MatchAnalysis {
    prefilter: PrefilterResult;
+   applyCheck?: ApplyCheck;
    ai?: AiAssessment;
 }
 
@@ -97,6 +107,8 @@ export interface MatchListItem {
    missingSkills: string[];
    /** why the prefilter rejected it; empty when it passed */
    rejectedBy: RejectReason[];
+   /** why the job site won't let me apply; null when it will or wasn't asked */
+   cannotApplyReason: string | null;
    salary: Salary | null;
    workModes: WorkMode[];
    status: MatchStatus;
