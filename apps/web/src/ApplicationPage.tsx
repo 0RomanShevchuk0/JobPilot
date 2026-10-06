@@ -1,7 +1,8 @@
-import type { ApplicationView, FormField } from "@jobpilot/contracts";
+import { choiceFieldKinds, type ApplicationView, type FormField } from "@jobpilot/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Link, useParams } from "react-router";
-import { apiGet, apiPost } from "./api";
+import { apiGet, apiPatch, apiPost } from "./api";
 
 // how often to check on the worker: answering takes seconds, sending is up to the user
 const PREPARING_POLL_MS = 3000;
@@ -14,6 +15,8 @@ const FILLING_POLL_MS = 5000;
 export function ApplicationPage() {
    const { id } = useParams<{ id: string }>();
    const queryClient = useQueryClient();
+   // my unsaved answers, by field name; saved ones come back in the application's fields
+   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
    const application = useQuery({
       queryKey: ["application", id],
@@ -34,18 +37,42 @@ export function ApplicationPage() {
          queryClient.invalidateQueries({ queryKey: ["matches"] }),
          queryClient.invalidateQueries({ queryKey: ["applications"] }),
       ]);
+   const app = application.data;
+   const changes = (app?.fields ?? [])
+      .filter((field) => field.name in drafts && drafts[field.name] !== savedValue(field))
+      .map((field) => ({ name: field.name, value: drafts[field.name]! }));
+   const saveChanges = () => apiPatch(`/applications/${id}/fields`, { values: changes });
+
+   const save = useMutation({
+      mutationFn: saveChanges,
+      onSuccess: async () => {
+         await refresh();
+         setDrafts({});
+      },
+   });
    const prepareAgain = useMutation({
       mutationFn: (vacancyId: string) => apiPost("/applications", { vacancyId }),
-      onSuccess: refresh,
+      onSuccess: async () => {
+         setDrafts({});
+         await refresh();
+      },
    });
+   // what I changed goes into the form too: saved first
    const fill = useMutation({
-      mutationFn: () => apiPost(`/applications/${id}/fill`),
-      onSuccess: refresh,
+      mutationFn: async () => {
+         if (changes.length > 0) await saveChanges();
+         await apiPost(`/applications/${id}/fill`);
+      },
+      onSuccess: async () => {
+         await refresh();
+         setDrafts({});
+      },
    });
 
-   const app = application.data;
-   const busy = prepareAgain.isPending || fill.isPending;
-   const error = prepareAgain.error ?? fill.error;
+   const busy = save.isPending || prepareAgain.isPending || fill.isPending;
+   const error = save.error ?? prepareAgain.error ?? fill.error;
+   // the answers can change while they are up for review and not open in a browser window
+   const editable = app?.status === "ready_for_review" && !app.filling && !busy;
 
    return (
       <main className="mx-auto max-w-4xl p-6">
@@ -104,12 +131,27 @@ export function ApplicationPage() {
                {app.status !== "preparing" && app.fields.length > 0 && (
                   <ol className="mt-6 space-y-4">
                      {app.fields.map((field) => (
-                        <FieldAnswer key={field.name} field={field} />
+                        <FieldAnswer
+                           key={field.name}
+                           field={field}
+                           value={drafts[field.name] ?? savedValue(field)}
+                           editable={editable}
+                           onChange={(value) => setDrafts((d) => ({ ...d, [field.name]: value }))}
+                        />
                      ))}
                   </ol>
                )}
 
                <div className="mt-6 flex gap-2">
+                  {app.status === "ready_for_review" && changes.length > 0 && (
+                     <button
+                        onClick={() => save.mutate()}
+                        disabled={busy || app.filling}
+                        className="rounded bg-gray-100 px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                     >
+                        Save changes
+                     </button>
+                  )}
                   {app.status === "ready_for_review" && (
                      <button
                         onClick={() => fill.mutate()}
@@ -143,8 +185,21 @@ const sourceLabels: Record<FormField["valueSource"], string> = {
    document: "document",
 };
 
-function FieldAnswer({ field }: { field: FormField }) {
-   const value = field.finalValue ?? field.proposedValue;
+/** The answer as last saved: mine if I changed it, else the proposed one. */
+function savedValue(field: FormField): string {
+   return field.finalValue ?? field.proposedValue ?? "";
+}
+
+interface AnswerProps {
+   field: FormField;
+   /** what the input shows: my unsaved change, else the saved answer */
+   value: string;
+   editable: boolean;
+   onChange: (value: string) => void;
+}
+
+function FieldAnswer(props: AnswerProps) {
+   const { field } = props;
    return (
       <li className="rounded border border-gray-200 p-4">
          <div className="flex items-start justify-between gap-4">
@@ -153,14 +208,66 @@ function FieldAnswer({ field }: { field: FormField }) {
                {field.required && <span className="text-red-600"> *</span>}
             </p>
             <span className="shrink-0 rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-               {sourceLabels[field.valueSource]}
+               {field.editedByUser ? "edited" : sourceLabels[field.valueSource]}
             </span>
          </div>
-         {value ? (
-            <p className="mt-2 text-sm whitespace-pre-wrap text-gray-700">{value}</p>
-         ) : (
-            <p className="mt-2 text-sm text-gray-400">No answer</p>
-         )}
+         <div className="mt-2">
+            <AnswerInput {...props} />
+         </div>
       </li>
+   );
+}
+
+/** The answer in the input its kind takes: text, one of the options, or as text when it can't be edited. */
+function AnswerInput({ field, value, editable, onChange }: AnswerProps) {
+   const choice = choiceFieldKinds.includes(field.kind) && field.options;
+   if (choice && field.kind === "radio") {
+      return (
+         <div className="flex flex-wrap gap-4 text-sm">
+            {field.options!.map((option) => (
+               <label key={option} className="flex items-center gap-2">
+                  <input
+                     type="radio"
+                     name={field.name}
+                     checked={value === option}
+                     disabled={!editable}
+                     onChange={() => onChange(option)}
+                  />
+                  {option}
+               </label>
+            ))}
+         </div>
+      );
+   }
+   if (choice) {
+      return (
+         <select
+            value={value}
+            disabled={!editable}
+            onChange={(e) => onChange(e.target.value)}
+            className="rounded border border-gray-300 px-2 py-1 text-sm disabled:bg-gray-50"
+         >
+            {field.options!.map((option) => (
+               <option key={option} value={option}>
+                  {option}
+               </option>
+            ))}
+         </select>
+      );
+   }
+   if (field.kind === "text" || field.kind === "textarea" || field.kind === "number") {
+      return (
+         <textarea
+            value={value}
+            disabled={!editable}
+            onChange={(e) => onChange(e.target.value)}
+            className="field-sizing-content min-h-10 w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 disabled:bg-gray-50"
+         />
+      );
+   }
+   return value ? (
+      <p className="text-sm whitespace-pre-wrap text-gray-700">{value}</p>
+   ) : (
+      <p className="text-sm text-gray-400">No answer</p>
    );
 }

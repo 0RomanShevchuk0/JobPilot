@@ -23,6 +23,9 @@ export const formFieldKinds = [
 ] as const;
 export type FormFieldKind = (typeof formFieldKinds)[number];
 
+/** Kinds answered with one of the field's options, as the form writes it. */
+export const choiceFieldKinds: readonly FormFieldKind[] = ["radio", "select"];
+
 export const formFieldValueSources = ["profile", "document", "ai"] as const;
 export type FormFieldValueSource = (typeof formFieldValueSources)[number];
 

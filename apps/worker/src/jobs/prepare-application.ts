@@ -1,4 +1,5 @@
 import {
+   choiceFieldKinds,
    SourceIds,
    type FormField,
    type PrepareApplicationJobData,
@@ -99,9 +100,6 @@ async function prepare(
    return fields.length;
 }
 
-// questions answered with one of their options; their options go to the model and the answer is one
-const CHOICE_KINDS: ApplyFormField["kind"][] = ["radio", "select"];
-
 /**
  * One answer per question, in their order, from the CV, the profile and the vacancy. A choice question's
  * answer is one of its options, as the form writes it.
@@ -118,7 +116,7 @@ async function answerQuestions(
    const cv = await database.documents.getBaseCvText(userId);
    const questionsForModel = questions.map((q) => ({
       label: q.label,
-      options: CHOICE_KINDS.includes(q.kind) ? q.options : undefined,
+      options: choiceFieldKinds.includes(q.kind) ? q.options : undefined,
    }));
    const request = buildApplicationAnswersRequest({
       profile,
@@ -133,7 +131,7 @@ async function answerQuestions(
    }
    return questions.map((question, i) => {
       const answer = tidyAnswer(answers[i]!);
-      if (!CHOICE_KINDS.includes(question.kind) || !question.options) return answer;
+      if (!choiceFieldKinds.includes(question.kind) || !question.options) return answer;
       const option = pickOption(answer, question.options);
       // thrown, so the job retries: the model usually gets it right the next time
       if (!option) {
