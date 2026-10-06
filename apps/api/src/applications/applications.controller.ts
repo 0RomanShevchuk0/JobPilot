@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, NotFoundException, Param, Post } from "@nestjs/common";
+import {
+   Body,
+   Controller,
+   Get,
+   HttpCode,
+   NotFoundException,
+   Param,
+   Patch,
+   Post,
+} from "@nestjs/common";
 import { z } from "zod";
 import { CurrentUser } from "../auth/current-user.service.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
@@ -8,6 +17,11 @@ const prepareBodySchema = z.object({
    vacancyId: z.uuid(),
    /** read the form on Djinni again; by default answering again reuses the questions read before */
    refreshForm: z.boolean().default(false),
+});
+
+const answersBodySchema = z.object({
+   /** only the changed fields, by their name in the form */
+   values: z.array(z.object({ name: z.string().min(1), value: z.string() })).min(1),
 });
 
 @Controller("applications")
@@ -45,6 +59,19 @@ export class ApplicationsController {
    async list() {
       const userId = await this.user.id();
       return this.applications.list(userId);
+   }
+
+   /** Saves my own answers in place of the proposed ones, while the application is up for review. */
+   @Patch(":id/fields")
+   @HttpCode(204)
+   async saveAnswers(
+      @Param("id", new ZodValidationPipe(z.uuid())) id: string,
+      @Body(new ZodValidationPipe(answersBodySchema)) body: z.infer<typeof answersBodySchema>,
+   ) {
+      const userId = await this.user.id();
+      if (!(await this.applications.saveAnswers(userId, id, body.values))) {
+         throw new NotFoundException("No such application");
+      }
    }
 
    @Get(":id")
