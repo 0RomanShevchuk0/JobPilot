@@ -6,7 +6,7 @@ import {
    openDjinniContext,
 } from "@jobpilot/apply";
 import type { DatabaseClient } from "@jobpilot/db";
-import type { Job } from "bullmq";
+import { type Job, UnrecoverableError } from "bullmq";
 import { config } from "../config.js";
 import { log } from "../log.js";
 
@@ -24,6 +24,11 @@ export async function handleFillApplication(
    const { applicationId } = job.data;
    const application = await database.applications.getToFill(applicationId);
    if (!application || application.status !== "ready_for_review") return "not ready";
+   if (application.source !== "djinni") {
+      const reason = `Applying through ${application.source} is not supported yet`;
+      await database.applications.setFillProblem(applicationId, reason);
+      throw new UnrecoverableError(reason);
+   }
 
    const values = application.fields.map((f) => ({
       name: f.name,
