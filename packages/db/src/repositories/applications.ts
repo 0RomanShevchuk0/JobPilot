@@ -46,6 +46,8 @@ export interface ApplicationsRepository {
    setSubmitted(applicationId: string): Promise<void>;
    /** Filling went wrong: the answers stay ready for review, the reason is shown with them. */
    setFillProblem(applicationId: string, reason: string): Promise<void>;
+   /** Forgets the last filling's problem: a new one is starting. */
+   clearFillProblem(applicationId: string): Promise<void>;
    /** Replaces the answers while they are up for review; false when the application no longer is. */
    saveFields(applicationId: string, fields: FormField[]): Promise<boolean>;
 }
@@ -162,6 +164,15 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
             .update(applications)
             .set({ failureReason: reason })
             .where(eq(applications.id, applicationId));
+      },
+
+      async clearFillProblem(applicationId) {
+         await db
+            .update(applications)
+            .set({ failureReason: null })
+            .where(
+               and(eq(applications.id, applicationId), eq(applications.status, "ready_for_review")),
+            );
       },
 
       async saveFields(applicationId, fields) {

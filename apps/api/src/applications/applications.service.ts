@@ -52,6 +52,8 @@ export class ApplicationsService {
             `The application is ${application.status}, not ready_for_review${reason}`,
          );
       }
+      // the last filling's problem is out of date; a new one records its own
+      await this.db.applications.clearFillProblem(applicationId);
       await this.queue.fill(applicationId);
       return true;
    }
