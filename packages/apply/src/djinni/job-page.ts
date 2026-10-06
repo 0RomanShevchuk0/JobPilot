@@ -1,4 +1,4 @@
-import type { ApplyCheck, JobPageCheck, SalaryFit } from "@jobpilot/contracts";
+import type { ApplyCheck, JobPageResult, SalaryFit } from "@jobpilot/contracts";
 import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
 import { DJINNI_URL, DjinniSessionExpiredError, djinniCookieHeader } from "./session.js";
@@ -10,7 +10,7 @@ export const SIGN_IN_LINK = "a.sign-in-link";
 // on a job applied to already, a card with a link to that dialog replaces the button
 const ALREADY_APPLIED = '.card-body a[href^="/my/inbox/"]';
 // on a closed job, an alert after the empty apply block: "The job ad is no longer active"
-const JOB_CLOSED = "#apply_job ~ .alert";
+const JOB_CLOSED_ALERT = "#apply_job ~ .alert";
 // the requirements the profile fails or may fail, listed in the main column (the sidebar lists all)
 const UNMET_REQUIREMENTS = ".col-lg-8 .job-matching-info > li";
 // the icon of a failed one, the reason applying is closed: "…#x-circle"; a doubtful one has "#question-circle"
@@ -27,8 +27,6 @@ const USER_AGENT =
    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
 const TIMEOUT_MS = 30_000;
 
-const JOB_CLOSED_REASON = "The job is no longer active on Djinni";
-
 /**
  * Whether a job page, loaded with the user's session, lets them apply: it shows the "Apply" button, or
  * why not. The page is in the account's language, so only the markup is read, never the wording.
@@ -44,8 +42,8 @@ function applyCheckOnPage($: CheerioAPI): ApplyCheck {
 }
 
 function whyNoApplyButton($: CheerioAPI): string {
+   if ($(JOB_CLOSED_ALERT).length > 0) return "The job is no longer active on Djinni";
    if ($(ALREADY_APPLIED).length > 0) return "Already applied to this job on Djinni";
-   if ($(JOB_CLOSED).length > 0) return JOB_CLOSED_REASON;
    const listed = $(UNMET_REQUIREMENTS).toArray();
    const failed = listed.filter((li) => FAILED_ICON.test($(li).find("use").attr("href") ?? ""));
    // the failed ones are why; a page that marks none failed still gets its whole list as the reason
@@ -61,26 +59,28 @@ function whyNoApplyButton($: CheerioAPI): string {
 
 /**
  * What Djinni shows the user on a job page: whether they can apply and how the salary compares with
- * their expectations. Loads the page with their session over plain HTTP, no browser. Throws
- * DjinniSessionExpiredError when the session is missing or over.
+ * their expectations, or that the job is gone (closed or removed). Loads the page with their session
+ * over plain HTTP, no browser. Throws DjinniSessionExpiredError when the session is missing or over.
  */
 export async function checkDjinniJobPage(
    jobUrl: string,
    sessionPath: string,
-): Promise<JobPageCheck> {
+): Promise<JobPageResult> {
    const cookie = await djinniCookieHeader(sessionPath);
    const response = await fetch(jobUrl, {
       headers: { cookie, "User-Agent": USER_AGENT, Referer: `${DJINNI_URL}/jobs/` },
       signal: AbortSignal.timeout(TIMEOUT_MS),
    });
    if (response.status === 404 || response.status === 410) {
-      return { applyCheck: { canApply: false, reason: JOB_CLOSED_REASON } };
+      return { status: "gone" };
    }
    if (response.status !== 200) throw new Error(`djinni ${jobUrl}: HTTP ${response.status}`);
    const html = await response.text();
    const $ = cheerio.load(html);
    if ($(SIGN_IN_LINK).length > 0) throw new DjinniSessionExpiredError();
-   return { applyCheck: applyCheckOnPage($), salaryFit: salaryFitOnPage($) };
+   if ($(JOB_CLOSED_ALERT).length > 0) return { status: "gone" };
+   const check = { applyCheck: applyCheckOnPage($), salaryFit: salaryFitOnPage($) };
+   return { status: "ok", check };
 }
 
 /** The salary against the profile's expectations, by the icon of its item; undefined when not shown. */

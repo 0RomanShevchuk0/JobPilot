@@ -87,6 +87,9 @@ export interface JobPageCheck {
    salaryFit?: SalaryFit;
 }
 
+/** Asking the job site about a job: what its page shows the user, or that the job is gone from it. */
+export type JobPageResult = { status: "gone" } | { status: "ok"; check: JobPageCheck };
+
 /**
  * What is stored in vacancy_matches.analysis. applyCheck and salaryFit are absent until the job site is
  * asked (or when it couldn't be, e.g. no session), ai until the vacancy is scored.

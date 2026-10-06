@@ -100,7 +100,7 @@ workers.push(
    ),
    new Worker<CheckCanApplyJobData>(
       QueueNames.checkCanApply,
-      (job) => handleCheckCanApply(job, database, scoreVacancyQueue),
+      (job) => handleCheckCanApply(job, database, scoreVacancyQueue, buildVacancyQueue),
       // the requests are the user's own: one job page per 5 s at most, like a person going through jobs
       { connection, concurrency: 1, limiter: { max: 1, duration: 5000 } },
    ),
