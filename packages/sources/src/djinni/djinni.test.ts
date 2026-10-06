@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { normalizedPostingSchema, type RawPosting } from "@jobpilot/contracts";
+import { normalizedPostingSchema, SourceIds, type RawPosting } from "@jobpilot/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDjinniAdapter } from "./adapter.js";
 import { isClosedPage, kyivTimeToIso, parseJobPage } from "./job-page.js";
@@ -46,7 +46,7 @@ describe("job page: remote job without salary", () => {
 
    it("takes structured fields from JSON-LD", () => {
       expect(posting).toMatchObject({
-         source: "djinni",
+         source: SourceIds.djinni,
          externalId: "846773",
          title: "PPC Specialist",
          company: { name: "Feenko", website: "https://feenko.com/" },

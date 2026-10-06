@@ -1,4 +1,4 @@
-import type { MatchListItem, MatchStatus, Salary } from "@jobpilot/contracts";
+import type { MatchListItem, MatchStatus, Salary, SalaryFit } from "@jobpilot/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
@@ -120,6 +120,11 @@ function MatchCard({ match }: { match: MatchListItem }) {
                   {match.title}
                </a>
                {details && <p className="text-sm text-gray-500">{details}</p>}
+               {match.salaryFit && (
+                  <p className={`text-sm ${salaryFitStyles[match.salaryFit]}`}>
+                     {salaryFitLabels[match.salaryFit]}
+                  </p>
+               )}
             </div>
             <div className="ml-auto flex shrink-0 gap-2">
                {match.application ? (
@@ -186,6 +191,16 @@ function MatchCard({ match }: { match: MatchListItem }) {
       </li>
    );
 }
+
+// what the job site says of the salary, a hidden one too, against the expectations in my profile there
+const salaryFitLabels: Record<SalaryFit, string> = {
+   fits: "Salary matches your expectations, says the job site",
+   below_expectations: "Salary range is below your expectations, says the job site",
+};
+const salaryFitStyles: Record<SalaryFit, string> = {
+   fits: "text-green-700",
+   below_expectations: "text-amber-700",
+};
 
 function MarkButton(props: { onClick: () => void; disabled: boolean; children: string }) {
    return (

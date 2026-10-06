@@ -1,11 +1,12 @@
-import type {
-   EmploymentType,
-   Language,
-   Location,
-   NormalizedPosting,
-   RawPosting,
-   Salary,
-   WorkMode,
+import {
+   SourceIds,
+   type EmploymentType,
+   type Language,
+   type Location,
+   type NormalizedPosting,
+   type RawPosting,
+   type Salary,
+   type WorkMode,
 } from "@jobpilot/contracts";
 import * as cheerio from "cheerio";
 import TurndownService from "turndown";
@@ -57,7 +58,7 @@ export function parseJobPage(raw: RawPosting): NormalizedPosting {
    const org = typeof ld.hiringOrganization === "object" ? ld.hiringOrganization : undefined;
 
    return {
-      source: "djinni",
+      source: SourceIds.djinni,
       externalId: raw.externalId,
       url,
       title: ld.title.trim(),

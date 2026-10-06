@@ -1,10 +1,10 @@
-import type { ApplicationListItem, ApplicationView } from "@jobpilot/contracts";
+import { SourceIds, type ApplicationListItem, type ApplicationView } from "@jobpilot/contracts";
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Database } from "../infra/database.js";
 import { ApplicationQueue } from "./application-queue.service.js";
 
 // job sites the browser agent can apply on
-const APPLY_SOURCES = ["djinni"];
+const APPLY_SOURCES = [SourceIds.djinni];
 
 @Injectable()
 export class ApplicationsService {

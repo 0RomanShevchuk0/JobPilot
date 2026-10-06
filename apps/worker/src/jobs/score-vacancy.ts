@@ -25,7 +25,10 @@ export async function handleScoreVacancy(
 
    // errors (rate limits, timeouts, an answer that fails the schema) throw here and the queue retries
    const cv = await database.documents.getBaseCvText(userId);
-   const answer = await llm.generate(buildScoringRequest(stored.profile, vacancy, cv));
+   // what the job site said of the salary, a hidden one too, goes to the model with the vacancy
+   const vacancyForPrompt = { ...vacancy, salaryFit: match.analysis.salaryFit };
+   const request = buildScoringRequest(stored.profile, vacancyForPrompt, cv);
+   const answer = await llm.generate(request);
    const ai = applyHardLimits(stored.profile, answer);
 
    const saved = await database.matches.saveAssessment(userId, vacancyId, stored.version, {

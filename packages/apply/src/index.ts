@@ -11,5 +11,5 @@ export {
    loginToDjinni,
    openDjinniContext,
 } from "./djinni/session.js";
-export { checkCanApply } from "./djinni/job-page.js";
+export { checkDjinniJobPage } from "./djinni/job-page.js";
 export { fillDjinniApplication, type FillOutcome, type FillValue } from "./djinni/fill.js";
