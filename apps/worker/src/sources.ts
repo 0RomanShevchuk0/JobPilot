@@ -1,5 +1,10 @@
 import type { SourceAdapter } from "@jobpilot/contracts";
-import { createDjinniAdapter } from "@jobpilot/sources";
+import {
+   createDjinniAdapter,
+   createDouAdapter,
+   DJINNI_BASE_URL,
+   DOU_BASE_URL,
+} from "@jobpilot/sources";
 import { config } from "./config.js";
 
 export interface SourceEntry {
@@ -16,8 +21,15 @@ export const sources: SourceEntry[] = [
    {
       adapter: createDjinniAdapter(),
       name: "Djinni",
-      baseUrl: "https://djinni.co",
+      baseUrl: DJINNI_BASE_URL,
       keywords: config.djinniKeywords,
+      fetchIntervalMs: 3000,
+   },
+   {
+      adapter: createDouAdapter(),
+      name: "DOU",
+      baseUrl: DOU_BASE_URL,
+      keywords: config.douCategories,
       fetchIntervalMs: 3000,
    },
 ];
