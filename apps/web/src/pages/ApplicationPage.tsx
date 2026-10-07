@@ -1,0 +1,114 @@
+import type { ApplicationView } from "@jobpilot/contracts";
+import { useState } from "react";
+import { Link, useParams } from "react-router";
+import {
+   ApplicationStatusNotice,
+   FieldAnswer,
+   savedValue,
+   useApplication,
+   useFillApplication,
+   useSaveAnswers,
+   useStartApplication,
+} from "../features/applications";
+
+/**
+ * One application: while the worker reads the form and answers it, then the answers to review, opened
+ * in a browser on this machine for the user to check and send.
+ */
+export function ApplicationPage() {
+   const { id } = useParams<{ id: string }>();
+   const application = useApplication(id!);
+
+   return (
+      <main className="mx-auto max-w-4xl p-6">
+         <Link to="/applications" className="text-sm text-gray-500 hover:text-gray-900">
+            ← Applications
+         </Link>
+         {application.isPending && <p className="mt-4 text-gray-500">Loading…</p>}
+         {application.isError && <p className="mt-4 text-red-600">{application.error.message}</p>}
+         {application.data && <Application key={application.data.id} app={application.data} />}
+      </main>
+   );
+}
+
+function Application({ app }: { app: ApplicationView }) {
+   // my unsaved answers, by field name; saved ones come back in the application's fields
+   const [drafts, setDrafts] = useState<Record<string, string>>({});
+   const save = useSaveAnswers(app.id);
+   const fill = useFillApplication(app.id);
+   const prepareAgain = useStartApplication();
+
+   const changes = app.fields
+      .filter((field) => field.name in drafts && drafts[field.name] !== savedValue(field))
+      .map((field) => ({ name: field.name, value: drafts[field.name]! }));
+   const clearDrafts = () => setDrafts({});
+
+   const busy = save.isPending || prepareAgain.isPending || fill.isPending;
+   const error = save.error ?? prepareAgain.error ?? fill.error;
+   // the answers can change while they are up for review and not open in a browser window
+   const editable = app.status === "ready_for_review" && !app.filling && !busy;
+
+   return (
+      <>
+         <header className="mt-2 mb-6">
+            <h1 className="text-2xl font-semibold">{app.title ?? "Application"}</h1>
+            <a
+               href={app.postingUrl}
+               target="_blank"
+               rel="noreferrer"
+               className="text-sm text-gray-500 hover:underline"
+            >
+               {app.postingUrl}
+            </a>
+         </header>
+
+         <ApplicationStatusNotice app={app} />
+
+         {app.status !== "preparing" && app.fields.length > 0 && (
+            <ol className="mt-6 space-y-4">
+               {app.fields.map((field) => (
+                  <FieldAnswer
+                     key={field.name}
+                     field={field}
+                     value={drafts[field.name] ?? savedValue(field)}
+                     editable={editable}
+                     onChange={(value) => setDrafts((d) => ({ ...d, [field.name]: value }))}
+                  />
+               ))}
+            </ol>
+         )}
+
+         <div className="mt-6 flex gap-2">
+            {app.status === "ready_for_review" && changes.length > 0 && (
+               <button
+                  onClick={() => save.mutate(changes, { onSuccess: clearDrafts })}
+                  disabled={busy || app.filling}
+                  className="rounded bg-gray-100 px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+               >
+                  Save changes
+               </button>
+            )}
+            {/* what I changed goes into the form too: it is saved first */}
+            {app.status === "ready_for_review" && (
+               <button
+                  onClick={() => fill.mutate(changes, { onSuccess: clearDrafts })}
+                  disabled={busy || app.filling}
+                  className="rounded bg-gray-900 px-3 py-1 text-sm text-white hover:bg-gray-700 disabled:opacity-50"
+               >
+                  Open in browser
+               </button>
+            )}
+            {(app.status === "ready_for_review" || app.status === "failed") && app.vacancyId && (
+               <button
+                  onClick={() => prepareAgain.mutate(app.vacancyId!, { onSuccess: clearDrafts })}
+                  disabled={busy || app.filling}
+                  className="rounded bg-gray-100 px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+               >
+                  {app.status === "failed" ? "Try again" : "Answer again"}
+               </button>
+            )}
+         </div>
+         {error && <p className="mt-3 text-sm text-red-600">{error.message}</p>}
+      </>
+   );
+}

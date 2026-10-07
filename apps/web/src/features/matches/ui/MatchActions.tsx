@@ -1,28 +1,15 @@
-import type { MatchListItem, MatchStatus } from "@jobpilot/contracts";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { MatchListItem } from "@jobpilot/contracts";
 import { Link, useNavigate } from "react-router";
-import { apiPatch, apiPost } from "./api";
-import { applicationStatusLabels } from "./applicationStatus";
+import { applicationStatusLabels, useStartApplication } from "../../applications";
+import { useMarkMatch } from "../api/queries";
 
 /** What I can do with a vacancy: apply through JobPilot (or open my application), mark it or unmark it. */
 export function MatchActions({ match }: { match: MatchListItem }) {
-   const queryClient = useQueryClient();
-   const mark = useMutation({
-      mutationFn: (status: MatchStatus) => apiPatch(`/matches/${match.vacancyId}`, { status }),
-      // the vacancy moves to another tab: every list may have changed, and its own page
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["matches"] }),
-   });
+   const mark = useMarkMatch(match.vacancyId);
+   const apply = useStartApplication();
    const navigate = useNavigate();
-   const apply = useMutation({
-      mutationFn: () => apiPost<{ id: string }>("/applications", { vacancyId: match.vacancyId }),
-      onSuccess: async ({ id }) => {
-         await Promise.all([
-            queryClient.invalidateQueries({ queryKey: ["matches"] }),
-            queryClient.invalidateQueries({ queryKey: ["applications"] }),
-         ]);
-         await navigate(`/applications/${id}`);
-      },
-   });
+   const startApplication = () =>
+      apply.mutate(match.vacancyId, { onSuccess: ({ id }) => navigate(`/applications/${id}`) });
 
    return (
       <div className="ml-auto flex max-w-xs shrink-0 flex-col items-end gap-2">
@@ -38,7 +25,7 @@ export function MatchActions({ match }: { match: MatchListItem }) {
                // the job site won't take an application: the reason is shown with the vacancy
                !match.cannotApplyReason && (
                   <button
-                     onClick={() => apply.mutate()}
+                     onClick={startApplication}
                      disabled={apply.isPending}
                      className="rounded bg-gray-900 px-2 py-1 text-sm text-white hover:bg-gray-700 disabled:opacity-50"
                   >
