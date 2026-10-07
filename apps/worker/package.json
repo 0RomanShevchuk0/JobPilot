@@ -11,7 +11,7 @@
       "postings:reparse": "tsc && node dist/reparse-postings.js",
       "matches:refresh": "tsc && node dist/refresh-matches.js",
       "login": "tsc && node dist/login.js",
-      "djinni:read-form": "tsc && node dist/djinni-read-form.js",
+      "read-form": "tsc && node dist/read-form.js",
       "typecheck": "tsc --noEmit"
    },
    "dependencies": {

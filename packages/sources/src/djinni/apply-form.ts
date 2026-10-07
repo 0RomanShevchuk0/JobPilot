@@ -1,34 +1,14 @@
-import { SessionExpiredError, SourceIds, type FormFieldKind } from "@jobpilot/contracts";
-import type { BrowserContext, Page } from "playwright";
+import {
+   CannotApplyError,
+   SessionExpiredError,
+   SourceIds,
+   type ApplyForm,
+   type ApplyFormField,
+} from "@jobpilot/contracts";
+import type { Page } from "playwright";
+import { launchBrowser } from "../browser.js";
 import { APPLY_BUTTON, readApplyCheck, SIGN_IN_LINK } from "./account-page.js";
-
-/**
- * Djinni offers no application form on this job: applied already, the job is closed, or the profile
- * doesn't meet its requirements. The message says which, for the user to read.
- */
-export class DjinniCannotApplyError extends Error {}
-
-/** One field of the Djinni application form, as the page shows it. */
-export interface ApplyFormField {
-   /** the input's name, to fill it later */
-   name: string;
-   label: string;
-   kind: FormFieldKind;
-   required: boolean;
-   /** for select, radio and checkbox groups */
-   options?: string[];
-}
-
-export interface ApplyForm {
-   /** the recruiter's questions, in the form's order */
-   questions: ApplyFormField[];
-   /** the message to the recruiter; Djinni makes it required on some jobs */
-   message?: ApplyFormField;
-   /** every other field (CV choice, salary, message templates): Djinni's defaults are kept */
-   other: ApplyFormField[];
-   /** the form's HTML as rendered, to see what the parser missed */
-   html: string;
-}
+import { openDjinniContext } from "./session.js";
 
 // Djinni names the recruiter's questions after their id: "answer_167872"
 const QUESTION_NAME = /^answer_\d+$/;
@@ -40,21 +20,20 @@ export async function openApplyForm(page: Page, jobUrl: string): Promise<void> {
       throw new SessionExpiredError(SourceIds.djinni);
    const html = await page.content();
    const applyCheck = readApplyCheck(html);
-   if (!applyCheck.canApply) throw new DjinniCannotApplyError(applyCheck.reason);
+   if (!applyCheck.canApply) throw new CannotApplyError(SourceIds.djinni, applyCheck.reason);
    await page.locator(APPLY_BUTTON).first().click();
    await page.locator("#apply_form").waitFor({ state: "visible" });
 }
 
 /**
- * Opens a job page with the user's session, presses "Apply for the job" and reads the form that
- * appears. Reads only: nothing is filled in or sent.
+ * Opens a job page with the user's session in a browser of its own, presses "Apply for the job" and
+ * reads the form that appears. Reads only: nothing is filled in or sent.
  */
-export async function readDjinniApplyForm(
-   context: BrowserContext,
-   jobUrl: string,
-): Promise<ApplyForm> {
-   const page = await context.newPage();
+export async function readDjinniApplyForm(jobUrl: string, sessionPath: string): Promise<ApplyForm> {
+   const browser = await launchBrowser();
    try {
+      const context = await openDjinniContext(browser, sessionPath);
+      const page = await context.newPage();
       await openApplyForm(page, jobUrl);
       const form = page.locator("#apply_form");
 
@@ -113,6 +92,6 @@ export async function readDjinniApplyForm(
          html: await form.evaluate((el) => el.outerHTML),
       };
    } finally {
-      await page.close();
+      await browser.close();
    }
 }

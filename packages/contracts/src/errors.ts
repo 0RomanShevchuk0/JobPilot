@@ -7,3 +7,16 @@ export class SessionExpiredError extends Error {
       super(`Not logged in to ${source}: run \`pnpm login ${source}\` in apps/worker`);
    }
 }
+
+/**
+ * The source offers no application form on this job: applied already, the job is closed, or the
+ * profile doesn't meet its requirements. The message says which, for the user to read.
+ */
+export class CannotApplyError extends Error {
+   constructor(
+      readonly source: string,
+      reason: string,
+   ) {
+      super(reason);
+   }
+}
