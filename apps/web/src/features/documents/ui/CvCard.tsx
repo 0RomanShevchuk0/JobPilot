@@ -1,49 +1,22 @@
 import type { DocumentListItem } from "@jobpilot/contracts";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { apiDelete, apiGet, apiPut } from "./api";
+import { useDeleteDocument, useUploadCv } from "../api/queries";
 
-/** My documents: for now just the CV, the one generated documents and form answers start from. */
-export function DocumentsPage() {
-   const documents = useQuery({
-      queryKey: ["documents"],
-      queryFn: () => apiGet<DocumentListItem[]>("/documents"),
-   });
-
-   return (
-      <main className="mx-auto max-w-4xl p-6">
-         <h1 className="mb-6 text-2xl font-semibold">Documents</h1>
-         {documents.isPending && <p className="text-gray-500">Loading…</p>}
-         {documents.isError && <p className="text-red-600">{documents.error.message}</p>}
-         {documents.data && <CvCard cv={documents.data.find((d) => d.isBase)} />}
-      </main>
-   );
-}
-
-function CvCard({ cv }: { cv?: DocumentListItem }) {
-   const queryClient = useQueryClient();
+/** The CV: view, download, replace or delete it, or upload the first one. */
+export function CvCard({ cv }: { cv?: DocumentListItem }) {
    const fileInput = useRef<HTMLInputElement>(null);
    const [confirmingDelete, setConfirmingDelete] = useState(false);
-   const refresh = () => queryClient.invalidateQueries({ queryKey: ["documents"] });
-
-   const upload = useMutation({
-      mutationFn: (file: File) => {
-         const form = new FormData();
-         form.append("file", file);
-         return apiPut<{ id: string; hasText: boolean }>("/documents/cv", form);
-      },
-      onSuccess: refresh,
-   });
-   const remove = useMutation({
-      mutationFn: (id: string) => apiDelete(`/documents/${id}`),
-      onSuccess: () => {
-         setConfirmingDelete(false);
-         upload.reset();
-         return refresh();
-      },
-   });
+   const upload = useUploadCv();
+   const remove = useDeleteDocument();
 
    const pickFile = () => fileInput.current?.click();
+   const deleteCv = (id: string) =>
+      remove.mutate(id, {
+         onSuccess: () => {
+            setConfirmingDelete(false);
+            upload.reset();
+         },
+      });
    const busy = upload.isPending || remove.isPending;
    const error = upload.error ?? remove.error;
 
@@ -102,7 +75,7 @@ function CvCard({ cv }: { cv?: DocumentListItem }) {
                   <>
                      <span className="text-sm text-gray-700">Delete the CV?</span>
                      <button
-                        onClick={() => remove.mutate(cv.id)}
+                        onClick={() => deleteCv(cv.id)}
                         disabled={busy}
                         className="rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700 disabled:opacity-50"
                      >

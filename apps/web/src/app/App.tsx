@@ -1,9 +1,9 @@
 import { Navigate, NavLink, Route, Routes } from "react-router";
-import { ApplicationPage } from "./ApplicationPage";
-import { ApplicationsPage } from "./ApplicationsPage";
-import { DocumentsPage } from "./DocumentsPage";
-import { MatchesPage } from "./MatchesPage";
-import { VacancyPage } from "./VacancyPage";
+import { ApplicationPage } from "../pages/ApplicationPage";
+import { ApplicationsPage } from "../pages/ApplicationsPage";
+import { DocumentsPage } from "../pages/DocumentsPage";
+import { MatchesPage } from "../pages/MatchesPage";
+import { VacancyPage } from "../pages/VacancyPage";
 
 const pages = [
    { path: "/matches", title: "Matches" },
