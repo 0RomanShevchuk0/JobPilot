@@ -1,3 +1,4 @@
+import type { JobPageResult } from "./match.js";
 import type { NormalizedPosting, RawContentType } from "./posting.js";
 
 /** What discover() finds on a source listing: enough to decide whether the page is worth fetching. */
@@ -26,6 +27,12 @@ export interface DiscoverParams {
 export interface SourceAccount {
    /** Interactive: the user logs in, the session is saved to sessionPath for later runs. */
    login(sessionPath: string): Promise<void>;
+   /**
+    * What the job page shows the logged-in user: whether they can apply, the salary against their
+    * expectations there; gone when the job is closed or removed. Throws SessionExpiredError without
+    * a valid session.
+    */
+   checkJobPage(url: string, sessionPath: string): Promise<JobPageResult>;
 }
 
 /**

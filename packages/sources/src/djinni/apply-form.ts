@@ -1,7 +1,6 @@
-import type { FormFieldKind } from "@jobpilot/contracts";
+import { SessionExpiredError, SourceIds, type FormFieldKind } from "@jobpilot/contracts";
 import type { BrowserContext, Page } from "playwright";
 import { APPLY_BUTTON, readApplyCheck, SIGN_IN_LINK } from "./account-page.js";
-import { DjinniSessionExpiredError } from "./session.js";
 
 /**
  * Djinni offers no application form on this job: applied already, the job is closed, or the profile
@@ -37,7 +36,8 @@ const QUESTION_NAME = /^answer_\d+$/;
 /** Opens a job page with the user's session and presses "Apply for the job": the form is then on screen. */
 export async function openApplyForm(page: Page, jobUrl: string): Promise<void> {
    await page.goto(jobUrl);
-   if ((await page.locator(SIGN_IN_LINK).count()) > 0) throw new DjinniSessionExpiredError();
+   if ((await page.locator(SIGN_IN_LINK).count()) > 0)
+      throw new SessionExpiredError(SourceIds.djinni);
    const html = await page.content();
    const applyCheck = readApplyCheck(html);
    if (!applyCheck.canApply) throw new DjinniCannotApplyError(applyCheck.reason);

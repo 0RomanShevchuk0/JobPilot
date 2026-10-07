@@ -24,11 +24,11 @@ export interface ApplicationToPrepare {
 export type ApplicationToFill = ApplicationToPrepare;
 
 export interface ApplicationsRepository {
-   /** The vacancy's active posting on one of these sources (the ones we can apply through), if any. */
+   /** The vacancy's active posting on one of these sources, the last seen one; undefined when none. */
    findPostingToApply(
       vacancyId: string,
       sources: string[],
-   ): Promise<{ id: string; url: string } | undefined>;
+   ): Promise<{ id: string; source: string; url: string } | undefined>;
    /**
     * Starts preparing the application to a posting: a new one, or the existing one again (its fields
     * stay until new answers replace them). Returns undefined when it was already submitted.
@@ -76,7 +76,7 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
    return {
       async findPostingToApply(vacancyId, sources) {
          const [row] = await db
-            .select({ id: postings.id, url: postings.url })
+            .select({ id: postings.id, source: postings.sourceId, url: postings.url })
             .from(postings)
             .where(
                and(

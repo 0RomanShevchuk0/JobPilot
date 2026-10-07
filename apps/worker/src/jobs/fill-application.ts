@@ -1,10 +1,5 @@
-import { SourceIds, type FillApplicationJobData } from "@jobpilot/contracts";
-import {
-   DjinniSessionExpiredError,
-   fillDjinniApplication,
-   launchBrowser,
-   openDjinniContext,
-} from "@jobpilot/sources";
+import { SessionExpiredError, SourceIds, type FillApplicationJobData } from "@jobpilot/contracts";
+import { fillDjinniApplication, launchBrowser, openDjinniContext } from "@jobpilot/sources";
 import type { DatabaseClient } from "@jobpilot/db";
 import { type Job, UnrecoverableError } from "bullmq";
 import { sessionPath } from "../config.js";
@@ -53,8 +48,8 @@ export async function handleFillApplication(
       return "submitted";
    } catch (err) {
       const reason =
-         err instanceof DjinniSessionExpiredError
-            ? "Not logged in to Djinni: run `pnpm login djinni` in apps/worker, then fill again"
+         err instanceof SessionExpiredError
+            ? `${err.message}, then fill again`
             : (err as Error).message;
       await database.applications.setFillProblem(applicationId, reason);
       throw err;

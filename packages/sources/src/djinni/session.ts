@@ -1,3 +1,4 @@
+import { SessionExpiredError, SourceIds } from "@jobpilot/contracts";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -7,13 +8,6 @@ import { launchBrowser } from "../browser.js";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 
 export const DJINNI_URL = "https://djinni.co";
-
-/** The session file is missing or Djinni no longer accepts it: log in again. */
-export class DjinniSessionExpiredError extends Error {
-   constructor() {
-      super("Not logged in to Djinni: run the login command again");
-   }
-}
 
 /** Where Google Chrome lives; the login runs in the real Chrome, see loginToDjinni. */
 const CHROME_PATHS = [
@@ -52,7 +46,7 @@ export async function loginToDjinni(sessionPath: string): Promise<void> {
    const browser = await launchBrowser();
    try {
       const page = await (await openDjinniContext(browser, sessionPath)).newPage();
-      if (!(await isLoggedIn(page))) throw new DjinniSessionExpiredError();
+      if (!(await isLoggedIn(page))) throw new SessionExpiredError(SourceIds.djinni);
    } finally {
       await browser.close();
    }
@@ -98,7 +92,7 @@ export async function djinniCookieHeader(sessionPath: string): Promise<string> {
    try {
       file = await readFile(sessionPath, "utf8");
    } catch {
-      throw new DjinniSessionExpiredError(); // no session file yet
+      throw new SessionExpiredError(SourceIds.djinni); // no session file yet
    }
    const { cookies } = JSON.parse(file) as {
       cookies: { name: string; value: string; expires: number }[];
@@ -120,7 +114,7 @@ export async function openDjinniContext(
          userAgent: desktopUserAgent(browser),
       });
    } catch {
-      throw new DjinniSessionExpiredError(); // no session file yet
+      throw new SessionExpiredError(SourceIds.djinni); // no session file yet
    }
 }
 
