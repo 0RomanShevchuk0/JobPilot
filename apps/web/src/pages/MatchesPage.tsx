@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MatchCard, useMatches, type MatchesTab } from "../features/matches";
+import { Button } from "../shared/ui";
 
 const tabs: MatchesTab[] = ["new", "applied", "hidden"];
 
@@ -27,17 +28,14 @@ export function MatchesPage() {
 
          <nav className="mb-4 flex gap-2">
             {tabs.map((t) => (
-               <button
+               <Button
                   key={t}
+                  variant={t === tab ? "primary" : "secondary"}
                   onClick={() => setTab(t)}
-                  className={`rounded px-3 py-1 text-sm capitalize ${
-                     t === tab
-                        ? "bg-gray-900 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                  className="capitalize"
                >
                   {t}
-               </button>
+               </Button>
             ))}
          </nav>
 

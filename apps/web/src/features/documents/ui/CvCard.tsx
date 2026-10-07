@@ -1,5 +1,6 @@
 import type { DocumentListItem } from "@jobpilot/contracts";
 import { useRef, useState } from "react";
+import { Button, buttonStyles } from "../../../shared/ui";
 import { useDeleteDocument, useUploadCv } from "../api/queries";
 
 /** The CV: view, download, replace or delete it, or upload the first one. */
@@ -43,61 +44,41 @@ export function CvCard({ cv }: { cv?: DocumentListItem }) {
                         href={`/api/documents/${cv.id}/file`}
                         target="_blank"
                         rel="noreferrer"
-                        className="rounded bg-gray-100 px-3 py-1 text-sm text-gray-700 hover:bg-gray-200"
+                        className={buttonStyles()}
                      >
                         View
                      </a>
                      {/* the API serves the file inline; download makes the browser save it under its name */}
-                     <a
-                        href={`/api/documents/${cv.id}/file`}
-                        download
-                        className="rounded bg-gray-100 px-3 py-1 text-sm text-gray-700 hover:bg-gray-200"
-                     >
+                     <a href={`/api/documents/${cv.id}/file`} download className={buttonStyles()}>
                         Download
                      </a>
-                     <button
-                        onClick={pickFile}
-                        disabled={busy}
-                        className="rounded bg-gray-100 px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-50"
-                     >
+                     <Button onClick={pickFile} disabled={busy}>
                         Replace
-                     </button>
-                     <button
+                     </Button>
+                     <Button
+                        variant="dangerGhost"
                         onClick={() => setConfirmingDelete(true)}
                         disabled={busy}
-                        className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
                      >
                         Delete
-                     </button>
+                     </Button>
                   </>
                )}
                {cv && confirmingDelete && (
                   <>
                      <span className="text-sm text-gray-700">Delete the CV?</span>
-                     <button
-                        onClick={() => deleteCv(cv.id)}
-                        disabled={busy}
-                        className="rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700 disabled:opacity-50"
-                     >
+                     <Button variant="danger" onClick={() => deleteCv(cv.id)} disabled={busy}>
                         Delete
-                     </button>
-                     <button
-                        onClick={() => setConfirmingDelete(false)}
-                        disabled={busy}
-                        className="rounded bg-gray-100 px-3 py-1 text-sm text-gray-700 hover:bg-gray-200"
-                     >
+                     </Button>
+                     <Button onClick={() => setConfirmingDelete(false)} disabled={busy}>
                         Cancel
-                     </button>
+                     </Button>
                   </>
                )}
                {!cv && (
-                  <button
-                     onClick={pickFile}
-                     disabled={busy}
-                     className="rounded bg-gray-900 px-3 py-1 text-sm text-white hover:bg-gray-700 disabled:opacity-50"
-                  >
+                  <Button variant="primary" onClick={pickFile} disabled={busy}>
                      Upload PDF
-                  </button>
+                  </Button>
                )}
             </div>
          </div>

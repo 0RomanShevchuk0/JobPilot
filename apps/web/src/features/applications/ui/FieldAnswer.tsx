@@ -1,4 +1,5 @@
 import { choiceFieldKinds, type FormField } from "@jobpilot/contracts";
+import { Badge } from "../../../shared/ui";
 
 const sourceLabels: Record<FormField["valueSource"], string> = {
    ai: "AI",
@@ -24,9 +25,7 @@ export function FieldAnswer(props: AnswerProps) {
                {field.label}
                {field.required && <span className="text-red-600"> *</span>}
             </p>
-            <span className="shrink-0 rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-               {field.editedByUser ? "edited" : sourceLabels[field.valueSource]}
-            </span>
+            <Badge>{field.editedByUser ? "edited" : sourceLabels[field.valueSource]}</Badge>
          </div>
          <div className="mt-2">
             <AnswerInput {...props} />

@@ -1,5 +1,6 @@
 import type { MatchListItem } from "@jobpilot/contracts";
 import { Link } from "react-router";
+import { Badge } from "../../../shared/ui";
 import { MatchEvaluation } from "./MatchEvaluation";
 import { MatchHeader } from "./MatchHeader";
 
@@ -34,12 +35,9 @@ function SourceBadges({ match }: { match: MatchListItem }) {
    return (
       <p className="mt-1 flex gap-1">
          {match.postings.map((posting) => (
-            <span
-               key={posting.url}
-               className="rounded bg-indigo-50 px-1.5 py-0.5 text-xs font-medium text-indigo-700"
-            >
+            <Badge key={posting.url} tone="bg-indigo-50 text-indigo-700">
                {posting.sourceName}
-            </span>
+            </Badge>
          ))}
       </p>
    );
