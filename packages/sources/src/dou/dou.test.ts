@@ -100,6 +100,17 @@ describe("job page: offices or remote", () => {
    });
 });
 
+describe("job page: a badge next to the date", () => {
+   // saved from jobs.dou.ua on 2026-10-07: "6 жовтня 2026" followed by a "бронювання" badge link
+   const posting = parseJobPage(
+      raw("375738", "https://jobs.dou.ua/companies/okko-group/vacancies/375738/", "job-badge.html"),
+   );
+
+   it("reads the date without the badge", () => {
+      expect(posting.publishedAt).toBe("2026-10-05T21:00:00.000Z");
+   });
+});
+
 describe("job page: remote, applying on DOU", () => {
    const url = "https://jobs.dou.ua/companies/sombra/vacancies/375739/";
    const posting = parseJobPage(raw("375739", url, "job-remote.html"));

@@ -50,6 +50,12 @@ export function parseJobPage(raw: RawPosting): NormalizedPosting {
    const places = placesOnPage($);
    const company = $(COMPANY).first().text().trim();
    const category = categoryOnPage($);
+   // the block's own text: badges like "бронювання" or "deftech" are links inside it
+   const date = $(DATE)
+      .first()
+      .contents()
+      .filter((_, node) => node.type === "text")
+      .text();
 
    return {
       source: SourceIds.dou,
@@ -58,7 +64,7 @@ export function parseJobPage(raw: RawPosting): NormalizedPosting {
       title,
       description: toMarkdown(descriptionHtml),
       company: company ? { name: company } : undefined,
-      publishedAt: publishedAt($(DATE).first().text()),
+      publishedAt: publishedAt(date),
       workModes: nonEmpty(workModes(places)),
       // DOU has no "where candidates may work from": every place is the job's own
       locations: nonEmpty(
