@@ -1,5 +1,6 @@
 import type { MatchListItem } from "@jobpilot/contracts";
 import type { ReactNode } from "react";
+import { Badge } from "../../../shared/ui";
 import {
    matchDetailsLine,
    matchVerdict,
@@ -24,11 +25,9 @@ export function MatchHeader({ match, title, children }: Props) {
 
    return (
       <div className="flex items-start gap-4">
-         <span
-            className={`shrink-0 rounded px-2 py-1 text-sm font-medium ${verdictStyles[verdict]}`}
-         >
+         <Badge tone={verdictStyles[verdict]} size="md">
             {match.score ?? "–"} {verdict}
-         </span>
+         </Badge>
          <div className="min-w-0">
             {title}
             {details && <p className="text-sm text-gray-500">{details}</p>}

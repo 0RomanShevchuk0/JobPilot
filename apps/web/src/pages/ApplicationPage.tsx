@@ -10,6 +10,7 @@ import {
    useSaveAnswers,
    useStartApplication,
 } from "../features/applications";
+import { Button } from "../shared/ui";
 
 /**
  * One application: while the worker reads the form and answers it, then the answers to review, opened
@@ -80,32 +81,30 @@ function Application({ app }: { app: ApplicationView }) {
 
          <div className="mt-6 flex gap-2">
             {app.status === "ready_for_review" && changes.length > 0 && (
-               <button
+               <Button
                   onClick={() => save.mutate(changes, { onSuccess: clearDrafts })}
                   disabled={busy || app.filling}
-                  className="rounded bg-gray-100 px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-50"
                >
                   Save changes
-               </button>
+               </Button>
             )}
             {/* what I changed goes into the form too: it is saved first */}
             {app.status === "ready_for_review" && (
-               <button
+               <Button
+                  variant="primary"
                   onClick={() => fill.mutate(changes, { onSuccess: clearDrafts })}
                   disabled={busy || app.filling}
-                  className="rounded bg-gray-900 px-3 py-1 text-sm text-white hover:bg-gray-700 disabled:opacity-50"
                >
                   Open in browser
-               </button>
+               </Button>
             )}
             {(app.status === "ready_for_review" || app.status === "failed") && app.vacancyId && (
-               <button
+               <Button
                   onClick={() => prepareAgain.mutate(app.vacancyId!, { onSuccess: clearDrafts })}
                   disabled={busy || app.filling}
-                  className="rounded bg-gray-100 px-3 py-1 text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-50"
                >
                   {app.status === "failed" ? "Try again" : "Answer again"}
-               </button>
+               </Button>
             )}
          </div>
          {error && <p className="mt-3 text-sm text-red-600">{error.message}</p>}
