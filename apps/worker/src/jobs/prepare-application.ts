@@ -1,5 +1,6 @@
 import {
    choiceFieldKinds,
+   SessionExpiredError,
    SourceIds,
    type FormField,
    type PrepareApplicationJobData,
@@ -7,7 +8,6 @@ import {
 } from "@jobpilot/contracts";
 import {
    DjinniCannotApplyError,
-   DjinniSessionExpiredError,
    launchBrowser,
    openDjinniContext,
    readDjinniApplyForm,
@@ -45,13 +45,13 @@ export async function handlePrepareApplication(
    } catch (err) {
       const lastAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
       const reason =
-         err instanceof DjinniSessionExpiredError
-            ? "Not logged in to Djinni: run `pnpm login djinni` in apps/worker, then prepare again"
+         err instanceof SessionExpiredError
+            ? `${err.message}, then prepare again`
             : (err as Error).message;
       // a final failure must not leave the application "preparing" forever
       if (
          err instanceof UnrecoverableError ||
-         err instanceof DjinniSessionExpiredError ||
+         err instanceof SessionExpiredError ||
          err instanceof DjinniCannotApplyError ||
          lastAttempt
       ) {

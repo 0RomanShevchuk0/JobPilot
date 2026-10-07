@@ -1,20 +1,17 @@
 import {
-   SourceIds,
+   SessionExpiredError,
    type BuildVacancyJobData,
    type CheckCanApplyJobData,
    type JobPageResult,
    type ScoreVacancyJobData,
 } from "@jobpilot/contracts";
-import { checkDjinniJobPage, DjinniSessionExpiredError } from "@jobpilot/sources";
 import type { DatabaseClient } from "@jobpilot/db";
 import { SCORING_PROMPT_VERSION } from "@jobpilot/matching";
 import type { Job, Queue } from "bullmq";
 import { sessionPath } from "../config.js";
 import { log } from "../log.js";
 import { buildVacancyJobOptions, scoreVacancyJobOptions } from "../queues.js";
-
-// job sites that tell a logged-in user whether they can apply
-const CHECKED_SOURCES = [SourceIds.djinni];
+import { findSource, sources } from "../sources.js";
 
 /**
  * One prefiltered vacancy × one user → asks the job site whether they can apply → what they can't
@@ -36,9 +33,11 @@ export async function handleCheckCanApply(
    const match = await database.matches.get(userId, vacancyId);
    if (!match || match.profileVersion !== stored.version || !match.prefilterPassed) return "stale";
 
-   const posting = await database.applications.findPostingToApply(vacancyId, CHECKED_SOURCES);
-   // undefined: not asked, the vacancy has no Djinni posting or there is no session
-   const result = posting ? await checkOnDjinni(posting.url) : undefined;
+   // one posting is asked, the last seen; asking all of them is in TODO.md
+   const allSources = sources.map((s) => s.adapter.source);
+   const posting = await database.applications.findPostingToApply(vacancyId, allSources);
+   // undefined: not asked, the vacancy has no active posting or there is no session on its site
+   const result = posting ? await checkJobPage(posting) : undefined;
    if (posting && result?.status === "gone") {
       // as when fetching finds the page gone: the posting is gone, its vacancy may now be closed
       await database.postings.markGone(posting.id);
@@ -77,16 +76,18 @@ export async function handleCheckCanApply(
    return applyCheck ? "can apply" : "not checked";
 }
 
-/** Asks Djinni; undefined when it can't be asked: no session, or it's over. */
-async function checkOnDjinni(url: string): Promise<JobPageResult | undefined> {
+/** Asks the posting's job site; undefined when it can't be asked: no session, or it's over. */
+async function checkJobPage(posting: {
+   source: string;
+   url: string;
+}): Promise<JobPageResult | undefined> {
+   const entry = findSource(posting.source);
+   if (!entry) throw new Error(`no adapter for source ${posting.source}`);
    try {
-      return await checkDjinniJobPage(url, sessionPath(SourceIds.djinni));
+      return await entry.adapter.account.checkJobPage(posting.url, sessionPath(posting.source));
    } catch (err) {
-      if (!(err instanceof DjinniSessionExpiredError)) throw err;
-      log(
-         "check-can-apply",
-         "not logged in to Djinni: run `pnpm login djinni`; scoring without the check",
-      );
+      if (!(err instanceof SessionExpiredError)) throw err;
+      log("check-can-apply", `${err.message}; scoring without the check`);
       return undefined;
    }
 }

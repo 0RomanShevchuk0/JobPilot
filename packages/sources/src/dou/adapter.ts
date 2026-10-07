@@ -1,4 +1,9 @@
-import { SourceIds, type PostingRef, type SourceAdapter } from "@jobpilot/contracts";
+import {
+   SessionExpiredError,
+   SourceIds,
+   type PostingRef,
+   type SourceAdapter,
+} from "@jobpilot/contracts";
 import { getText } from "../http.js";
 import { isClosedPage, parseJobPage } from "./job-page.js";
 import { parseRss, rssUrl } from "./rss.js";
@@ -43,6 +48,8 @@ export function createDouAdapter(): SourceAdapter {
       // not implemented yet: whatever needs the account fails until it is
       account: {
          login: () => Promise.reject(new Error("dou: logging in is not implemented yet")),
+         // there is no DOU session without a login: the check is skipped, as for any source not logged in
+         checkJobPage: () => Promise.reject(new SessionExpiredError(SourceIds.dou)),
       },
    };
 }

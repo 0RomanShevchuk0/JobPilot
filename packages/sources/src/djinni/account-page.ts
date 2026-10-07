@@ -1,7 +1,13 @@
-import type { ApplyCheck, JobPageResult, SalaryFit } from "@jobpilot/contracts";
+import {
+   SessionExpiredError,
+   SourceIds,
+   type ApplyCheck,
+   type JobPageResult,
+   type SalaryFit,
+} from "@jobpilot/contracts";
 import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
-import { DJINNI_URL, DjinniSessionExpiredError, djinniCookieHeader } from "./session.js";
+import { DJINNI_URL, djinniCookieHeader } from "./session.js";
 
 // "Apply for the job": in the page's HTML from the start, no waiting for it
 export const APPLY_BUTTON = "button.js-inbox-toggle-reply-form";
@@ -60,7 +66,7 @@ function whyNoApplyButton($: CheerioAPI): string {
 /**
  * What Djinni shows the user on a job page: whether they can apply and how the salary compares with
  * their expectations, or that the job is gone (closed or removed). Loads the page with their session
- * over plain HTTP, no browser. Throws DjinniSessionExpiredError when the session is missing or over.
+ * over plain HTTP, no browser. Throws SessionExpiredError when the session is missing or over.
  */
 export async function checkDjinniJobPage(
    jobUrl: string,
@@ -77,7 +83,7 @@ export async function checkDjinniJobPage(
    if (response.status !== 200) throw new Error(`djinni ${jobUrl}: HTTP ${response.status}`);
    const html = await response.text();
    const $ = cheerio.load(html);
-   if ($(SIGN_IN_LINK).length > 0) throw new DjinniSessionExpiredError();
+   if ($(SIGN_IN_LINK).length > 0) throw new SessionExpiredError(SourceIds.djinni);
    if ($(JOB_CLOSED_ALERT).length > 0) return { status: "gone" };
    const check = { applyCheck: applyCheckOnPage($), salaryFit: salaryFitOnPage($) };
    return { status: "ok", check };
