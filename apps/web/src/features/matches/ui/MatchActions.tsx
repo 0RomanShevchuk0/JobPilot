@@ -12,7 +12,8 @@ export function MatchActions({ match }: { match: MatchListItem }) {
       apply.mutate(match.vacancyId, { onSuccess: ({ id }) => navigate(`/applications/${id}`) });
 
    return (
-      <div className="ml-auto flex max-w-xs shrink-0 flex-col items-end gap-2">
+      // relative z-10: above the card's stretched link, so the buttons stay clickable on their own
+      <div className="relative z-10 ml-auto flex max-w-xs shrink-0 flex-col items-end gap-2">
          <div className="flex gap-2">
             {match.application ? (
                <Link
