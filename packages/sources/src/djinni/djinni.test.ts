@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { normalizedPostingSchema, SourceIds, type RawPosting } from "@jobpilot/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDjinniAdapter } from "./adapter.js";
-import { isClosedPage, kyivTimeToIso, parseJobPage } from "./job-page.js";
+import { kyivTimeToIso } from "../kyiv-time.js";
+import { isClosedPage, parseJobPage } from "./job-page.js";
 import { countryCode } from "./mappings.js";
 import { parseRss, rssUrl } from "./rss.js";
 

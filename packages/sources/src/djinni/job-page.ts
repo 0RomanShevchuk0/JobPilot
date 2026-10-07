@@ -10,6 +10,7 @@ import {
 } from "@jobpilot/contracts";
 import * as cheerio from "cheerio";
 import TurndownService from "turndown";
+import { kyivTimeToIso } from "../kyiv-time.js";
 import { countryCode, EMPLOYMENT_TYPES, LANGUAGE_CODES, SALARY_PERIODS } from "./mappings.js";
 
 /** The subset of schema.org JobPosting that Djinni fills in. */
@@ -64,6 +65,7 @@ export function parseJobPage(raw: RawPosting): NormalizedPosting {
       title: ld.title.trim(),
       description: toMarkdown(descriptionHtml),
       company: org?.name ? { name: org.name.trim(), website: validUrl(org.sameAs) } : undefined,
+      // Djinni's datePosted has no offset; it is Kyiv wall-clock time
       publishedAt: ld.datePosted ? kyivTimeToIso(ld.datePosted) : undefined,
       employmentTypes: nonEmpty(employmentTypes(ld)),
       workModes: nonEmpty(workModes($, ld)),
@@ -230,24 +232,6 @@ function detailRows($: cheerio.CheerioAPI, heading: string): { name: string; val
          value: $(el).find(".detail-rows__value").text().trim(),
       }))
       .get();
-}
-
-/** Djinni's datePosted has no offset; it is Kyiv wall-clock time. */
-export function kyivTimeToIso(value: string): string {
-   // already ends with an offset ("…Z" or "…+03:00"): nothing to convert
-   if (/(Z|[+-]\d{2}:\d{2})$/.test(value)) return new Date(value).toISOString();
-   const asUtc = new Date(`${value.slice(0, 23)}Z`); // JS dates keep milliseconds only
-   const offsetMinutes = timeZoneOffsetMinutes(asUtc, "Europe/Kyiv");
-   return new Date(asUtc.getTime() - offsetMinutes * 60_000).toISOString();
-}
-
-function timeZoneOffsetMinutes(date: Date, timeZone: string): number {
-   const name = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "longOffset" })
-      .formatToParts(date)
-      .find((p) => p.type === "timeZoneName")?.value;
-   const m = /GMT([+-])(\d{2}):(\d{2})/.exec(name ?? ""); // "GMT+03:00" → sign, hours, minutes
-   if (!m) return 0;
-   return (m[1] === "-" ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3]));
 }
 
 function validUrl(value: string | undefined): string | undefined {
