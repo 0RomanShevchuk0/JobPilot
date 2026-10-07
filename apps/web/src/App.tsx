@@ -3,6 +3,7 @@ import { ApplicationPage } from "./ApplicationPage";
 import { ApplicationsPage } from "./ApplicationsPage";
 import { DocumentsPage } from "./DocumentsPage";
 import { MatchesPage } from "./MatchesPage";
+import { VacancyPage } from "./VacancyPage";
 
 const pages = [
    { path: "/matches", title: "Matches" },
@@ -31,6 +32,7 @@ export function App() {
          </nav>
          <Routes>
             <Route path="/matches" element={<MatchesPage />} />
+            <Route path="/matches/:vacancyId" element={<VacancyPage />} />
             <Route path="/applications" element={<ApplicationsPage />} />
             <Route path="/applications/:id" element={<ApplicationPage />} />
             <Route path="/documents" element={<DocumentsPage />} />

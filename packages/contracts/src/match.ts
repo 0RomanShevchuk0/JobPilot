@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ApplicationStatus } from "./application.js";
-import type { Salary, WorkMode } from "./posting.js";
+import type { Location, Salary, WorkMode } from "./posting.js";
 
 export type PrefilterCheck =
    | "seniority"
@@ -105,6 +105,15 @@ export interface MatchAnalysis {
 export const matchStatusSchema = z.enum(["applied", "hidden"]).nullable();
 export type MatchStatus = z.infer<typeof matchStatusSchema>;
 
+/** Where the vacancy is listed: one active posting on one job site. */
+export interface MatchPosting {
+   /** the job site's id, e.g. "djinni" */
+   source: string;
+   /** the job site's name to show, e.g. "Djinni" */
+   sourceName: string;
+   url: string;
+}
+
 /**
  * One vacancy in GET /matches: how it was evaluated against the user's current profile.
  * The API's wire format, so dates are ISO strings.
@@ -114,8 +123,8 @@ export interface MatchListItem {
    title: string;
    /** null when the employer is hidden */
    company: string | null;
-   /** pages of the vacancy's active postings */
-   urls: string[];
+   /** the vacancy's active postings, the first seen first */
+   postings: MatchPosting[];
    /** null: rejected by the prefilter or not scored yet */
    score: number | null;
    verdict: AiAssessment["verdict"] | null;
@@ -135,4 +144,10 @@ export interface MatchListItem {
    evaluatedAt: string;
    /** my application to it through JobPilot, once started */
    application: { id: string; status: ApplicationStatus } | null;
+}
+
+/** One vacancy in GET /matches/:vacancyId: the list item plus what only its own page shows. */
+export interface MatchDetails extends MatchListItem {
+   description: string; // markdown
+   locations: Location[];
 }

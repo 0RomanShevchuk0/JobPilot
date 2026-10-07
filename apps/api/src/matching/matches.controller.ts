@@ -36,6 +36,15 @@ export class MatchesController {
       });
    }
 
+   /** One vacancy as evaluated for my current profile, with its description and every job site it is on. */
+   @Get(":vacancyId")
+   async get(@Param("vacancyId", new ZodValidationPipe(z.uuid())) vacancyId: string) {
+      const userId = await this.user.id();
+      const match = await this.matches.get(userId, vacancyId);
+      if (!match) throw new NotFoundException("No evaluated vacancy with this id");
+      return match;
+   }
+
    /** Marks a vacancy as applied or hidden, or clears the mark. */
    @Patch(":vacancyId")
    async setStatus(

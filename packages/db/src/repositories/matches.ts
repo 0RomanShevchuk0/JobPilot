@@ -4,16 +4,18 @@ import type {
    JobPageCheck,
    ApplicationStatus,
    MatchAnalysis,
+   MatchDetails,
    MatchListItem,
    MatchStatus,
 } from "@jobpilot/contracts";
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import {
    applications,
    companies,
    postings,
    profiles,
+   sources,
    vacancies,
    vacancyMatches,
 } from "../schema.js";
@@ -59,6 +61,11 @@ export interface MatchesRepository {
     * their verdict, since the user has already decided about them.
     */
    listForUser(userId: string, options: MatchListOptions): Promise<MatchListItem[]>;
+   /**
+    * One vacancy evaluated for the user's current profile version, with what only its own page shows;
+    * closed ones too. Undefined when there is no such evaluation.
+    */
+   getDetails(userId: string, vacancyId: string): Promise<MatchDetails | undefined>;
    /** Marks a vacancy (null clears the mark). Returns false when it has no evaluation for the user. */
    setStatus(userId: string, vacancyId: string, status: MatchStatus): Promise<boolean>;
    get(userId: string, vacancyId: string): Promise<StoredMatch | undefined>;
@@ -91,12 +98,10 @@ export interface MatchesRepository {
 }
 
 export function createMatchesRepository(db: Drizzle): MatchesRepository {
-   return {
-      async listForUser(userId, { status, includeSkipped }) {
-         const verdict = sql`${vacancyMatches.analysis}->'ai'->>'verdict'`;
-         // absent when the job site wasn't asked: such vacancies stay
-         const canApply = sql`(${vacancyMatches.analysis}->'applyCheck'->>'canApply') is distinct from 'false'`;
-         const rows = await db
+   /** The user's evaluations made for their current profile version that also meet the condition, best first. */
+   function selectMatches(userId: string, condition: SQL | undefined) {
+      return (
+         db
             .select({
                vacancyId: vacancies.id,
                title: vacancies.title,
@@ -122,87 +127,97 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
             )
             .innerJoin(vacancies, eq(vacancies.id, vacancyMatches.vacancyId))
             .leftJoin(companies, eq(companies.id, vacancies.companyId))
-            .where(
-               and(
-                  eq(vacancyMatches.userId, userId),
-                  isNull(vacancies.closedAt),
-                  status === null
-                     ? isNull(vacancyMatches.status)
-                     : eq(vacancyMatches.status, status),
-                  status === null && !includeSkipped
-                     ? inArray(verdict, ["apply", "stretch"])
-                     : undefined,
-                  // what the job site won't let me apply to is no use among the new ones
-                  status === null && !includeSkipped ? canApply : undefined,
-               ),
-            )
-            .orderBy(
-               sql`${vacancyMatches.score} desc nulls last`,
-               desc(vacancyMatches.evaluatedAt),
-            );
+            .where(and(eq(vacancyMatches.userId, userId), condition))
+            .orderBy(sql`${vacancyMatches.score} desc nulls last`, desc(vacancyMatches.evaluatedAt))
+      );
+   }
 
-         const urls = rows.length
-            ? await db
-                 .select({ vacancyId: postings.vacancyId, url: postings.url })
-                 .from(postings)
-                 .where(
-                    and(
-                       inArray(
-                          postings.vacancyId,
-                          rows.map((r) => r.vacancyId),
-                       ),
-                       isNull(postings.goneAt),
-                    ),
-                 )
-                 .orderBy(postings.firstSeenAt)
-            : [];
-         // a vacancy can have several postings, each with its own application: the latest one counts
-         const userApplications = rows.length
-            ? await db
-                 .select({
-                    vacancyId: postings.vacancyId,
-                    id: applications.id,
-                    status: applications.status,
-                 })
-                 .from(applications)
-                 .innerJoin(postings, eq(postings.id, applications.postingId))
-                 .where(
-                    and(
-                       eq(applications.userId, userId),
-                       inArray(
-                          postings.vacancyId,
-                          rows.map((r) => r.vacancyId),
-                       ),
-                    ),
-                 )
-                 .orderBy(desc(applications.updatedAt))
-            : [];
+   /** The selected evaluations with their vacancies' active postings and the user's applications. */
+   async function toListItems(
+      userId: string,
+      rows: Awaited<ReturnType<typeof selectMatches>>,
+   ): Promise<MatchListItem[]> {
+      if (rows.length === 0) return [];
+      const vacancyIds = rows.map((r) => r.vacancyId);
+      const activePostings = await db
+         .select({
+            vacancyId: postings.vacancyId,
+            source: postings.sourceId,
+            sourceName: sources.name,
+            url: postings.url,
+         })
+         .from(postings)
+         .innerJoin(sources, eq(sources.id, postings.sourceId))
+         .where(and(inArray(postings.vacancyId, vacancyIds), isNull(postings.goneAt)))
+         .orderBy(postings.firstSeenAt);
+      // a vacancy can have several postings, each with its own application: the latest one counts
+      const userApplications = await db
+         .select({
+            vacancyId: postings.vacancyId,
+            id: applications.id,
+            status: applications.status,
+         })
+         .from(applications)
+         .innerJoin(postings, eq(postings.id, applications.postingId))
+         .where(and(eq(applications.userId, userId), inArray(postings.vacancyId, vacancyIds)))
+         .orderBy(desc(applications.updatedAt));
 
-         return rows.map(
-            ({ analysis, salaryMin, salaryMax, salaryCurrency, salaryPeriod, ...r }) => ({
-               ...r,
-               evaluatedAt: r.evaluatedAt.toISOString(),
-               urls: urls.filter((u) => u.vacancyId === r.vacancyId).map((u) => u.url),
-               application: applicationOf(userApplications, r.vacancyId),
-               verdict: analysis.ai?.verdict ?? null,
-               summary: analysis.ai?.summary ?? null,
-               concerns: analysis.ai?.concerns ?? [],
-               matchedSkills: analysis.ai?.matchedSkills ?? [],
-               missingSkills: analysis.ai?.missingSkills ?? [],
-               rejectedBy: analysis.prefilter.rejectedBy,
-               cannotApplyReason: cannotApplyReason(analysis.applyCheck),
-               salaryFit: analysis.salaryFit ?? null,
-               salary:
-                  salaryCurrency && salaryPeriod && (salaryMin !== null || salaryMax !== null)
-                     ? {
-                          min: salaryMin ?? undefined,
-                          max: salaryMax ?? undefined,
-                          currency: salaryCurrency,
-                          period: salaryPeriod,
-                       }
-                     : null,
-            }),
+      return rows.map(({ analysis, salaryMin, salaryMax, salaryCurrency, salaryPeriod, ...r }) => ({
+         ...r,
+         evaluatedAt: r.evaluatedAt.toISOString(),
+         postings: activePostings
+            .filter((p) => p.vacancyId === r.vacancyId)
+            .map(({ source, sourceName, url }) => ({ source, sourceName, url })),
+         application: applicationOf(userApplications, r.vacancyId),
+         verdict: analysis.ai?.verdict ?? null,
+         summary: analysis.ai?.summary ?? null,
+         concerns: analysis.ai?.concerns ?? [],
+         matchedSkills: analysis.ai?.matchedSkills ?? [],
+         missingSkills: analysis.ai?.missingSkills ?? [],
+         rejectedBy: analysis.prefilter.rejectedBy,
+         cannotApplyReason: cannotApplyReason(analysis.applyCheck),
+         salaryFit: analysis.salaryFit ?? null,
+         salary:
+            salaryCurrency && salaryPeriod && (salaryMin !== null || salaryMax !== null)
+               ? {
+                    min: salaryMin ?? undefined,
+                    max: salaryMax ?? undefined,
+                    currency: salaryCurrency,
+                    period: salaryPeriod,
+                 }
+               : null,
+      }));
+   }
+
+   return {
+      async listForUser(userId, { status, includeSkipped }) {
+         const verdict = sql`${vacancyMatches.analysis}->'ai'->>'verdict'`;
+         // absent when the job site wasn't asked: such vacancies stay
+         const canApply = sql`(${vacancyMatches.analysis}->'applyCheck'->>'canApply') is distinct from 'false'`;
+         const rows = await selectMatches(
+            userId,
+            and(
+               isNull(vacancies.closedAt),
+               status === null ? isNull(vacancyMatches.status) : eq(vacancyMatches.status, status),
+               status === null && !includeSkipped
+                  ? inArray(verdict, ["apply", "stretch"])
+                  : undefined,
+               // what the job site won't let me apply to is no use among the new ones
+               status === null && !includeSkipped ? canApply : undefined,
+            ),
          );
+         return toListItems(userId, rows);
+      },
+
+      async getDetails(userId, vacancyId) {
+         const rows = await selectMatches(userId, eq(vacancies.id, vacancyId));
+         const [item] = await toListItems(userId, rows);
+         if (!item) return undefined;
+         const [vacancy] = await db
+            .select({ description: vacancies.description, locations: vacancies.locations })
+            .from(vacancies)
+            .where(eq(vacancies.id, vacancyId));
+         return { ...item, ...vacancy };
       },
 
       async get(userId, vacancyId) {
