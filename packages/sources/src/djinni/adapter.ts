@@ -1,6 +1,7 @@
 import { SourceIds, type PostingRef, type SourceAdapter } from "@jobpilot/contracts";
 import { getText } from "../http.js";
 import { checkDjinniJobPage } from "./account-page.js";
+import { readDjinniApplyForm } from "./apply-form.js";
 import { isClosedPage, parseJobPage } from "./job-page.js";
 import { parseRss, rssUrl } from "./rss.js";
 import { loginToDjinni } from "./session.js";
@@ -44,6 +45,9 @@ export function createDjinniAdapter(): SourceAdapter {
       account: {
          login: loginToDjinni,
          checkJobPage: checkDjinniJobPage,
+         readApplyForm: readDjinniApplyForm,
+         // like a person going through jobs: a minute or two between forms
+         formOpenGapMs: { min: 60_000, max: 150_000 },
       },
    };
 }

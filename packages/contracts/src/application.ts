@@ -29,6 +29,29 @@ export const choiceFieldKinds: readonly FormFieldKind[] = ["radio", "select"];
 export const formFieldValueSources = ["profile", "document", "ai"] as const;
 export type FormFieldValueSource = (typeof formFieldValueSources)[number];
 
+/** One field of an application form as the job site shows it, before anything is answered. */
+export interface ApplyFormField {
+   /** the input's name, to fill it later */
+   name: string;
+   label: string;
+   kind: FormFieldKind;
+   required: boolean;
+   /** for select, radio and checkbox groups */
+   options?: string[];
+}
+
+/** An application form read from the job site. */
+export interface ApplyForm {
+   /** the recruiter's questions, in the form's order: answered by the AI */
+   questions: ApplyFormField[];
+   /** the message to the recruiter, when the form has one: written from the profile */
+   message?: ApplyFormField;
+   /** every other field (CV choice, salary, message templates): the site's defaults are kept */
+   other: ApplyFormField[];
+   /** the form's HTML as rendered, to see what the reading missed */
+   html: string;
+}
+
 /** One field of an application form, as found by the browser agent. Array order = order in the form. */
 export const formFieldSchema = z.object({
    /** the input's name in the form, to fill it in */

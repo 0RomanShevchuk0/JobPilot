@@ -1,19 +1,13 @@
 import {
+   CannotApplyError,
    choiceFieldKinds,
    SessionExpiredError,
-   SourceIds,
+   type ApplyForm,
+   type ApplyFormField,
    type FormField,
    type PrepareApplicationJobData,
    type Profile,
 } from "@jobpilot/contracts";
-import {
-   DjinniCannotApplyError,
-   launchBrowser,
-   openDjinniContext,
-   readDjinniApplyForm,
-   type ApplyForm,
-   type ApplyFormField,
-} from "@jobpilot/sources";
 import type { ApplicationToPrepare, DatabaseClient, VacancyForMatching } from "@jobpilot/db";
 import type { LlmProvider } from "@jobpilot/llm";
 import {
@@ -25,6 +19,7 @@ import {
 import { type Job, UnrecoverableError } from "bullmq";
 import { sessionPath } from "../config.js";
 import { log } from "../log.js";
+import { findSource, type SourceEntry } from "../sources.js";
 
 /**
  * The user asked to apply: open the form on the job site with their session, read its questions,
@@ -52,7 +47,7 @@ export async function handlePrepareApplication(
       if (
          err instanceof UnrecoverableError ||
          err instanceof SessionExpiredError ||
-         err instanceof DjinniCannotApplyError ||
+         err instanceof CannotApplyError ||
          lastAttempt
       ) {
          await database.applications.setFailed(applicationId, reason);
@@ -70,8 +65,8 @@ async function prepare(
    llm: LlmProvider,
 ) {
    const { userId, vacancyId, postingUrl, source } = application;
-   if (source !== SourceIds.djinni)
-      throw new UnrecoverableError(`Applying through ${source} is not supported yet`);
+   const entry = findSource(source);
+   if (!entry) throw new UnrecoverableError(`No adapter for source ${source}`);
    const stored = await database.profiles.get(userId);
    if (!stored) throw new UnrecoverableError("No profile yet");
    const vacancy = vacancyId ? await database.vacancies.getForMatching(vacancyId) : undefined;
@@ -80,7 +75,7 @@ async function prepare(
    // the questions are read from the job site once; answering again reuses them
    const form =
       refreshForm || application.fields.length === 0
-         ? await readForm(postingUrl)
+         ? await readForm(entry, postingUrl)
          : storedForm(application.fields);
    const answers =
       form.questions.length > 0
@@ -144,20 +139,23 @@ async function answerQuestions(
    });
 }
 
-// Djinni sees one account opening application forms: automated opens are spaced out at random,
-// like a person going through jobs. Jobs run one at a time, so a plain variable is enough.
-const MIN_GAP_MS = 60_000;
-const MAX_GAP_MS = 150_000;
-let nextOpenAt = 0;
+// A job site sees one account opening application forms: automated opens are spaced out at random,
+// like a person going through jobs, each site at its own pace. Jobs run one at a time, so a plain map
+// is enough: when the next open is allowed, by source.
+const nextOpenAt = new Map<string, number>();
 
-/** Waits until the previous automated open is far enough behind; no wait after a quiet spell. */
-async function waitForTurn(): Promise<void> {
-   const wait = nextOpenAt - Date.now();
+/** Waits until the previous automated open on this site is far enough behind; no wait after a quiet spell. */
+async function waitForTurn({ name, adapter }: SourceEntry): Promise<void> {
+   const wait = (nextOpenAt.get(adapter.source) ?? 0) - Date.now();
    if (wait > 0) {
-      log("prepare-application", `waiting ${Math.round(wait / 1000)}s before opening Djinni again`);
+      log(
+         "prepare-application",
+         `waiting ${Math.round(wait / 1000)}s before opening ${name} again`,
+      );
       await new Promise((resolve) => setTimeout(resolve, wait));
    }
-   nextOpenAt = Date.now() + MIN_GAP_MS + Math.random() * (MAX_GAP_MS - MIN_GAP_MS);
+   const { min, max } = adapter.account.formOpenGapMs;
+   nextOpenAt.set(adapter.source, Date.now() + min + Math.random() * (max - min));
 }
 
 /** The questions and the message field as read before, without their answers. */
@@ -176,15 +174,9 @@ function storedForm(fields: FormField[]): Pick<ApplyForm, "questions" | "message
    };
 }
 
-async function readForm(jobUrl: string): Promise<ApplyForm> {
-   await waitForTurn();
-   const browser = await launchBrowser();
-   try {
-      const context = await openDjinniContext(browser, sessionPath(SourceIds.djinni));
-      return await readDjinniApplyForm(context, jobUrl);
-   } finally {
-      await browser.close();
-   }
+async function readForm(entry: SourceEntry, jobUrl: string): Promise<ApplyForm> {
+   await waitForTurn(entry);
+   return entry.adapter.account.readApplyForm(jobUrl, sessionPath(entry.adapter.source));
 }
 
 function formField(
