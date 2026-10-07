@@ -5,11 +5,11 @@ import {
    type JobPageResult,
    type ScoreVacancyJobData,
 } from "@jobpilot/contracts";
-import { checkDjinniJobPage, DjinniSessionExpiredError } from "@jobpilot/apply";
+import { checkDjinniJobPage, DjinniSessionExpiredError } from "@jobpilot/sources";
 import type { DatabaseClient } from "@jobpilot/db";
 import { SCORING_PROMPT_VERSION } from "@jobpilot/matching";
 import type { Job, Queue } from "bullmq";
-import { config } from "../config.js";
+import { sessionPath } from "../config.js";
 import { log } from "../log.js";
 import { buildVacancyJobOptions, scoreVacancyJobOptions } from "../queues.js";
 
@@ -80,12 +80,12 @@ export async function handleCheckCanApply(
 /** Asks Djinni; undefined when it can't be asked: no session, or it's over. */
 async function checkOnDjinni(url: string): Promise<JobPageResult | undefined> {
    try {
-      return await checkDjinniJobPage(url, config.djinniSessionPath);
+      return await checkDjinniJobPage(url, sessionPath(SourceIds.djinni));
    } catch (err) {
       if (!(err instanceof DjinniSessionExpiredError)) throw err;
       log(
          "check-can-apply",
-         "not logged in to Djinni: run `pnpm djinni:login`; scoring without the check",
+         "not logged in to Djinni: run `pnpm login djinni`; scoring without the check",
       );
       return undefined;
    }

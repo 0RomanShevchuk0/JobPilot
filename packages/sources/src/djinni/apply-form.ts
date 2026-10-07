@@ -1,6 +1,6 @@
 import type { FormFieldKind } from "@jobpilot/contracts";
 import type { BrowserContext, Page } from "playwright";
-import { APPLY_BUTTON, readApplyCheck, SIGN_IN_LINK } from "./job-page.js";
+import { APPLY_BUTTON, readApplyCheck, SIGN_IN_LINK } from "./account-page.js";
 import { DjinniSessionExpiredError } from "./session.js";
 
 /**

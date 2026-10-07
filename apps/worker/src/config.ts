@@ -21,11 +21,16 @@ export const config = {
    // until user profiles exist, what to look for comes from the environment
    djinniKeywords: list("DJINNI_KEYWORDS"),
    douCategories: list("DOU_CATEGORIES"),
-   // single-user for now: one Djinni session, saved by `pnpm djinni:login` (.data/ is gitignored)
-   djinniSessionPath: "../../.data/sessions/djinni.json",
+   // single-user for now: one session per source, saved by `pnpm login <source>` (.data/ is gitignored)
+   sessionsDir: "../../.data/sessions",
    llm: {
       provider: required("LLM_PROVIDER"),
       model: process.env.LLM_MODEL || undefined, // the provider's default when empty
       geminiApiKey: process.env.GEMINI_API_KEY,
    },
 };
+
+/** Where the user's session on a source is kept: .data/sessions/<source>.json */
+export function sessionPath(source: string): string {
+   return `${config.sessionsDir}/${source}.json`;
+}
