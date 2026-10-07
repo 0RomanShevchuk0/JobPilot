@@ -39,5 +39,10 @@ export function createDouAdapter(): SourceAdapter {
       },
 
       parse: parseJobPage,
+
+      // not implemented yet: whatever needs the account fails until it is
+      account: {
+         login: () => Promise.reject(new Error("dou: logging in is not implemented yet")),
+      },
    };
 }

@@ -22,6 +22,12 @@ export interface DiscoverParams {
    keywords?: string[];
 }
 
+/** What the platform does under the user's own account on the source. */
+export interface SourceAccount {
+   /** Interactive: the user logs in, the session is saved to sessionPath for later runs. */
+   login(sessionPath: string): Promise<void>;
+}
+
 /**
  * Implemented once per source. The platform only talks to sources through this interface.
  * Rate limiting and retries are the caller's job: every method makes at most the requests it needs, once.
@@ -34,4 +40,5 @@ export interface SourceAdapter {
    fetch(ref: PostingRef): Promise<FetchResult>;
    /** Pure: no network. Must never guess — a field it is not sure about stays undefined. */
    parse(raw: RawPosting): NormalizedPosting;
+   readonly account: SourceAccount;
 }

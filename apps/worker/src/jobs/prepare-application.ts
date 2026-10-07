@@ -13,7 +13,7 @@ import {
    readDjinniApplyForm,
    type ApplyForm,
    type ApplyFormField,
-} from "@jobpilot/apply";
+} from "@jobpilot/sources";
 import type { ApplicationToPrepare, DatabaseClient, VacancyForMatching } from "@jobpilot/db";
 import type { LlmProvider } from "@jobpilot/llm";
 import {
@@ -23,7 +23,7 @@ import {
    tidyAnswer,
 } from "@jobpilot/matching";
 import { type Job, UnrecoverableError } from "bullmq";
-import { config } from "../config.js";
+import { sessionPath } from "../config.js";
 import { log } from "../log.js";
 
 /**
@@ -46,7 +46,7 @@ export async function handlePrepareApplication(
       const lastAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
       const reason =
          err instanceof DjinniSessionExpiredError
-            ? "Not logged in to Djinni: run `pnpm djinni:login` in apps/worker, then prepare again"
+            ? "Not logged in to Djinni: run `pnpm login djinni` in apps/worker, then prepare again"
             : (err as Error).message;
       // a final failure must not leave the application "preparing" forever
       if (
@@ -180,7 +180,7 @@ async function readForm(jobUrl: string): Promise<ApplyForm> {
    await waitForTurn();
    const browser = await launchBrowser();
    try {
-      const context = await openDjinniContext(browser, config.djinniSessionPath);
+      const context = await openDjinniContext(browser, sessionPath(SourceIds.djinni));
       return await readDjinniApplyForm(context, jobUrl);
    } finally {
       await browser.close();

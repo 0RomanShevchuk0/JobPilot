@@ -4,10 +4,10 @@ import {
    fillDjinniApplication,
    launchBrowser,
    openDjinniContext,
-} from "@jobpilot/apply";
+} from "@jobpilot/sources";
 import type { DatabaseClient } from "@jobpilot/db";
 import { type Job, UnrecoverableError } from "bullmq";
-import { config } from "../config.js";
+import { sessionPath } from "../config.js";
 import { log } from "../log.js";
 
 // slows every browser action down a little, so the user can follow the filling
@@ -38,7 +38,7 @@ export async function handleFillApplication(
 
    const browser = await launchBrowser({ visible: true, slowMo: SLOW_MO_MS });
    try {
-      const context = await openDjinniContext(browser, config.djinniSessionPath);
+      const context = await openDjinniContext(browser, sessionPath(SourceIds.djinni));
       const outcome = await fillDjinniApplication(context, application.postingUrl, values);
       if (outcome.status === "cancelled") {
          log("fill-application", `${application.postingUrl}: closed without sending`);
@@ -54,7 +54,7 @@ export async function handleFillApplication(
    } catch (err) {
       const reason =
          err instanceof DjinniSessionExpiredError
-            ? "Not logged in to Djinni: run `pnpm djinni:login` in apps/worker, then fill again"
+            ? "Not logged in to Djinni: run `pnpm login djinni` in apps/worker, then fill again"
             : (err as Error).message;
       await database.applications.setFillProblem(applicationId, reason);
       throw err;

@@ -2,6 +2,7 @@ import { SourceIds, type PostingRef, type SourceAdapter } from "@jobpilot/contra
 import { getText } from "../http.js";
 import { isClosedPage, parseJobPage } from "./job-page.js";
 import { parseRss, rssUrl } from "./rss.js";
+import { loginToDjinni } from "./session.js";
 
 export function createDjinniAdapter(): SourceAdapter {
    return {
@@ -38,5 +39,9 @@ export function createDjinniAdapter(): SourceAdapter {
       },
 
       parse: parseJobPage,
+
+      account: {
+         login: loginToDjinni,
+      },
    };
 }

@@ -276,9 +276,6 @@ importers:
 
   apps/worker:
     dependencies:
-      '@jobpilot/apply':
-        specifier: workspace:*
-        version: link:../../packages/apply
       '@jobpilot/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -310,25 +307,6 @@ importers:
       concurrently:
         specifier: ^10.0.5
         version: 10.0.5
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
-
-  packages/apply:
-    dependencies:
-      '@jobpilot/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      cheerio:
-        specifier: ^1.2.0
-        version: 1.2.0
-      playwright:
-        specifier: ^1.63.0
-        version: 1.63.0
-    devDependencies:
-      '@types/node':
-        specifier: ^24.13.6
-        version: 24.13.6
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
@@ -417,6 +395,9 @@ importers:
       fast-xml-parser:
         specifier: ^5.11.1
         version: 5.11.1
+      playwright:
+        specifier: ^1.63.0
+        version: 1.63.0
       turndown:
         specifier: ^7.2.4
         version: 7.2.4
