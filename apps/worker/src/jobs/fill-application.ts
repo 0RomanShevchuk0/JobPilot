@@ -1,12 +1,9 @@
-import { SessionExpiredError, SourceIds, type FillApplicationJobData } from "@jobpilot/contracts";
-import { fillDjinniApplication, launchBrowser, openDjinniContext } from "@jobpilot/sources";
+import { SessionExpiredError, type FillApplicationJobData } from "@jobpilot/contracts";
 import type { DatabaseClient } from "@jobpilot/db";
 import { type Job, UnrecoverableError } from "bullmq";
 import { sessionPath } from "../config.js";
 import { log } from "../log.js";
-
-// slows every browser action down a little, so the user can follow the filling
-const SLOW_MO_MS = 150;
+import { findSource } from "../sources.js";
 
 /**
  * The user approved the answers: open the form in a visible browser on this machine, fill them in and
@@ -19,8 +16,9 @@ export async function handleFillApplication(
    const { applicationId } = job.data;
    const application = await database.applications.getToFill(applicationId);
    if (!application || application.status !== "ready_for_review") return "not ready";
-   if (application.source !== SourceIds.djinni) {
-      const reason = `Applying through ${application.source} is not supported yet`;
+   const entry = findSource(application.source);
+   if (!entry) {
+      const reason = `No adapter for source ${application.source}`;
       await database.applications.setFillProblem(applicationId, reason);
       throw new UnrecoverableError(reason);
    }
@@ -31,10 +29,12 @@ export async function handleFillApplication(
       value: f.finalValue ?? f.proposedValue ?? "",
    }));
 
-   const browser = await launchBrowser({ visible: true, slowMo: SLOW_MO_MS });
    try {
-      const context = await openDjinniContext(browser, sessionPath(SourceIds.djinni));
-      const outcome = await fillDjinniApplication(context, application.postingUrl, values);
+      const outcome = await entry.adapter.account.fillApplicationForm(
+         application.postingUrl,
+         sessionPath(application.source),
+         values,
+      );
       if (outcome.status === "cancelled") {
          log("fill-application", `${application.postingUrl}: closed without sending`);
          return "cancelled";
@@ -53,7 +53,5 @@ export async function handleFillApplication(
             : (err as Error).message;
       await database.applications.setFillProblem(applicationId, reason);
       throw err;
-   } finally {
-      await browser.close();
    }
 }

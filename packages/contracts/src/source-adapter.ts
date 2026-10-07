@@ -1,4 +1,4 @@
-import type { ApplyForm } from "./application.js";
+import type { ApplyForm, FillOutcome, FillValue } from "./application.js";
 import type { JobPageResult } from "./match.js";
 import type { NormalizedPosting, RawContentType } from "./posting.js";
 
@@ -40,6 +40,16 @@ export interface SourceAccount {
     * the job is closed, the profile doesn't meet its requirements).
     */
    readApplyForm(url: string, sessionPath: string): Promise<ApplyForm>;
+   /**
+    * Opens the job's application form in a visible browser on this machine, fills in the answers and
+    * hands over to the user, who sends it or closes the window: never sends anything itself. Resolves
+    * once the form was sent or the window closed. Throws SessionExpiredError or CannotApplyError.
+    */
+   fillApplicationForm(
+      url: string,
+      sessionPath: string,
+      answers: FillValue[],
+   ): Promise<FillOutcome>;
    /** Pause between automated form opens, ms, picked at random: one account shouldn't look like a bot. */
    readonly formOpenGapMs: { min: number; max: number };
 }

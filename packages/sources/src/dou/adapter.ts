@@ -51,6 +51,8 @@ export function createDouAdapter(): SourceAdapter {
          // there is no DOU session without a login: the check is skipped, as for any source not logged in
          checkJobPage: () => Promise.reject(new SessionExpiredError(SourceIds.dou)),
          readApplyForm: () => Promise.reject(new Error("dou: applying is not implemented yet")),
+         fillApplicationForm: () =>
+            Promise.reject(new Error("dou: applying is not implemented yet")),
          // not measured on DOU yet: Djinni's pace
          formOpenGapMs: { min: 60_000, max: 150_000 },
       },
