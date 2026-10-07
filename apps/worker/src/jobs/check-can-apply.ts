@@ -11,7 +11,7 @@ import type { Job, Queue } from "bullmq";
 import { sessionPath } from "../config.js";
 import { log } from "../log.js";
 import { buildVacancyJobOptions, scoreVacancyJobOptions } from "../queues.js";
-import { findSource, sources } from "../sources.js";
+import { findSource } from "../sources.js";
 
 /**
  * One prefiltered vacancy × one user → asks the job site whether they can apply → what they can't
@@ -34,8 +34,7 @@ export async function handleCheckCanApply(
    if (!match || match.profileVersion !== stored.version || !match.prefilterPassed) return "stale";
 
    // one posting is asked, the last seen; asking all of them is in TODO.md
-   const allSources = sources.map((s) => s.adapter.source);
-   const posting = await database.applications.findPostingToApply(vacancyId, allSources);
+   const posting = await database.applications.findPostingToApply(vacancyId);
    // undefined: not asked, the vacancy has no active posting or there is no session on its site
    const result = posting ? await checkJobPage(posting) : undefined;
    if (posting && result?.status === "gone") {

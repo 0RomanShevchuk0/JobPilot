@@ -1,20 +1,11 @@
-import type { FormFieldKind } from "@jobpilot/contracts";
+import type { FillOutcome, FillValue } from "@jobpilot/contracts";
 import type { BrowserContext, Page } from "playwright";
+import { launchBrowser } from "../browser.js";
 import { openApplyForm } from "./apply-form.js";
+import { openDjinniContext } from "./session.js";
 
-export interface FillValue {
-   /** the input's name in the form */
-   name: string;
-   kind: FormFieldKind;
-   /** for a choice field, the label of the option to pick */
-   value: string;
-}
-
-export type FillOutcome =
-   | { status: "submitted" }
-   /** the user closed the window or let it sit too long: nothing was sent */
-   | { status: "cancelled" };
-
+// slows every browser action down a little, so the user can follow the filling
+const SLOW_MO_MS = 150;
 // how long the window waits for the user to send or close it
 const REVIEW_TIMEOUT_MS = 30 * 60_000;
 // "https://djinni.co/jobs/850626-full-stack-…/" → "850626"
@@ -23,11 +14,25 @@ const JOB_ID_IN_URL = /\/jobs\/(\d+)-/;
 const STEP_PAUSE_MS = 200;
 
 /**
- * Opens a job's application form in the given (visible) browser, fills in the values and hands over to
- * the user: they review, edit if they like, and press "Send application" themselves, or close the
- * window. Never sends anything on its own. Resolves once the form was sent or the window closed.
+ * Opens a job's application form in a visible browser with the user's session, fills in the values and
+ * hands over to the user: they review, edit if they like, and press "Send application" themselves, or
+ * close the window. Never sends anything on its own. Resolves once the form was sent or the window closed.
  */
 export async function fillDjinniApplication(
+   jobUrl: string,
+   sessionPath: string,
+   values: FillValue[],
+): Promise<FillOutcome> {
+   const browser = await launchBrowser({ visible: true, slowMo: SLOW_MO_MS });
+   try {
+      const context = await openDjinniContext(browser, sessionPath);
+      return await fillForm(context, jobUrl, values);
+   } finally {
+      await browser.close();
+   }
+}
+
+async function fillForm(
    context: BrowserContext,
    jobUrl: string,
    values: FillValue[],

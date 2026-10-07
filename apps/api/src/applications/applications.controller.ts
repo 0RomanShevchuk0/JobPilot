@@ -15,7 +15,7 @@ import { ApplicationsService } from "./applications.service.js";
 
 const prepareBodySchema = z.object({
    vacancyId: z.uuid(),
-   /** read the form on Djinni again; by default answering again reuses the questions read before */
+   /** read the form on the job site again; by default answering again reuses the questions read before */
    refreshForm: z.boolean().default(false),
 });
 

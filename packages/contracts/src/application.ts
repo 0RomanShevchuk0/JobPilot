@@ -52,6 +52,21 @@ export interface ApplyForm {
    html: string;
 }
 
+/** One answer to put into the form, by the input's name. */
+export interface FillValue {
+   /** the input's name in the form */
+   name: string;
+   kind: FormFieldKind;
+   /** for a choice field, the label of the option to pick */
+   value: string;
+}
+
+/** How filling the form in ended: the user sent it, or nothing was sent. */
+export type FillOutcome =
+   | { status: "submitted" }
+   /** the user closed the window or let it sit too long: nothing was sent */
+   | { status: "cancelled" };
+
 /** One field of an application form, as found by the browser agent. Array order = order in the form. */
 export const formFieldSchema = z.object({
    /** the input's name in the form, to fill it in */

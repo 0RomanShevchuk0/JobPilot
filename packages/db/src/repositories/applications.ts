@@ -24,10 +24,9 @@ export interface ApplicationToPrepare {
 export type ApplicationToFill = ApplicationToPrepare;
 
 export interface ApplicationsRepository {
-   /** The vacancy's active posting on one of these sources, the last seen one; undefined when none. */
+   /** The vacancy's active posting, the last seen one; undefined when none. */
    findPostingToApply(
       vacancyId: string,
-      sources: string[],
    ): Promise<{ id: string; source: string; url: string } | undefined>;
    /**
     * Starts preparing the application to a posting: a new one, or the existing one again (its fields
@@ -74,17 +73,11 @@ function withIsoDates<T extends { createdAt: Date; updatedAt: Date }>(row: T) {
 
 export function createApplicationsRepository(db: Drizzle): ApplicationsRepository {
    return {
-      async findPostingToApply(vacancyId, sources) {
+      async findPostingToApply(vacancyId) {
          const [row] = await db
             .select({ id: postings.id, source: postings.sourceId, url: postings.url })
             .from(postings)
-            .where(
-               and(
-                  eq(postings.vacancyId, vacancyId),
-                  inArray(postings.sourceId, sources),
-                  isNull(postings.goneAt),
-               ),
-            )
+            .where(and(eq(postings.vacancyId, vacancyId), isNull(postings.goneAt)))
             .orderBy(desc(postings.lastSeenAt))
             .limit(1);
          return row;
