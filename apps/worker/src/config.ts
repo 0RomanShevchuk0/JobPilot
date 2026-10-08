@@ -21,7 +21,7 @@ export const config = {
    // until user profiles exist, what to look for comes from the environment
    djinniKeywords: list("DJINNI_KEYWORDS"),
    douCategories: list("DOU_CATEGORIES"),
-   // single-user for now: one session per source, saved by `pnpm login <source>` (.data/ is gitignored)
+   // single-user for now: one session per source, saved by `pnpm login:<source>` (.data/ is gitignored)
    sessionsDir: "../../.data/sessions",
    llm: {
       provider: required("LLM_PROVIDER"),
@@ -37,5 +37,5 @@ export function sessionPath(source: string): string {
 
 /** How the user logs in to a source again, for messages about a missing or expired session. */
 export function loginHint(source: string): string {
-   return `run \`pnpm login ${source}\` in apps/worker`;
+   return `run \`pnpm login:${source}\` in apps/worker`;
 }
