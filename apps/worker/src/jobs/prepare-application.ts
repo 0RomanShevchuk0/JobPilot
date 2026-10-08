@@ -17,7 +17,7 @@ import {
    tidyAnswer,
 } from "@jobpilot/matching";
 import { type Job, UnrecoverableError } from "bullmq";
-import { sessionPath } from "../config.js";
+import { loginHint, sessionPath } from "../config.js";
 import { log } from "../log.js";
 import { findSource, type SourceEntry } from "../sources.js";
 
@@ -41,7 +41,7 @@ export async function handlePrepareApplication(
       const lastAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
       const reason =
          err instanceof SessionExpiredError
-            ? `${err.message}, then prepare again`
+            ? `${err.message}: ${loginHint(application.source)}, then prepare again`
             : (err as Error).message;
       // a final failure must not leave the application "preparing" forever
       if (
