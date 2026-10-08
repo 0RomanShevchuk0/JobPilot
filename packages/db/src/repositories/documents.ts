@@ -12,7 +12,9 @@ export interface StoredDocumentFile {
 export interface DocumentsRepository {
    listForUser(userId: string): Promise<DocumentListItem[]>;
    /** Where the document's file is; undefined when the user has no such document or it has no file. */
-   getFile(userId: string, documentId: string): Promise<StoredDocumentFile | undefined>;
+   getFileInfo(userId: string, documentId: string): Promise<StoredDocumentFile | undefined>;
+   /** Where the user's base CV file is; undefined when there is no CV. */
+   getBaseCvFileInfo(userId: string): Promise<StoredDocumentFile | undefined>;
    /** The text of the user's base CV; undefined when there is no CV or no text was found in it. */
    getBaseCvText(userId: string): Promise<string | undefined>;
    /** Creates the user's base CV or replaces it in place (same id). Returns the id. */
@@ -47,11 +49,20 @@ export function createDocumentsRepository(db: Drizzle): DocumentsRepository {
          return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));
       },
 
-      async getFile(userId, documentId) {
+      async getFileInfo(userId, documentId) {
          const [row] = await db
             .select({ filePath: documents.filePath, fileName: documents.fileName })
             .from(documents)
             .where(own(userId, documentId));
+         if (!row?.filePath || !row.fileName) return undefined;
+         return { filePath: row.filePath, fileName: row.fileName };
+      },
+
+      async getBaseCvFileInfo(userId) {
+         const [row] = await db
+            .select({ filePath: documents.filePath, fileName: documents.fileName })
+            .from(documents)
+            .where(and(eq(documents.userId, userId), baseCv));
          if (!row?.filePath || !row.fileName) return undefined;
          return { filePath: row.filePath, fileName: row.fileName };
       },
