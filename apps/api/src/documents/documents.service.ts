@@ -52,7 +52,7 @@ export class DocumentsService {
 
    /** undefined when the user has no such document or its file is gone */
    async getFile(userId: string, documentId: string): Promise<DocumentFile | undefined> {
-      const stored = await this.db.documents.getFile(userId, documentId);
+      const stored = await this.db.documents.getFileInfo(userId, documentId);
       if (!stored) return undefined;
       const file = await this.storage.get(stored.filePath);
       if (!file) return undefined;

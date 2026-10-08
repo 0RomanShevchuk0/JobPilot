@@ -87,6 +87,14 @@ async function prepare(
       const message = applicationMessage(stored.profile);
       fields.push(formField(form.message, "profile", message));
    }
+   if (form.cv) {
+      const baseCv = await database.documents.getBaseCvFileInfo(userId);
+      if (!baseCv) {
+         throw new UnrecoverableError("The form asks for a CV: upload yours in Documents");
+      }
+      // shows which file goes in; filling attaches the base CV as it is then
+      fields.push(formField(form.cv, "document", baseCv.fileName));
+   }
    await database.applications.setPrepared(applicationId, fields);
    log(
       "prepare-application",
@@ -158,8 +166,8 @@ async function waitForTurn({ adapter }: SourceEntry): Promise<void> {
    nextOpenAt.set(adapter.source, Date.now() + min + Math.random() * (max - min));
 }
 
-/** The questions and the message field as read before, without their answers. */
-function storedForm(fields: FormField[]): Pick<ApplyForm, "questions" | "message"> {
+/** The questions, the message and the CV fields as read before, without their answers. */
+function storedForm(fields: FormField[]): Pick<ApplyForm, "questions" | "message" | "cv"> {
    const asFormField = ({ name, label, kind, required, options }: FormField): ApplyFormField => ({
       name,
       label,
@@ -168,9 +176,11 @@ function storedForm(fields: FormField[]): Pick<ApplyForm, "questions" | "message
       options,
    });
    const message = fields.find((f) => f.valueSource === "profile");
+   const cv = fields.find((f) => f.valueSource === "document");
    return {
       questions: fields.filter((f) => f.valueSource === "ai").map(asFormField),
       message: message && asFormField(message),
+      cv: cv && asFormField(cv),
    };
 }
 

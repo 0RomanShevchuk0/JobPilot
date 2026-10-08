@@ -46,6 +46,8 @@ export interface ApplyForm {
    questions: ApplyFormField[];
    /** the message to the recruiter, when the form has one: written from the profile */
    message?: ApplyFormField;
+   /** the file input for a CV, when the form asks to attach one: the user's base CV goes in */
+   cv?: ApplyFormField;
    /** every other field (CV choice, salary, message templates): the site's defaults are kept */
    other: ApplyFormField[];
    /** the form's HTML as rendered, to see what the reading missed */
@@ -57,7 +59,7 @@ export interface FillValue {
    /** the input's name in the form */
    name: string;
    kind: FormFieldKind;
-   /** for a choice field, the label of the option to pick */
+   /** for a choice field, the label of the option to pick; for a file field, the path of a local file */
    value: string;
 }
 
