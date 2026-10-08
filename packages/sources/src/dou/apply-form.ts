@@ -32,8 +32,8 @@ export async function readDouApplyForm(jobUrl: string, sessionPath: string): Pro
 
 /** The form on a job page loaded with the session; throws as readDouApplyForm does. */
 export function readApplyFormOnPage(html: string): ApplyForm {
+   checkFormToFill(html);
    const $ = cheerio.load(html);
-   checkFormToFill($, html);
    const form = $(APPLY_FORM_SELECTOR).first();
    const fields = form
       .find("input, textarea, select")
@@ -50,9 +50,13 @@ export function readApplyFormOnPage(html: string): ApplyForm {
    };
 }
 
-/** Throws unless the page has DOU's own form for the user to fill in. */
-function checkFormToFill($: CheerioAPI, html: string): void {
+/**
+ * Throws unless the job page, loaded with the session, has DOU's own form for the user to fill in:
+ * SessionExpiredError without a session, CannotApplyError when applying can't go through DOU.
+ */
+export function checkFormToFill(html: string): void {
    const result = readJobPage(html); // throws SessionExpiredError without a session
+   const $ = cheerio.load(html);
    if (result.status === "gone") throw new CannotApplyError("The job is no longer active on DOU");
    const { applyCheck } = result.check;
    if (!applyCheck.canApply) throw new CannotApplyError(applyCheck.reason);

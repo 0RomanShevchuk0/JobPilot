@@ -8,7 +8,7 @@ import { LOGIN_BUTTON_SELECTOR } from "./session.js";
 import { DOU_NAME } from "./site.js";
 
 // "Відгукнутися" opening DOU's own form: shown to a logged-in user who hasn't applied yet
-const APPLY_BUTTON_SELECTOR = ".reply #reply-btn-id";
+export const APPLY_BUTTON_SELECTOR = ".reply #reply-btn-id";
 // on a job applied to already, the form says so instead: "Ви відгукнулись на цю вакансію"
 const ALREADY_APPLIED_SELECTOR = "form#replied-id.sent";
 
