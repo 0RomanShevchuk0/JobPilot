@@ -6,11 +6,13 @@ import {
 } from "@jobpilot/contracts";
 import { getText } from "../http.js";
 import { isClosedPage, parseJobPage } from "./job-page.js";
-import { parseRss, rssUrl } from "./rss.js";
+import { DOU_BASE_URL, parseRss, rssUrl } from "./rss.js";
 
 export function createDouAdapter(): SourceAdapter {
    return {
       source: SourceIds.dou,
+      name: "DOU",
+      baseUrl: DOU_BASE_URL,
       parserVersion: 1,
 
       /** keywords are DOU categories ("Node.js", "Front End"): the feed's only useful filter */

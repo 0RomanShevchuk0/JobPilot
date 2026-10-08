@@ -60,6 +60,9 @@ export interface SourceAccount {
  */
 export interface SourceAdapter {
    readonly source: string;
+   /** the job site's name to show, e.g. "Djinni" */
+   readonly name: string;
+   readonly baseUrl: string;
    /** Bump when parse() output changes, so stored postings can be found and re-parsed from posting_raw. */
    readonly parserVersion: number;
    discover(params: DiscoverParams): Promise<PostingRef[]>;
