@@ -1,5 +1,5 @@
 import { choiceFieldKinds, type FormField } from "@jobpilot/contracts";
-import { Badge } from "../../../shared/ui";
+import { Badge, buttonStyles } from "../../../shared/ui";
 
 const sourceLabels: Record<FormField["valueSource"], string> = {
    ai: "AI",
@@ -13,6 +13,8 @@ interface AnswerProps {
    value: string;
    editable: boolean;
    onChange: (value: string) => void;
+   /** where the file the field attaches opens, to look at it */
+   fileUrl?: string;
 }
 
 /** One form field with its answer and where the answer came from. */
@@ -35,7 +37,7 @@ export function FieldAnswer(props: AnswerProps) {
 }
 
 /** The answer in the input its kind takes: text, one of the options, or as text when it can't be edited. */
-function AnswerInput({ field, value, editable, onChange }: AnswerProps) {
+function AnswerInput({ field, value, editable, onChange, fileUrl }: AnswerProps) {
    const choice = choiceFieldKinds.includes(field.kind) && field.options;
    if (choice && field.kind === "radio") {
       return (
@@ -79,6 +81,21 @@ function AnswerInput({ field, value, editable, onChange }: AnswerProps) {
             onChange={(e) => onChange(e.target.value)}
             className="field-sizing-content min-h-10 w-full rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 disabled:bg-gray-50"
          />
+      );
+   }
+   if (value && fileUrl) {
+      return (
+         <div className="flex items-center justify-between gap-3">
+            <p className="truncate text-sm text-gray-700">{value}</p>
+            <a
+               href={fileUrl}
+               target="_blank"
+               rel="noreferrer"
+               className={buttonStyles({ size: "sm" })}
+            >
+               View
+            </a>
+         </div>
       );
    }
    return value ? (

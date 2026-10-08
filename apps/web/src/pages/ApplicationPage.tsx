@@ -10,6 +10,7 @@ import {
    useSaveAnswers,
    useStartApplication,
 } from "../features/applications";
+import { documentFileUrl, useDocuments } from "../features/documents";
 import { Button } from "../shared/ui";
 
 /**
@@ -38,6 +39,10 @@ function Application({ app }: { app: ApplicationView }) {
    const save = useSaveAnswers(app.id);
    const fill = useFillApplication(app.id);
    const prepareAgain = useStartApplication();
+   // the CV field attaches the base CV as it is when filling: the link opens that one
+   const documents = useDocuments();
+   const baseCv = documents.data?.find((d) => d.type === "cv" && d.isBase);
+   const cvUrl = baseCv && documentFileUrl(baseCv.id);
 
    const changes = app.fields
       .filter((field) => field.name in drafts && drafts[field.name] !== savedValue(field))
@@ -74,6 +79,7 @@ function Application({ app }: { app: ApplicationView }) {
                      value={drafts[field.name] ?? savedValue(field)}
                      editable={editable}
                      onChange={(value) => setDrafts((d) => ({ ...d, [field.name]: value }))}
+                     fileUrl={field.valueSource === "document" ? cvUrl : undefined}
                   />
                ))}
             </ol>
