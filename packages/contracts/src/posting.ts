@@ -26,6 +26,8 @@ export const locationSchema = z.object({
    kind: z.enum(locationKinds),
    raw: z.string().min(1),
    country: z.string().length(2).optional(), // ISO 3166-1 alpha-2
+   // in English, as it is usually spelled: "Kyiv", not "Київ" or "Kiev". Cities are matched as text
+   // (the profile's against the vacancy's), so the adapter translates a local spelling
    city: z.string().min(1).optional(),
 });
 export type Location = z.infer<typeof locationSchema>;
