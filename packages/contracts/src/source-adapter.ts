@@ -20,7 +20,10 @@ export interface RawPosting {
 export type FetchResult = { status: "ok"; raw: RawPosting } | { status: "gone" };
 
 export interface DiscoverParams {
-   /** Specializations to look for, e.g. "Node.js". Each adapter maps them to its own filters. Empty = everything. */
+   /**
+    * The site's own search filters, spelled as the site spells them, e.g. the category "Node.js": the
+    * adapter passes them on as they are, nothing is mapped. Empty = everything.
+    */
    keywords?: string[];
 }
 
