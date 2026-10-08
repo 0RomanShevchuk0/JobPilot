@@ -1,7 +1,9 @@
 import {
+   languageLevels,
    SourceIds,
    type EmploymentType,
    type Language,
+   type LanguageLevel,
    type Location,
    type NormalizedPosting,
    type RawPosting,
@@ -208,10 +210,20 @@ function languages($: cheerio.CheerioAPI): Language[] {
    return detailRows($, "Required languages").flatMap(({ name, value }) => {
       const code = LANGUAGE_CODES[name.toLowerCase()];
       if (!code) return [];
-      // a CEFR level as a separate word (A1…C2): "B2 - Upper Intermediate" → "B2"; "Native" stays as is
-      const level = /\b[ABC][12]\b/.exec(value)?.[0] ?? (value || undefined);
-      return [{ code, level }];
+      return [{ code, level: languageLevel(value) }];
    });
+}
+
+// a CEFR level as a separate word (A1…C2): "B2 - Upper Intermediate" → "B2"
+const CEFR_LEVEL = /\b[ABC][12]\b/;
+// "Native", "native speaker" → match
+const NATIVE = /\bnative\b/i;
+
+/** The level a "Required languages" row states; undefined when it states none we know. */
+function languageLevel(value: string): LanguageLevel | undefined {
+   if (NATIVE.test(value)) return "Native";
+   const cefr = CEFR_LEVEL.exec(value)?.[0];
+   return languageLevels.find((level) => level === cefr);
 }
 
 /**
