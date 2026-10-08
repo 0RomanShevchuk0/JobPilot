@@ -1,7 +1,7 @@
 import { SessionExpiredError, type FillApplicationJobData } from "@jobpilot/contracts";
 import type { DatabaseClient } from "@jobpilot/db";
 import { type Job, UnrecoverableError } from "bullmq";
-import { sessionPath } from "../config.js";
+import { loginHint, sessionPath } from "../config.js";
 import { log } from "../log.js";
 import { findSource } from "../sources.js";
 
@@ -49,7 +49,7 @@ export async function handleFillApplication(
    } catch (err) {
       const reason =
          err instanceof SessionExpiredError
-            ? `${err.message}, then fill again`
+            ? `${err.message}: ${loginHint(application.source)}, then fill again`
             : (err as Error).message;
       await database.applications.setFillProblem(applicationId, reason);
       throw err;

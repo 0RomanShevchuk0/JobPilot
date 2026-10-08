@@ -8,7 +8,7 @@ import {
 import type { DatabaseClient } from "@jobpilot/db";
 import { SCORING_PROMPT_VERSION } from "@jobpilot/matching";
 import type { Job, Queue } from "bullmq";
-import { sessionPath } from "../config.js";
+import { loginHint, sessionPath } from "../config.js";
 import { log } from "../log.js";
 import { buildVacancyJobOptions, scoreVacancyJobOptions } from "../queues.js";
 import { findSource } from "../sources.js";
@@ -86,7 +86,10 @@ async function checkJobPage(posting: {
       return await entry.adapter.account.checkJobPage(posting.url, sessionPath(posting.source));
    } catch (err) {
       if (!(err instanceof SessionExpiredError)) throw err;
-      log("check-can-apply", `${err.message}; scoring without the check`);
+      log(
+         "check-can-apply",
+         `${err.message} (${loginHint(posting.source)}); scoring without the check`,
+      );
       return undefined;
    }
 }

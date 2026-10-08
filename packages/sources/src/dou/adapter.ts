@@ -48,7 +48,7 @@ export function createDouAdapter(): SourceAdapter {
       account: {
          login: () => Promise.reject(new Error("dou: logging in is not implemented yet")),
          // there is no DOU session without a login: the check is skipped, as for any source not logged in
-         checkJobPage: () => Promise.reject(new SessionExpiredError(DOU_ID)),
+         checkJobPage: () => Promise.reject(new SessionExpiredError(DOU_NAME)),
          readApplyForm: () => Promise.reject(new Error("dou: applying is not implemented yet")),
          fillApplicationForm: () =>
             Promise.reject(new Error("dou: applying is not implemented yet")),

@@ -34,3 +34,8 @@ export const config = {
 export function sessionPath(source: string): string {
    return `${config.sessionsDir}/${source}.json`;
 }
+
+/** How the user logs in to a source again, for messages about a missing or expired session. */
+export function loginHint(source: string): string {
+   return `run \`pnpm login ${source}\` in apps/worker`;
+}

@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { launchBrowser } from "../browser.js";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
-import { DJINNI_BASE_URL, DJINNI_ID } from "./site.js";
+import { DJINNI_BASE_URL, DJINNI_NAME } from "./site.js";
 
 /** Where Google Chrome lives; the login runs in the real Chrome, see loginToDjinni. */
 const CHROME_PATHS = [
@@ -45,7 +45,7 @@ export async function loginToDjinni(sessionPath: string): Promise<void> {
    const browser = await launchBrowser();
    try {
       const page = await (await openDjinniContext(browser, sessionPath)).newPage();
-      if (!(await isLoggedIn(page))) throw new SessionExpiredError(DJINNI_ID);
+      if (!(await isLoggedIn(page))) throw new SessionExpiredError(DJINNI_NAME);
    } finally {
       await browser.close();
    }
@@ -91,7 +91,7 @@ export async function djinniCookieHeader(sessionPath: string): Promise<string> {
    try {
       file = await readFile(sessionPath, "utf8");
    } catch {
-      throw new SessionExpiredError(DJINNI_ID); // no session file yet
+      throw new SessionExpiredError(DJINNI_NAME); // no session file yet
    }
    const { cookies } = JSON.parse(file) as {
       cookies: { name: string; value: string; expires: number }[];
@@ -113,7 +113,7 @@ export async function openDjinniContext(
          userAgent: desktopUserAgent(browser),
       });
    } catch {
-      throw new SessionExpiredError(DJINNI_ID); // no session file yet
+      throw new SessionExpiredError(DJINNI_NAME); // no session file yet
    }
 }
 
