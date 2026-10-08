@@ -5,9 +5,8 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { launchBrowser } from "../browser.js";
+import { DJINNI_BASE_URL } from "./rss.js";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
-
-export const DJINNI_URL = "https://djinni.co";
 
 /** Where Google Chrome lives; the login runs in the real Chrome, see loginToDjinni. */
 const CHROME_PATHS = [
@@ -36,7 +35,7 @@ export async function loginToDjinni(sessionPath: string): Promise<void> {
          `--user-data-dir=${profile}`,
          "--no-first-run",
          "--no-default-browser-check",
-         `${DJINNI_URL}/login`,
+         `${DJINNI_BASE_URL}/login`,
       ]);
       await saveDjinniCookies(profile, sessionPath);
    } finally {
@@ -136,6 +135,6 @@ function desktopUserAgent(browser: Browser): string {
 
 /** Djinni shows "Log In" links to anonymous visitors only. */
 export async function isLoggedIn(page: Page): Promise<boolean> {
-   await page.goto(`${DJINNI_URL}/jobs/`);
+   await page.goto(`${DJINNI_BASE_URL}/jobs/`);
    return (await page.locator("a.sign-in-link").count()) === 0;
 }

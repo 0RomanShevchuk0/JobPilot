@@ -4,12 +4,14 @@ import { checkDjinniJobPage } from "./account-page.js";
 import { readDjinniApplyForm } from "./apply-form.js";
 import { fillDjinniApplication } from "./fill.js";
 import { isClosedPage, parseJobPage } from "./job-page.js";
-import { parseRss, rssUrl } from "./rss.js";
+import { DJINNI_BASE_URL, parseRss, rssUrl } from "./rss.js";
 import { loginToDjinni } from "./session.js";
 
 export function createDjinniAdapter(): SourceAdapter {
    return {
       source: SourceIds.djinni,
+      name: "Djinni",
+      baseUrl: DJINNI_BASE_URL,
       parserVersion: 3,
 
       async discover({ keywords }) {

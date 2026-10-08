@@ -7,7 +7,8 @@ import {
 } from "@jobpilot/contracts";
 import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
-import { DJINNI_URL, djinniCookieHeader } from "./session.js";
+import { DJINNI_BASE_URL } from "./rss.js";
+import { djinniCookieHeader } from "./session.js";
 
 // "Apply for the job": in the page's HTML from the start, no waiting for it
 export const APPLY_BUTTON = "button.js-inbox-toggle-reply-form";
@@ -74,7 +75,7 @@ export async function checkDjinniJobPage(
 ): Promise<JobPageResult> {
    const cookie = await djinniCookieHeader(sessionPath);
    const response = await fetch(jobUrl, {
-      headers: { cookie, "User-Agent": USER_AGENT, Referer: `${DJINNI_URL}/jobs/` },
+      headers: { cookie, "User-Agent": USER_AGENT, Referer: `${DJINNI_BASE_URL}/jobs/` },
       signal: AbortSignal.timeout(TIMEOUT_MS),
    });
    if (response.status === 404 || response.status === 410) {

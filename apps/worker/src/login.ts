@@ -11,6 +11,6 @@ if (!entry) {
 }
 
 const path = sessionPath(entry.adapter.source);
-console.log(`Log in to ${entry.name} in the browser window that opens…`);
+console.log(`Log in to ${entry.adapter.name} in the browser window that opens…`);
 await entry.adapter.account.login(path);
 console.log(`logged in, session saved to ${path}`);

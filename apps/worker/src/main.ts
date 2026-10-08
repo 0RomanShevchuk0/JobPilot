@@ -50,8 +50,8 @@ const scoreVacancyQueue = new Queue<ScoreVacancyJobData>(QueueNames.scoreVacancy
 const workers: Worker[] = [];
 
 for (const entry of sources) {
-   const { source } = entry.adapter;
-   await database.sources.register({ id: source, name: entry.name, baseUrl: entry.baseUrl });
+   const { source, name, baseUrl } = entry.adapter;
+   await database.sources.register({ id: source, name, baseUrl });
 
    // a new scheduler runs right away; an existing one keeps its interval, so restarts don't re-trigger it
    await discoverQueue.upsertJobScheduler(

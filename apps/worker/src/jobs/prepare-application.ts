@@ -145,12 +145,12 @@ async function answerQuestions(
 const nextOpenAt = new Map<string, number>();
 
 /** Waits until the previous automated open on this site is far enough behind; no wait after a quiet spell. */
-async function waitForTurn({ name, adapter }: SourceEntry): Promise<void> {
+async function waitForTurn({ adapter }: SourceEntry): Promise<void> {
    const wait = (nextOpenAt.get(adapter.source) ?? 0) - Date.now();
    if (wait > 0) {
       log(
          "prepare-application",
-         `waiting ${Math.round(wait / 1000)}s before opening ${name} again`,
+         `waiting ${Math.round(wait / 1000)}s before opening ${adapter.name} again`,
       );
       await new Promise((resolve) => setTimeout(resolve, wait));
    }
