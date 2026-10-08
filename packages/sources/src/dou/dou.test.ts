@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
-import { normalizedPostingSchema, type RawPosting } from "@jobpilot/contracts";
+import { normalizedPostingSchema, SessionExpiredError, type RawPosting } from "@jobpilot/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { readJobPage } from "./account-page.js";
 import { createDouAdapter } from "./adapter.js";
 import { isClosedPage, parseJobPage, parseSalary, publishedAt } from "./job-page.js";
 import { parseRss, rssUrl } from "./rss.js";
@@ -149,6 +150,38 @@ describe("closed job page", () => {
             ),
          ),
       ).toThrow(/layout not recognized/);
+   });
+});
+
+// pages loaded with a session, saved on 2026-10-08; the account's name, contacts and ids replaced
+describe("job page under the account", () => {
+   it("lets the user apply through DOU's form", () => {
+      expect(readJobPage(fixture("account-can-apply.html"))).toEqual({
+         status: "ok",
+         check: { applyCheck: { canApply: true } },
+      });
+   });
+
+   it("lets the user apply on the employer's site", () => {
+      expect(readJobPage(fixture("account-external.html"))).toEqual({
+         status: "ok",
+         check: { applyCheck: { canApply: true } },
+      });
+   });
+
+   it("says the user applied already", () => {
+      expect(readJobPage(fixture("account-applied.html"))).toEqual({
+         status: "ok",
+         check: { applyCheck: { canApply: false, reason: "Already applied to this job on DOU" } },
+      });
+   });
+
+   it("finds a closed job gone", () => {
+      expect(readJobPage(fixture("account-closed.html"))).toEqual({ status: "gone" });
+   });
+
+   it("throws SessionExpiredError on a page DOU shows to anonymous visitors", () => {
+      expect(() => readJobPage(fixture("job-remote.html"))).toThrow(SessionExpiredError);
    });
 });
 

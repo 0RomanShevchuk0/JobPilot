@@ -13,7 +13,7 @@ import { DOU_ID } from "./site.js";
 // whatever the request's language, so markers are classes, not wording.
 
 // a closed job still answers 200; its block gets this class and the title "(вакансія неактивна)"
-const CLOSED_JOB_SELECTOR = ".l-vacancy.__inactive";
+export const CLOSED_JOB_SELECTOR = ".l-vacancy.__inactive";
 const TITLE_SELECTOR = ".l-vacancy h1";
 const DESCRIPTION_SELECTOR = ".l-vacancy .vacancy-section";
 // "5 жовтня 2026": the day the job was published or last bumped, without time
@@ -27,7 +27,7 @@ const SALARY_SELECTOR = ".l-vacancy .sh-info .salary";
 // "Всі вакансії / Node.js / Львів": the category link has ?category= and nothing else
 const BREADCRUMB_LINKS_SELECTOR = "li.breadcrumbs a";
 // applying goes through DOU's redirect to the employer's site or ATS
-const EXTERNAL_APPLY_SELECTOR = ".reply a.replied-external";
+export const EXTERNAL_APPLY_SELECTOR = ".reply a.replied-external";
 // applying on DOU; without a session the link only offers to sign in
 const ON_SITE_APPLY_SELECTOR = ".reply #relogin-link";
 
