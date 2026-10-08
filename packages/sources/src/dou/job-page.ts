@@ -1,5 +1,4 @@
 import {
-   SourceIds,
    type NormalizedPosting,
    type RawPosting,
    type Salary,
@@ -8,6 +7,7 @@ import {
 import * as cheerio from "cheerio";
 import TurndownService from "turndown";
 import { kyivTimeToIso } from "../kyiv-time.js";
+import { DOU_ID } from "./site.js";
 
 // DOU has no JobPosting JSON-LD: everything comes from the markup. Pages are always in Ukrainian,
 // whatever the request's language, so markers are classes, not wording.
@@ -58,7 +58,7 @@ export function parseJobPage(raw: RawPosting): NormalizedPosting {
       .text();
 
    return {
-      source: SourceIds.dou,
+      source: DOU_ID,
       externalId: raw.externalId,
       url: raw.url,
       title,

@@ -1,7 +1,6 @@
 import {
    CannotApplyError,
    SessionExpiredError,
-   SourceIds,
    type ApplyForm,
    type ApplyFormField,
 } from "@jobpilot/contracts";
@@ -9,6 +8,7 @@ import type { Page } from "playwright";
 import { launchBrowser } from "../browser.js";
 import { APPLY_BUTTON, readApplyCheck, SIGN_IN_LINK } from "./account-page.js";
 import { openDjinniContext } from "./session.js";
+import { DJINNI_ID } from "./site.js";
 
 // Djinni names the recruiter's questions after their id: "answer_167872"
 const QUESTION_NAME = /^answer_\d+$/;
@@ -16,11 +16,10 @@ const QUESTION_NAME = /^answer_\d+$/;
 /** Opens a job page with the user's session and presses "Apply for the job": the form is then on screen. */
 export async function openApplyForm(page: Page, jobUrl: string): Promise<void> {
    await page.goto(jobUrl);
-   if ((await page.locator(SIGN_IN_LINK).count()) > 0)
-      throw new SessionExpiredError(SourceIds.djinni);
+   if ((await page.locator(SIGN_IN_LINK).count()) > 0) throw new SessionExpiredError(DJINNI_ID);
    const html = await page.content();
    const applyCheck = readApplyCheck(html);
-   if (!applyCheck.canApply) throw new CannotApplyError(SourceIds.djinni, applyCheck.reason);
+   if (!applyCheck.canApply) throw new CannotApplyError(DJINNI_ID, applyCheck.reason);
    await page.locator(APPLY_BUTTON).first().click();
    await page.locator("#apply_form").waitFor({ state: "visible" });
 }

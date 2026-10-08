@@ -1,14 +1,13 @@
 import {
    SessionExpiredError,
-   SourceIds,
    type ApplyCheck,
    type JobPageResult,
    type SalaryFit,
 } from "@jobpilot/contracts";
 import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
-import { DJINNI_BASE_URL } from "./rss.js";
 import { djinniCookieHeader } from "./session.js";
+import { DJINNI_BASE_URL, DJINNI_ID } from "./site.js";
 
 // "Apply for the job": in the page's HTML from the start, no waiting for it
 export const APPLY_BUTTON = "button.js-inbox-toggle-reply-form";
@@ -84,7 +83,7 @@ export async function checkDjinniJobPage(
    if (response.status !== 200) throw new Error(`djinni ${jobUrl}: HTTP ${response.status}`);
    const html = await response.text();
    const $ = cheerio.load(html);
-   if ($(SIGN_IN_LINK).length > 0) throw new SessionExpiredError(SourceIds.djinni);
+   if ($(SIGN_IN_LINK).length > 0) throw new SessionExpiredError(DJINNI_ID);
    if ($(JOB_CLOSED_ALERT).length > 0) return { status: "gone" };
    const check = { applyCheck: applyCheckOnPage($), salaryFit: salaryFitOnPage($) };
    return { status: "ok", check };

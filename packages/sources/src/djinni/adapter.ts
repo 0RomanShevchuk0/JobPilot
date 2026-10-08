@@ -1,16 +1,17 @@
-import { SourceIds, type PostingRef, type SourceAdapter } from "@jobpilot/contracts";
+import type { PostingRef, SourceAdapter } from "@jobpilot/contracts";
 import { getText } from "../http.js";
 import { checkDjinniJobPage } from "./account-page.js";
 import { readDjinniApplyForm } from "./apply-form.js";
 import { fillDjinniApplication } from "./fill.js";
 import { isClosedPage, parseJobPage } from "./job-page.js";
-import { DJINNI_BASE_URL, parseRss, rssUrl } from "./rss.js";
+import { parseRss, rssUrl } from "./rss.js";
 import { loginToDjinni } from "./session.js";
+import { DJINNI_BASE_URL, DJINNI_ID, DJINNI_NAME } from "./site.js";
 
 export function createDjinniAdapter(): SourceAdapter {
    return {
-      source: SourceIds.djinni,
-      name: "Djinni",
+      source: DJINNI_ID,
+      name: DJINNI_NAME,
       baseUrl: DJINNI_BASE_URL,
       parserVersion: 3,
       fetchIntervalMs: 3000,

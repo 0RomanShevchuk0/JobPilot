@@ -1,7 +1,6 @@
 import type { PostingRef } from "@jobpilot/contracts";
 import { XMLParser } from "fast-xml-parser";
-
-export const DJINNI_BASE_URL = "https://djinni.co";
+import { DJINNI_BASE_URL } from "./site.js";
 
 /** The feed holds the ~100 newest (or bumped) jobs; it takes the same filters as the site search. */
 export function rssUrl(keyword?: string): string {

@@ -1,7 +1,6 @@
 import type { PostingRef } from "@jobpilot/contracts";
 import { XMLParser } from "fast-xml-parser";
-
-export const DOU_BASE_URL = "https://jobs.dou.ua";
+import { DOU_BASE_URL } from "./site.js";
 
 /**
  * The feed holds the 25 newest (or bumped) jobs of a category, 50 without one; it takes the same filters
