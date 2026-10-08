@@ -50,7 +50,7 @@ const scoreVacancyQueue = new Queue<ScoreVacancyJobData>(QueueNames.scoreVacancy
 const workers: Worker[] = [];
 
 for (const entry of sources) {
-   const { source, name, baseUrl } = entry.adapter;
+   const { source, name, baseUrl, fetchIntervalMs } = entry.adapter;
    await database.sources.register({ id: source, name, baseUrl });
 
    // a new scheduler runs right away; an existing one keeps its interval, so restarts don't re-trigger it
@@ -69,7 +69,7 @@ for (const entry of sources) {
          fetchQueueName(source),
          (job) => handleFetch(job, entry, database, buildVacancyQueue),
          // one page at a time, at most one per fetchIntervalMs
-         { connection, concurrency: 1, limiter: { max: 1, duration: entry.fetchIntervalMs } },
+         { connection, concurrency: 1, limiter: { max: 1, duration: fetchIntervalMs } },
       ),
    );
 }

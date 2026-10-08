@@ -56,7 +56,8 @@ export interface SourceAccount {
 
 /**
  * Implemented once per source. The platform only talks to sources through this interface.
- * Rate limiting and retries are the caller's job: every method makes at most the requests it needs, once.
+ * The adapter says how often its site may be asked (fetchIntervalMs, account.formOpenGapMs); keeping to it
+ * and retrying are the caller's job: every method makes at most the requests it needs, once.
  */
 export interface SourceAdapter {
    readonly source: string;
@@ -65,6 +66,8 @@ export interface SourceAdapter {
    readonly baseUrl: string;
    /** Bump when parse() output changes, so stored postings can be found and re-parsed from posting_raw. */
    readonly parserVersion: number;
+   /** At most one fetch() per this many ms, to stay polite and avoid bans. */
+   readonly fetchIntervalMs: number;
    discover(params: DiscoverParams): Promise<PostingRef[]>;
    fetch(ref: PostingRef): Promise<FetchResult>;
    /** Pure: no network. Must never guess — a field it is not sure about stays undefined. */
