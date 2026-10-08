@@ -5,7 +5,7 @@ import { loginInChrome, sessionCookieHeader } from "../saved-session.js";
 import { DOU_BASE_URL, DOU_NAME } from "./site.js";
 
 // "Вхід і реєстрація" in the header, opens the login dialog: on every page, for anonymous visitors only
-const LOGIN_BUTTON_SELECTOR = "#login-link";
+export const LOGIN_BUTTON_SELECTOR = "#login-link";
 
 /** Logs in to DOU in the real Chrome (see loginInChrome) and checks the saved session works. */
 export async function loginToDou(sessionPath: string): Promise<void> {
