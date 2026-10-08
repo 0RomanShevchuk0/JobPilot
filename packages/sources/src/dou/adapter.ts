@@ -2,6 +2,7 @@ import type { PostingRef, SourceAdapter } from "@jobpilot/contracts";
 import { getText } from "../http.js";
 import { checkDouJobPage } from "./account-page.js";
 import { readDouApplyForm } from "./apply-form.js";
+import { fillDouApplication } from "./fill.js";
 import { isClosedPage, parseJobPage } from "./job-page.js";
 import { parseRss, rssUrl } from "./rss.js";
 import { loginToDou } from "./session.js";
@@ -47,13 +48,11 @@ export function createDouAdapter(): SourceAdapter {
 
       parse: parseJobPage,
 
-      // filling the form in is not implemented yet: it fails until it is
       account: {
          login: loginToDou,
          checkJobPage: checkDouJobPage,
          readApplyForm: readDouApplyForm,
-         fillApplicationForm: () =>
-            Promise.reject(new Error("dou: applying is not implemented yet")),
+         fillApplicationForm: fillDouApplication,
          // not measured on DOU yet: Djinni's pace
          formOpenGapMs: { min: 60_000, max: 150_000 },
       },
