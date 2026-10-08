@@ -13,45 +13,45 @@ import { DOU_ID } from "./site.js";
 // whatever the request's language, so markers are classes, not wording.
 
 // a closed job still answers 200; its block gets this class and the title "(вакансія неактивна)"
-const CLOSED_JOB = ".l-vacancy.__inactive";
-const TITLE = ".l-vacancy h1";
-const DESCRIPTION = ".l-vacancy .vacancy-section";
+const CLOSED_JOB_SELECTOR = ".l-vacancy.__inactive";
+const TITLE_SELECTOR = ".l-vacancy h1";
+const DESCRIPTION_SELECTOR = ".l-vacancy .vacancy-section";
 // "5 жовтня 2026": the day the job was published or last bumped, without time
-const DATE = ".l-vacancy .date";
+const DATE_SELECTOR = ".l-vacancy .date";
 // the company is in the header above the job, its first link is the name
-const COMPANY = ".b-compinfo .l-n a";
+const COMPANY_SELECTOR = ".b-compinfo .l-n a";
 // "Львів, Рівне, Вроцлав (Польща), віддалено"
-const PLACES = ".l-vacancy .sh-info .place";
+const PLACES_SELECTOR = ".l-vacancy .sh-info .place";
 // "$2500–3500", "від $1200", "до $3000"
-const SALARY = ".l-vacancy .sh-info .salary";
+const SALARY_SELECTOR = ".l-vacancy .sh-info .salary";
 // "Всі вакансії / Node.js / Львів": the category link has ?category= and nothing else
-const BREADCRUMB_LINKS = "li.breadcrumbs a";
+const BREADCRUMB_LINKS_SELECTOR = "li.breadcrumbs a";
 // applying goes through DOU's redirect to the employer's site or ATS
-const EXTERNAL_APPLY = ".reply a.replied-external";
+const EXTERNAL_APPLY_SELECTOR = ".reply a.replied-external";
 // applying on DOU; without a session the link only offers to sign in
-const ON_SITE_APPLY = ".reply #relogin-link";
+const ON_SITE_APPLY_SELECTOR = ".reply #relogin-link";
 
 // in the list of places: the job is remote; anything else is a city or "за кордоном" (relocation abroad)
 const REMOTE = "віддалено";
 
 /** Closed jobs still answer 200, marked by a class on the job block. */
 export function isClosedPage(html: string): boolean {
-   return cheerio.load(html)(CLOSED_JOB).length > 0;
+   return cheerio.load(html)(CLOSED_JOB_SELECTOR).length > 0;
 }
 
 export function parseJobPage(raw: RawPosting): NormalizedPosting {
    const $ = cheerio.load(raw.body);
-   const title = $(TITLE).first().text().trim();
-   const descriptionHtml = $(DESCRIPTION).first().html();
-   if ($(CLOSED_JOB).length > 0 || !title || !descriptionHtml) {
+   const title = $(TITLE_SELECTOR).first().text().trim();
+   const descriptionHtml = $(DESCRIPTION_SELECTOR).first().html();
+   if ($(CLOSED_JOB_SELECTOR).length > 0 || !title || !descriptionHtml) {
       // a layout change or a closed job: fail loudly instead of saving half a posting
       throw new Error(`dou ${raw.externalId}: job page layout not recognized`);
    }
    const places = placesOnPage($);
-   const company = $(COMPANY).first().text().trim();
+   const company = $(COMPANY_SELECTOR).first().text().trim();
    const category = categoryOnPage($);
    // the block's own text: badges like "бронювання" or "deftech" are links inside it
-   const date = $(DATE)
+   const date = $(DATE_SELECTOR)
       .first()
       .contents()
       .filter((_, node) => node.type === "text")
@@ -70,14 +70,14 @@ export function parseJobPage(raw: RawPosting): NormalizedPosting {
       locations: nonEmpty(
          places.filter((p) => p !== REMOTE).map((p) => ({ kind: "office" as const, raw: p })),
       ),
-      salary: parseSalary($(SALARY).first().text()),
+      salary: parseSalary($(SALARY_SELECTOR).first().text()),
       skills: category ? [category] : undefined,
       apply: apply($, raw.url),
    };
 }
 
 function placesOnPage($: cheerio.CheerioAPI): string[] {
-   return $(PLACES)
+   return $(PLACES_SELECTOR)
       .first()
       .text()
       .split(",")
@@ -147,7 +147,7 @@ export function parseSalary(text: string): Salary | undefined {
 }
 
 function categoryOnPage($: cheerio.CheerioAPI): string | undefined {
-   const link = $(BREADCRUMB_LINKS)
+   const link = $(BREADCRUMB_LINKS_SELECTOR)
       .toArray()
       .map((el) => $(el).attr("href") ?? "")
       .filter((href) => URL.canParse(href))
@@ -157,9 +157,9 @@ function categoryOnPage($: cheerio.CheerioAPI): string | undefined {
 }
 
 function apply($: cheerio.CheerioAPI, url: string): NormalizedPosting["apply"] {
-   const external = $(EXTERNAL_APPLY).attr("href");
+   const external = $(EXTERNAL_APPLY_SELECTOR).attr("href");
    if (external && URL.canParse(external)) return { method: "external", url: external };
-   if ($(ON_SITE_APPLY).length > 0) return { method: "on_site", url };
+   if ($(ON_SITE_APPLY_SELECTOR).length > 0) return { method: "on_site", url };
    return undefined;
 }
 

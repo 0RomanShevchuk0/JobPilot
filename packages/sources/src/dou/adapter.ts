@@ -2,6 +2,7 @@ import { SessionExpiredError, type PostingRef, type SourceAdapter } from "@jobpi
 import { getText } from "../http.js";
 import { isClosedPage, parseJobPage } from "./job-page.js";
 import { parseRss, rssUrl } from "./rss.js";
+import { loginToDou } from "./session.js";
 import { DOU_BASE_URL, DOU_ID, DOU_NAME } from "./site.js";
 
 export function createDouAdapter(): SourceAdapter {
@@ -44,10 +45,10 @@ export function createDouAdapter(): SourceAdapter {
 
       parse: parseJobPage,
 
-      // not implemented yet: whatever needs the account fails until it is
+      // only logging in so far: applying fails until it is implemented
       account: {
-         login: () => Promise.reject(new Error("dou: logging in is not implemented yet")),
-         // there is no DOU session without a login: the check is skipped, as for any source not logged in
+         login: loginToDou,
+         // not implemented yet: the check is skipped, as for any source not logged in
          checkJobPage: () => Promise.reject(new SessionExpiredError(DOU_NAME)),
          readApplyForm: () => Promise.reject(new Error("dou: applying is not implemented yet")),
          fillApplicationForm: () =>

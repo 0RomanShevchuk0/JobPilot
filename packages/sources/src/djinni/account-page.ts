@@ -6,23 +6,23 @@ import {
 } from "@jobpilot/contracts";
 import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
-import { djinniCookieHeader } from "./session.js";
+import { sessionCookieHeader } from "../saved-session.js";
 import { DJINNI_BASE_URL, DJINNI_NAME } from "./site.js";
 
 // "Apply for the job": in the page's HTML from the start, no waiting for it
-export const APPLY_BUTTON = "button.js-inbox-toggle-reply-form";
+export const APPLY_BUTTON_SELECTOR = "button.js-inbox-toggle-reply-form";
 // a page loaded without a valid session offers to sign in
-export const SIGN_IN_LINK = "a.sign-in-link";
+export const SIGN_IN_LINK_SELECTOR = "a.sign-in-link";
 // on a job applied to already, a card with a link to that dialog replaces the button
-const ALREADY_APPLIED = '.card-body a[href^="/my/inbox/"]';
+const ALREADY_APPLIED_SELECTOR = '.card-body a[href^="/my/inbox/"]';
 // on a closed job, an alert after the empty apply block: "The job ad is no longer active"
-const JOB_CLOSED_ALERT = "#apply_job ~ .alert";
+const JOB_CLOSED_ALERT_SELECTOR = "#apply_job ~ .alert";
 // the requirements the profile fails or may fail, listed in the main column (the sidebar lists all)
-const UNMET_REQUIREMENTS = ".col-lg-8 .job-matching-info > li";
+const UNMET_REQUIREMENTS_SELECTOR = ".col-lg-8 .job-matching-info > li";
 // the icon of a failed one, the reason applying is closed: "…#x-circle"; a doubtful one has "#question-circle"
 const FAILED_ICON = /#x-circle$/;
 // every requirement against the profile, each with an icon: met, doubtful or failed
-const SIDEBAR_REQUIREMENTS = "aside .job-matching-info > li";
+const SIDEBAR_REQUIREMENTS_SELECTOR = "aside .job-matching-info > li";
 // the salary one is the only one quoting the profile's expectations: "Your expectations: $3000"
 const EXPECTATIONS = /\$\s?\d/;
 // its icon when the range covers the expectations or is above them: "…#check2-circle"
@@ -43,14 +43,14 @@ export function readApplyCheck(html: string): ApplyCheck {
 }
 
 function applyCheckOnPage($: CheerioAPI): ApplyCheck {
-   if ($(APPLY_BUTTON).length > 0) return { canApply: true };
+   if ($(APPLY_BUTTON_SELECTOR).length > 0) return { canApply: true };
    return { canApply: false, reason: whyNoApplyButton($) };
 }
 
 function whyNoApplyButton($: CheerioAPI): string {
-   if ($(JOB_CLOSED_ALERT).length > 0) return "The job is no longer active on Djinni";
-   if ($(ALREADY_APPLIED).length > 0) return "Already applied to this job on Djinni";
-   const listed = $(UNMET_REQUIREMENTS).toArray();
+   if ($(JOB_CLOSED_ALERT_SELECTOR).length > 0) return "The job is no longer active on Djinni";
+   if ($(ALREADY_APPLIED_SELECTOR).length > 0) return "Already applied to this job on Djinni";
+   const listed = $(UNMET_REQUIREMENTS_SELECTOR).toArray();
    const failed = listed.filter((li) => FAILED_ICON.test($(li).find("use").attr("href") ?? ""));
    // the failed ones are why; a page that marks none failed still gets its whole list as the reason
    const unmet = (failed.length > 0 ? failed : listed)
@@ -72,7 +72,7 @@ export async function checkDjinniJobPage(
    jobUrl: string,
    sessionPath: string,
 ): Promise<JobPageResult> {
-   const cookie = await djinniCookieHeader(sessionPath);
+   const cookie = await sessionCookieHeader(sessionPath, DJINNI_NAME);
    const response = await fetch(jobUrl, {
       headers: { cookie, "User-Agent": USER_AGENT, Referer: `${DJINNI_BASE_URL}/jobs/` },
       signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -83,15 +83,15 @@ export async function checkDjinniJobPage(
    if (response.status !== 200) throw new Error(`djinni ${jobUrl}: HTTP ${response.status}`);
    const html = await response.text();
    const $ = cheerio.load(html);
-   if ($(SIGN_IN_LINK).length > 0) throw new SessionExpiredError(DJINNI_NAME);
-   if ($(JOB_CLOSED_ALERT).length > 0) return { status: "gone" };
+   if ($(SIGN_IN_LINK_SELECTOR).length > 0) throw new SessionExpiredError(DJINNI_NAME);
+   if ($(JOB_CLOSED_ALERT_SELECTOR).length > 0) return { status: "gone" };
    const check = { applyCheck: applyCheckOnPage($), salaryFit: salaryFitOnPage($) };
    return { status: "ok", check };
 }
 
 /** The salary against the profile's expectations, by the icon of its item; undefined when not shown. */
 function salaryFitOnPage($: CheerioAPI): SalaryFit | undefined {
-   const item = $(SIDEBAR_REQUIREMENTS)
+   const item = $(SIDEBAR_REQUIREMENTS_SELECTOR)
       .toArray()
       .find((li) => EXPECTATIONS.test($(li).text()));
    if (!item) return undefined;

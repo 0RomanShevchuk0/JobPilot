@@ -1,140 +1,26 @@
 import { SessionExpiredError } from "@jobpilot/contracts";
-import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import type { Page } from "playwright";
 import { launchBrowser } from "../browser.js";
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
+import { loginInChrome, openSessionContext } from "../saved-session.js";
 import { DJINNI_BASE_URL, DJINNI_NAME } from "./site.js";
 
-/** Where Google Chrome lives; the login runs in the real Chrome, see loginToDjinni. */
-const CHROME_PATHS = [
-   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-   "/usr/bin/google-chrome",
-   "/usr/bin/google-chrome-stable",
-];
-
-/**
- * Logs in to Djinni in the user's real Google Chrome and saves the session for headless runs.
- *
- * Google refuses sign-in in a browser driven by automation, and Djinni accounts may only have Google
- * sign-in, so the login can't happen in a Playwright browser. Instead:
- * 1. Chrome opens with a fresh temporary profile (not the user's own) on the Djinni login page;
- * 2. the user logs in there in any way Djinni offers and quits that Chrome;
- * 3. Playwright reads the profile and keeps only djinni.co cookies: the Google session is not saved;
- * 4. the temporary profile is deleted.
- * No password ever reaches JobPilot.
- */
+/** Logs in to Djinni in the real Chrome (see loginInChrome) and checks the saved session works. */
 export async function loginToDjinni(sessionPath: string): Promise<void> {
-   const chrome = CHROME_PATHS.find((path) => existsSync(path));
-   if (!chrome) throw new Error("Google Chrome is not installed: the Djinni login runs in it");
-   const profile = await mkdtemp(join(tmpdir(), "jobpilot-djinni-login-"));
-   try {
-      await runUntilQuit(chrome, [
-         `--user-data-dir=${profile}`,
-         "--no-first-run",
-         "--no-default-browser-check",
-         `${DJINNI_BASE_URL}/login`,
-      ]);
-      await saveDjinniCookies(profile, sessionPath);
-   } finally {
-      await rm(profile, { recursive: true, force: true });
-   }
+   const site = { name: DJINNI_NAME, loginUrl: `${DJINNI_BASE_URL}/login`, domain: "djinni.co" };
+   await loginInChrome(site, sessionPath);
 
    const browser = await launchBrowser();
    try {
-      const page = await (await openDjinniContext(browser, sessionPath)).newPage();
+      const context = await openSessionContext(browser, sessionPath, DJINNI_NAME);
+      const page = await context.newPage();
       if (!(await isLoggedIn(page))) throw new SessionExpiredError(DJINNI_NAME);
    } finally {
       await browser.close();
    }
 }
 
-/** Starts a program and resolves when the user quits it. */
-function runUntilQuit(program: string, args: string[]): Promise<void> {
-   return new Promise((resolve, reject) => {
-      const child = spawn(program, args, { stdio: "ignore" });
-      child.on("error", reject);
-      child.on("exit", () => resolve());
-   });
-}
-
-/** Copies the djinni.co cookies of a Chrome profile into a Playwright session file. */
-async function saveDjinniCookies(profile: string, sessionPath: string): Promise<void> {
-   const context = await chromium.launchPersistentContext(profile, {
-      channel: "chrome", // the same Chrome that wrote the profile, so it can read its cookies
-      headless: true,
-      // Playwright's default fake keychain can't decrypt cookies Chrome encrypted with the real one
-      ignoreDefaultArgs: ["--use-mock-keychain"],
-   });
-   try {
-      const state = await context.storageState();
-      const isDjinni = (domain: string) => domain === "djinni.co" || domain.endsWith(".djinni.co");
-      const djinniOnly = {
-         cookies: state.cookies.filter((c) => isDjinni(c.domain.replace(/^\./, ""))), // ".djinni.co" → "djinni.co"
-         origins: state.origins.filter((o) => isDjinni(new URL(o.origin).hostname)),
-      };
-      await mkdir(dirname(sessionPath), { recursive: true });
-      await writeFile(sessionPath, JSON.stringify(djinniOnly, null, 2), { mode: 0o600 }); // readable by the owner only
-   } finally {
-      await context.close();
-   }
-}
-
-/**
- * The saved session as a Cookie header, for plain HTTP requests without a browser. Expired cookies are
- * left out; whether Djinni still accepts the rest only a request tells.
- */
-export async function djinniCookieHeader(sessionPath: string): Promise<string> {
-   let file: string;
-   try {
-      file = await readFile(sessionPath, "utf8");
-   } catch {
-      throw new SessionExpiredError(DJINNI_NAME); // no session file yet
-   }
-   const { cookies } = JSON.parse(file) as {
-      cookies: { name: string; value: string; expires: number }[];
-   };
-   const nowSeconds = Date.now() / 1000;
-   // expires is in seconds, -1 for a cookie that lives as long as the browser session
-   const live = cookies.filter((c) => c.expires === -1 || c.expires > nowSeconds);
-   return live.map((c) => `${c.name}=${c.value}`).join("; ");
-}
-
-/** A browser context with the saved Djinni session, introducing itself as an ordinary desktop Chrome. */
-export async function openDjinniContext(
-   browser: Browser,
-   sessionPath: string,
-): Promise<BrowserContext> {
-   try {
-      return await browser.newContext({
-         storageState: sessionPath,
-         userAgent: desktopUserAgent(browser),
-      });
-   } catch {
-      throw new SessionExpiredError(DJINNI_NAME); // no session file yet
-   }
-}
-
-/**
- * The User-Agent of a regular desktop Chrome of the same version. Headless Chromium sends
- * "HeadlessChrome/…" by default: the first thing bot checks look at.
- */
-function desktopUserAgent(browser: Browser): string {
-   const major = browser.version().split(".")[0]; // "153.0.8010.12" → "153"
-   const os =
-      process.platform === "darwin"
-         ? "Macintosh; Intel Mac OS X 10_15_7"
-         : process.platform === "win32"
-           ? "Windows NT 10.0; Win64; x64"
-           : "X11; Linux x86_64";
-   // Chrome itself reports only the major version, the rest as zeros
-   return `Mozilla/5.0 (${os}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${major}.0.0.0 Safari/537.36`;
-}
-
 /** Djinni shows "Log In" links to anonymous visitors only. */
-export async function isLoggedIn(page: Page): Promise<boolean> {
+async function isLoggedIn(page: Page): Promise<boolean> {
    await page.goto(`${DJINNI_BASE_URL}/jobs/`);
    return (await page.locator("a.sign-in-link").count()) === 0;
 }

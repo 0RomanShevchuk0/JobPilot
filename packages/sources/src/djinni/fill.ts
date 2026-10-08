@@ -1,8 +1,9 @@
 import type { FillOutcome, FillValue } from "@jobpilot/contracts";
 import type { BrowserContext, Page } from "playwright";
 import { launchBrowser } from "../browser.js";
+import { openSessionContext } from "../saved-session.js";
 import { openApplyForm } from "./apply-form.js";
-import { openDjinniContext } from "./session.js";
+import { DJINNI_NAME } from "./site.js";
 
 // slows every browser action down a little, so the user can follow the filling
 const SLOW_MO_MS = 150;
@@ -25,7 +26,7 @@ export async function fillDjinniApplication(
 ): Promise<FillOutcome> {
    const browser = await launchBrowser({ visible: true, slowMo: SLOW_MO_MS });
    try {
-      const context = await openDjinniContext(browser, sessionPath);
+      const context = await openSessionContext(browser, sessionPath, DJINNI_NAME);
       return await fillForm(context, jobUrl, values);
    } finally {
       await browser.close();
