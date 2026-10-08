@@ -1,6 +1,7 @@
 import type { PostingRef, SourceAdapter } from "@jobpilot/contracts";
 import { getText } from "../http.js";
 import { checkDouJobPage } from "./account-page.js";
+import { readDouApplyForm } from "./apply-form.js";
 import { isClosedPage, parseJobPage } from "./job-page.js";
 import { parseRss, rssUrl } from "./rss.js";
 import { loginToDou } from "./session.js";
@@ -46,11 +47,11 @@ export function createDouAdapter(): SourceAdapter {
 
       parse: parseJobPage,
 
-      // applying is not implemented yet: it fails until it is
+      // filling the form in is not implemented yet: it fails until it is
       account: {
          login: loginToDou,
          checkJobPage: checkDouJobPage,
-         readApplyForm: () => Promise.reject(new Error("dou: applying is not implemented yet")),
+         readApplyForm: readDouApplyForm,
          fillApplicationForm: () =>
             Promise.reject(new Error("dou: applying is not implemented yet")),
          // not measured on DOU yet: Djinni's pace

@@ -17,6 +17,7 @@
    "dependencies": {
       "@jobpilot/contracts": "workspace:*",
       "cheerio": "^1.2.0",
+      "domhandler": "^5.0.3",
       "fast-xml-parser": "^5.11.1",
       "playwright": "^1.63.0",
       "turndown": "^7.2.4"

@@ -1,8 +1,14 @@
 import { readFileSync } from "node:fs";
-import { normalizedPostingSchema, SessionExpiredError, type RawPosting } from "@jobpilot/contracts";
+import {
+   CannotApplyError,
+   normalizedPostingSchema,
+   SessionExpiredError,
+   type RawPosting,
+} from "@jobpilot/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readJobPage } from "./account-page.js";
 import { createDouAdapter } from "./adapter.js";
+import { readApplyFormOnPage } from "./apply-form.js";
 import { isClosedPage, parseJobPage, parseSalary, publishedAt } from "./job-page.js";
 import { parseRss, rssUrl } from "./rss.js";
 import { DOU_ID } from "./site.js";
@@ -182,6 +188,52 @@ describe("job page under the account", () => {
 
    it("throws SessionExpiredError on a page DOU shows to anonymous visitors", () => {
       expect(() => readJobPage(fixture("job-remote.html"))).toThrow(SessionExpiredError);
+   });
+});
+
+describe("application form", () => {
+   it("reads the message and the CV fields, nothing to answer", () => {
+      const { html, ...form } = readApplyFormOnPage(fixture("account-can-apply.html"));
+      expect(form).toEqual({
+         questions: [],
+         message: {
+            name: "descr",
+            label: "Напишіть трохи про себе і про те, чому вакансія вам підходить",
+            kind: "textarea",
+            required: false,
+            options: undefined,
+         },
+         cv: {
+            name: "user_cv",
+            label: "Прикріпіть резюме",
+            kind: "file",
+            required: false,
+            options: undefined,
+         },
+         other: [],
+      });
+      expect(html).toMatch(/^<form id="replied-id"/);
+   });
+
+   it("has no form for a job applied to on the employer's site", () => {
+      expect(() => readApplyFormOnPage(fixture("account-external.html"))).toThrow(
+         new CannotApplyError(
+            "This job is applied to on the employer's site: https://dou.ua/goto/vacancy/?id=375249",
+         ),
+      );
+   });
+
+   it("has no form for a job applied to already or closed", () => {
+      expect(() => readApplyFormOnPage(fixture("account-applied.html"))).toThrow(
+         "Already applied to this job on DOU",
+      );
+      expect(() => readApplyFormOnPage(fixture("account-closed.html"))).toThrow(
+         "The job is no longer active on DOU",
+      );
+   });
+
+   it("throws SessionExpiredError without a session", () => {
+      expect(() => readApplyFormOnPage(fixture("job-remote.html"))).toThrow(SessionExpiredError);
    });
 });
 
