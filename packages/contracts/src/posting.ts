@@ -30,9 +30,13 @@ export const locationSchema = z.object({
 });
 export type Location = z.infer<typeof locationSchema>;
 
+/** CEFR levels, then native, from the lowest: the order is how levels compare */
+export const languageLevels = ["A1", "A2", "B1", "B2", "C1", "C2", "Native"] as const;
+export type LanguageLevel = (typeof languageLevels)[number];
+
 export const languageSchema = z.object({
    code: z.string().min(2), // ISO 639-1
-   level: z.string().min(1).optional(), // as stated by the source, e.g. "B2", "Upper-Intermediate"
+   level: z.enum(languageLevels).optional(),
 });
 export type Language = z.infer<typeof languageSchema>;
 

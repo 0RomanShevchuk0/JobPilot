@@ -1,12 +1,13 @@
-import type {
-   Language,
-   Location,
-   PrefilterResult,
-   Profile,
-   RejectReason,
-   Salary,
-   Seniority,
-   WorkMode,
+import {
+   languageLevels,
+   type Language,
+   type Location,
+   type PrefilterResult,
+   type Profile,
+   type RejectReason,
+   type Salary,
+   type Seniority,
+   type WorkMode,
 } from "@jobpilot/contracts";
 import { normalizeCompanyName, normalizeTitle } from "@jobpilot/vacancies";
 import { toUsdPerMonth } from "./salary.js";
@@ -97,14 +98,15 @@ function checkSalary(p: Profile, v: VacancyForPrefilter): RejectReason | undefin
 
 /**
  * Only compares languages I listed: a language missing from my profile may simply not be filled in.
- * Levels are compared when both sides are CEFR levels or "native".
+ * Levels are compared when both sides state one.
  */
 function checkLanguages(p: Profile, v: VacancyForPrefilter): RejectReason[] {
    return v.languages.flatMap((required) => {
       const mine = p.languages.find((l) => l.code === required.code);
-      const need = levelRank(required.level);
-      const have = levelRank(mine?.level);
-      if (!mine || need === undefined || have === undefined || have >= need) return [];
+      if (!mine?.level || !required.level) return [];
+      const have = languageLevels.indexOf(mine.level);
+      const need = languageLevels.indexOf(required.level);
+      if (have >= need) return [];
       return [
          {
             check: "language" as const,
@@ -140,14 +142,4 @@ function checkCompany(p: Profile, v: VacancyForPrefilter): RejectReason | undefi
 
 function cities(locations: Location[], kind: Location["kind"]): string[] {
    return locations.filter((l) => l.kind === kind && l.city).map((l) => l.city!.toLowerCase());
-}
-
-const CEFR = ["a1", "a2", "b1", "b2", "c1", "c2"];
-
-function levelRank(level: string | undefined): number | undefined {
-   if (!level) return;
-   const l = level.trim().toLowerCase();
-   if (l === "native") return CEFR.length;
-   const i = CEFR.indexOf(l);
-   return i === -1 ? undefined : i;
 }
