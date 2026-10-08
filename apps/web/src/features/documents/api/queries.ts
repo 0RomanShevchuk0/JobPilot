@@ -3,6 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiDelete, apiGet, apiPut } from "../../../shared/api/client";
 import { queryKeys } from "../../../shared/api/queryKeys";
 
+/** Where a document's file opens: the API serves it inline, so the browser shows a PDF itself. */
+export function documentFileUrl(id: string): string {
+   return `/api/documents/${id}/file`;
+}
+
 /** My documents. */
 export function useDocuments() {
    return useQuery({

@@ -1,7 +1,7 @@
 import type { DocumentListItem } from "@jobpilot/contracts";
 import { useRef, useState } from "react";
 import { Button, buttonStyles } from "../../../shared/ui";
-import { useDeleteDocument, useUploadCv } from "../api/queries";
+import { documentFileUrl, useDeleteDocument, useUploadCv } from "../api/queries";
 
 /** The CV: view, download, replace or delete it, or upload the first one. */
 export function CvCard({ cv }: { cv?: DocumentListItem }) {
@@ -41,7 +41,7 @@ export function CvCard({ cv }: { cv?: DocumentListItem }) {
                {cv && !confirmingDelete && (
                   <>
                      <a
-                        href={`/api/documents/${cv.id}/file`}
+                        href={documentFileUrl(cv.id)}
                         target="_blank"
                         rel="noreferrer"
                         className={buttonStyles()}
@@ -49,7 +49,7 @@ export function CvCard({ cv }: { cv?: DocumentListItem }) {
                         View
                      </a>
                      {/* the API serves the file inline; download makes the browser save it under its name */}
-                     <a href={`/api/documents/${cv.id}/file`} download className={buttonStyles()}>
+                     <a href={documentFileUrl(cv.id)} download className={buttonStyles()}>
                         Download
                      </a>
                      <Button onClick={pickFile} disabled={busy}>
