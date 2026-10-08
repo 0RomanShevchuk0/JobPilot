@@ -13,6 +13,7 @@ export function createDjinniAdapter(): SourceAdapter {
       name: "Djinni",
       baseUrl: DJINNI_BASE_URL,
       parserVersion: 3,
+      fetchIntervalMs: 3000,
 
       async discover({ keywords }) {
          const urls = keywords?.length ? keywords.map((k) => rssUrl(k)) : [rssUrl()];

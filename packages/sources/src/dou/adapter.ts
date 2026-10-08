@@ -14,6 +14,7 @@ export function createDouAdapter(): SourceAdapter {
       name: "DOU",
       baseUrl: DOU_BASE_URL,
       parserVersion: 1,
+      fetchIntervalMs: 3000,
 
       /** keywords are DOU categories ("Node.js", "Front End"): the feed's only useful filter */
       async discover({ keywords }) {
