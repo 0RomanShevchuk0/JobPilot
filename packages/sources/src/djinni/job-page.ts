@@ -1,6 +1,5 @@
 import {
    languageLevels,
-   SourceIds,
    type EmploymentType,
    type Language,
    type LanguageLevel,
@@ -14,6 +13,7 @@ import * as cheerio from "cheerio";
 import TurndownService from "turndown";
 import { kyivTimeToIso } from "../kyiv-time.js";
 import { countryCode, EMPLOYMENT_TYPES, LANGUAGE_CODES, SALARY_PERIODS } from "./mappings.js";
+import { DJINNI_ID } from "./site.js";
 
 /** The subset of schema.org JobPosting that Djinni fills in. */
 interface JsonLdAddress {
@@ -61,7 +61,7 @@ export function parseJobPage(raw: RawPosting): NormalizedPosting {
    const org = typeof ld.hiringOrganization === "object" ? ld.hiringOrganization : undefined;
 
    return {
-      source: SourceIds.djinni,
+      source: DJINNI_ID,
       externalId: raw.externalId,
       url,
       title: ld.title.trim(),

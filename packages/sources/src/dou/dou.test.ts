@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
-import { normalizedPostingSchema, SourceIds, type RawPosting } from "@jobpilot/contracts";
+import { normalizedPostingSchema, type RawPosting } from "@jobpilot/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDouAdapter } from "./adapter.js";
 import { isClosedPage, parseJobPage, parseSalary, publishedAt } from "./job-page.js";
 import { parseRss, rssUrl } from "./rss.js";
+import { DOU_ID } from "./site.js";
 
 // real pages saved from jobs.dou.ua on 2026-10-06
 const fixture = (name: string) =>
@@ -45,7 +46,7 @@ describe("job page: abroad, salary, applying on the employer's site", () => {
 
    it("reads the header fields", () => {
       expect(posting).toMatchObject({
-         source: SourceIds.dou,
+         source: DOU_ID,
          externalId: "368779",
          url,
          title: "Fullstack Engineer",
