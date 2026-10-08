@@ -6,8 +6,8 @@ import {
 } from "@jobpilot/contracts";
 import type { Page } from "playwright";
 import { launchBrowser } from "../browser.js";
-import { APPLY_BUTTON, readApplyCheck, SIGN_IN_LINK } from "./account-page.js";
-import { openDjinniContext } from "./session.js";
+import { openSessionContext } from "../saved-session.js";
+import { APPLY_BUTTON_SELECTOR, readApplyCheck, SIGN_IN_LINK_SELECTOR } from "./account-page.js";
 import { DJINNI_NAME } from "./site.js";
 
 // Djinni names the recruiter's questions after their id: "answer_167872"
@@ -16,11 +16,12 @@ const QUESTION_NAME = /^answer_\d+$/;
 /** Opens a job page with the user's session and presses "Apply for the job": the form is then on screen. */
 export async function openApplyForm(page: Page, jobUrl: string): Promise<void> {
    await page.goto(jobUrl);
-   if ((await page.locator(SIGN_IN_LINK).count()) > 0) throw new SessionExpiredError(DJINNI_NAME);
+   if ((await page.locator(SIGN_IN_LINK_SELECTOR).count()) > 0)
+      throw new SessionExpiredError(DJINNI_NAME);
    const html = await page.content();
    const applyCheck = readApplyCheck(html);
    if (!applyCheck.canApply) throw new CannotApplyError(applyCheck.reason);
-   await page.locator(APPLY_BUTTON).first().click();
+   await page.locator(APPLY_BUTTON_SELECTOR).first().click();
    await page.locator("#apply_form").waitFor({ state: "visible" });
 }
 
@@ -31,7 +32,7 @@ export async function openApplyForm(page: Page, jobUrl: string): Promise<void> {
 export async function readDjinniApplyForm(jobUrl: string, sessionPath: string): Promise<ApplyForm> {
    const browser = await launchBrowser();
    try {
-      const context = await openDjinniContext(browser, sessionPath);
+      const context = await openSessionContext(browser, sessionPath, DJINNI_NAME);
       const page = await context.newPage();
       await openApplyForm(page, jobUrl);
       const form = page.locator("#apply_form");

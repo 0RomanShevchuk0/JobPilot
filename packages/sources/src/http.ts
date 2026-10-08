@@ -8,13 +8,20 @@ export interface TextResponse {
    body: string;
 }
 
-/** One GET request, no retries: retries and rate limiting belong to the queue. */
-export async function getText(url: string): Promise<TextResponse> {
+/**
+ * One GET request, no retries: retries and rate limiting belong to the queue. headers are added to the
+ * defaults, e.g. a Cookie with the user's session.
+ */
+export async function getText(
+   url: string,
+   headers: Record<string, string> = {},
+): Promise<TextResponse> {
    const res = await fetch(url, {
       headers: {
          "User-Agent": USER_AGENT,
          // pages are localized; parsers rely on English markers
          "Accept-Language": "en",
+         ...headers,
       },
       signal: AbortSignal.timeout(TIMEOUT_MS),
    });
