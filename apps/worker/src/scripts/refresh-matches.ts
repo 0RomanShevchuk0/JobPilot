@@ -4,7 +4,7 @@ import { QueueNames, type MatchUserJobData } from "@jobpilot/contracts";
 import { createDatabase } from "@jobpilot/db";
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
-import { config } from "./config.js";
+import { config } from "../config.js";
 
 const connection = new Redis(config.redisUrl, { maxRetriesPerRequest: null });
 const database = createDatabase(config.databaseUrl);

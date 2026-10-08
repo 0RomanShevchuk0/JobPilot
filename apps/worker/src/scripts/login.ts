@@ -1,7 +1,7 @@
 // Logs in to a source under the user's own account and saves the session for the worker.
 // Usage: pnpm login <source>, e.g. pnpm login djinni. Run it again whenever the source logs you out.
-import { sessionPath } from "./config.js";
-import { findSource, sources } from "./sources.js";
+import { sessionPath } from "../config.js";
+import { findSource, sources } from "../sources.js";
 
 const source = process.argv[2];
 const entry = source ? findSource(source) : undefined;

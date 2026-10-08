@@ -1,8 +1,8 @@
 // Reads the application form of one job with the saved session and prints its fields.
 // Nothing is filled in or sent. Usage: pnpm read-form <source> <job url> [file to save the form's HTML to]
 import { writeFile } from "node:fs/promises";
-import { sessionPath } from "./config.js";
-import { findSource, sources } from "./sources.js";
+import { sessionPath } from "../config.js";
+import { findSource, sources } from "../sources.js";
 
 const [source, jobUrl, htmlPath] = process.argv.slice(2);
 const entry = source ? findSource(source) : undefined;

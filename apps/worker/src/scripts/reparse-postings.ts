@@ -5,9 +5,9 @@ import { normalizedPostingSchema, QueueNames, type BuildVacancyJobData } from "@
 import { createDatabase } from "@jobpilot/db";
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
-import { config } from "./config.js";
-import { buildVacancyJobOptions } from "./queues.js";
-import { sources } from "./sources.js";
+import { config } from "../config.js";
+import { buildVacancyJobOptions } from "../queues.js";
+import { sources } from "../sources.js";
 
 const connection = new Redis(config.redisUrl, { maxRetriesPerRequest: null });
 const database = createDatabase(config.databaseUrl);

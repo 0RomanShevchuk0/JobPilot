@@ -2,9 +2,9 @@
 import { QueueNames, type DiscoverJobData } from "@jobpilot/contracts";
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
-import { config } from "./config.js";
-import { discoverJobOptions } from "./queues.js";
-import { sources } from "./sources.js";
+import { config } from "../config.js";
+import { discoverJobOptions } from "../queues.js";
+import { sources } from "../sources.js";
 
 const connection = new Redis(config.redisUrl, { maxRetriesPerRequest: null });
 const queue = new Queue<DiscoverJobData>(QueueNames.discover, { connection });
