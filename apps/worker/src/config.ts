@@ -23,6 +23,14 @@ export const config = {
    douCategories: list("DOU_CATEGORIES"),
    // single-user for now: one session per source, saved by `pnpm login:<source>` (.data/ is gitignored)
    sessionsDir: "../../.data/sessions",
+   // where document files live (the CV attached to applications): the same storage as the API's
+   storage: {
+      endpoint: required("S3_ENDPOINT"),
+      region: required("S3_REGION"),
+      bucket: required("S3_BUCKET"),
+      accessKeyId: required("S3_ACCESS_KEY_ID"),
+      secretAccessKey: required("S3_SECRET_ACCESS_KEY"),
+   },
    llm: {
       provider: required("LLM_PROVIDER"),
       model: process.env.LLM_MODEL || undefined, // the provider's default when empty

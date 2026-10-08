@@ -21,6 +21,7 @@
       "@jobpilot/llm": "workspace:*",
       "@jobpilot/matching": "workspace:*",
       "@jobpilot/sources": "workspace:*",
+      "@jobpilot/storage": "workspace:*",
       "@jobpilot/vacancies": "workspace:*",
       "bullmq": "^6.3.8",
       "ioredis": "^6.0.0"
