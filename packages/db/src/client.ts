@@ -32,6 +32,9 @@ export interface DatabaseClient {
 
 export function createDatabase(connectionString: string): DatabaseClient {
    const pool = new Pool({ connectionString });
+   // an idle connection can drop (Neon closes idle ones, the network or the laptop sleeps): the pool
+   // discards it and opens a new one when needed, but an 'error' event nobody listens to kills the process
+   pool.on("error", (err) => console.warn(`[db] idle connection dropped: ${err.message}`));
    const db = drizzle({ client: pool, schema });
 
    return {
