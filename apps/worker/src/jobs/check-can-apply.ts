@@ -1,7 +1,9 @@
 import {
    SessionExpiredError,
+   type ApplyCheck,
    type BuildVacancyJobData,
    type CheckCanApplyJobData,
+   type JobPageCheck,
    type JobPageResult,
    type ScoreVacancyJobData,
 } from "@jobpilot/contracts";
@@ -14,10 +16,11 @@ import { buildVacancyJobOptions, scoreVacancyJobOptions } from "../queues.js";
 import { findSource } from "../sources.js";
 
 /**
- * One prefiltered vacancy × one user → asks the job site whether they can apply → what they can't
- * (applied already, the job is closed, unmet requirements) is dropped; the rest goes to scoring, with
- * what the site said of the salary against their expectations. Without a session the check is skipped,
- * not the vacancy: it is scored as before.
+ * One prefiltered vacancy × one user → asks the job site of every active posting whether they can
+ * apply → a vacancy every site refuses (applied already, the job is closed, unmet requirements) is
+ * dropped; the rest goes to scoring, with what a site said of the salary against their expectations.
+ * A site without a session isn't asked: while it might still allow applying, the question stays open
+ * and match-vacancy asks again later (refresh-matches); the vacancy is scored meanwhile.
  */
 export async function handleCheckCanApply(
    job: Job<CheckCanApplyJobData>,
@@ -33,23 +36,32 @@ export async function handleCheckCanApply(
    const match = await database.matches.get(userId, vacancyId);
    if (!match || match.profileVersion !== stored.version || !match.prefilterPassed) return "stale";
 
-   // one posting is asked, the last seen; asking all of them is in TODO.md
-   const posting = await database.applications.findPostingToApply(vacancyId);
-   // undefined: not asked, the vacancy has no active posting or there is no session on its site
-   const result = posting ? await checkJobPage(posting) : undefined;
-   if (posting && result?.status === "gone") {
-      // as when fetching finds the page gone: the posting is gone, its vacancy may now be closed
-      await database.postings.markGone(posting.id);
-      await buildVacancyQueue.add(
-         "build-vacancy",
-         { postingId: posting.id },
-         buildVacancyJobOptions(posting.id),
-      );
-      log("check-can-apply", `✗ ${posting.url} — gone (closed or removed)`);
-      return "gone";
+   const active = await database.postings.listActive(vacancyId);
+   const checks: JobPageCheck[] = [];
+   let notAsked = 0;
+   let gone = 0;
+   for (const posting of active) {
+      const result = await checkJobPage(posting);
+      if (!result) {
+         notAsked++;
+      } else if (result.status === "gone") {
+         // as when fetching finds the page gone: the posting is gone, its vacancy may now be closed
+         await database.postings.markGone(posting.id);
+         await buildVacancyQueue.add(
+            "build-vacancy",
+            { postingId: posting.id },
+            buildVacancyJobOptions(posting.id),
+         );
+         log("check-can-apply", `✗ ${posting.url} — gone (closed or removed)`);
+         gone++;
+      } else {
+         checks.push(result.check);
+      }
    }
+   // the rebuild closes the vacancy: nothing left to score
+   if (active.length > 0 && gone === active.length) return "gone";
 
-   const pageCheck = result?.status === "ok" ? result.check : undefined;
+   const pageCheck = combineChecks(checks, notAsked);
    if (pageCheck) {
       const saved = await database.matches.saveJobPageCheck(
          userId,
@@ -60,8 +72,9 @@ export async function handleCheckCanApply(
       if (!saved) return "stale";
    }
    const applyCheck = pageCheck?.applyCheck;
-   if (posting && applyCheck && !applyCheck.canApply) {
-      log("check-can-apply", `✗ ${posting.url} — ${applyCheck.reason}`);
+   if (applyCheck && !applyCheck.canApply) {
+      const urls = active.map((p) => p.url).join(", ");
+      log("check-can-apply", `✗ ${urls} — ${applyCheck.reason}`);
       return "cannot apply";
    }
 
@@ -73,6 +86,24 @@ export async function handleCheckCanApply(
       );
    }
    return applyCheck ? "can apply" : "not checked";
+}
+
+/**
+ * What the sites said, as one answer: the user can apply if any site lets them, can't if every one
+ * refuses (with all the reasons); the salary as the first site that told it. undefined when no site
+ * was asked. Refusals with a site not asked leave the can-apply question open: that one may allow it.
+ */
+function combineChecks(
+   checks: JobPageCheck[],
+   notAsked: number,
+): Partial<JobPageCheck> | undefined {
+   if (checks.length === 0) return undefined;
+   const salaryFit = checks.find((c) => c.salaryFit)?.salaryFit;
+   const refusals = checks.flatMap((c) => (c.applyCheck.canApply ? [] : [c.applyCheck.reason]));
+   let applyCheck: ApplyCheck | undefined;
+   if (refusals.length < checks.length) applyCheck = { canApply: true };
+   else if (notAsked === 0) applyCheck = { canApply: false, reason: refusals.join("; ") };
+   return { applyCheck, salaryFit };
 }
 
 /** Asks the posting's job site; undefined when it can't be asked: no session, or it's over. */

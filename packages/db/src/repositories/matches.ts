@@ -85,15 +85,16 @@ export interface MatchesRepository {
       assessment: Assessment,
    ): Promise<boolean>;
    /**
-    * Adds what the job page showed the user (whether they can apply, the salary against their
-    * expectations) to the evaluation it was asked for, on the same terms as saveAssessment. Returns
-    * false when the evaluation was replaced meanwhile.
+    * Adds what the job pages showed the user (whether they can apply, the salary against their
+    * expectations) to the evaluation it was asked for, on the same terms as saveAssessment. Without
+    * applyCheck the can-apply question stays open: match-vacancy asks again. Returns false when the
+    * evaluation was replaced meanwhile.
     */
    saveJobPageCheck(
       userId: string,
       vacancyId: string,
       profileVersion: number,
-      check: JobPageCheck,
+      check: Partial<JobPageCheck>,
    ): Promise<boolean>;
 }
 
