@@ -21,15 +21,16 @@ export class ApplicationsService {
    ) {}
 
    /**
-    * Starts preparing an application to a vacancy: the worker reads the form and answers it.
-    * Preparing the same vacancy again answers the same questions anew, without opening the job site;
-    * refreshForm reads the form again first.
+    * Starts preparing an application through one of the vacancy's job sites: the worker reads the form
+    * and answers it. Preparing the same posting again answers the same questions anew, without opening
+    * the job site; refreshForm reads the form again first.
     */
-   async prepare(userId: string, vacancyId: string, refreshForm: boolean): Promise<{ id: string }> {
-      const posting = await this.db.applications.findPostingToApply(vacancyId);
-      if (!posting) throw new NotFoundException("No active posting for this vacancy");
-      const application = await this.db.applications.startPreparing(userId, posting.id);
-      if (!application) throw new ConflictException("Already applied to this vacancy");
+   async prepare(userId: string, postingId: string, refreshForm: boolean): Promise<{ id: string }> {
+      if (!(await this.db.applications.isPostingActive(postingId))) {
+         throw new NotFoundException("The job is no longer on this site");
+      }
+      const application = await this.db.applications.startPreparing(userId, postingId);
+      if (!application) throw new ConflictException("Already applied through this site");
       await this.queue.prepare(application.id, refreshForm);
       return application;
    }

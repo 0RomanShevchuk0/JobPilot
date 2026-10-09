@@ -14,7 +14,8 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { ApplicationsService } from "./applications.service.js";
 
 const prepareBodySchema = z.object({
-   vacancyId: z.uuid(),
+   /** the vacancy's posting on the job site I apply through */
+   postingId: z.uuid(),
    /** read the form on the job site again; by default answering again reuses the questions read before */
    refreshForm: z.boolean().default(false),
 });
@@ -41,7 +42,7 @@ export class ApplicationsController {
       @Body(new ZodValidationPipe(prepareBodySchema)) body: z.infer<typeof prepareBodySchema>,
    ) {
       const userId = await this.user.id();
-      return this.applications.prepare(userId, body.vacancyId, body.refreshForm);
+      return this.applications.prepare(userId, body.postingId, body.refreshForm);
    }
 
    /** Fills the prepared answers into the form in a visible browser; you send it (or close the window). */

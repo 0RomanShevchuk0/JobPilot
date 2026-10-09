@@ -104,9 +104,9 @@ function Application({ app }: { app: ApplicationView }) {
                   Open in browser
                </Button>
             )}
-            {(app.status === "ready_for_review" || app.status === "failed") && app.vacancyId && (
+            {(app.status === "ready_for_review" || app.status === "failed") && (
                <Button
-                  onClick={() => prepareAgain.mutate(app.vacancyId!, { onSuccess: clearDrafts })}
+                  onClick={() => prepareAgain.mutate(app.postingId, { onSuccess: clearDrafts })}
                   disabled={busy || app.filling}
                >
                   {app.status === "failed" ? "Try again" : "Answer again"}
