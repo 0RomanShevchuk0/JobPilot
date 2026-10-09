@@ -32,11 +32,13 @@ export function MatchCard({ match }: { match: MatchListItem }) {
 /** The job sites the vacancy is listed on; links to them are on its page. */
 function SourceBadges({ match }: { match: MatchListItem }) {
    if (match.postings.length === 0) return null;
+   // a site that lists the job twice (a repost) shows once
+   const siteNames = [...new Set(match.postings.map((p) => p.sourceName))];
    return (
       <p className="mt-1 flex gap-1">
-         {match.postings.map((posting) => (
-            <Badge key={posting.url} tone="bg-indigo-50 text-indigo-700">
-               {posting.sourceName}
+         {siteNames.map((name) => (
+            <Badge key={name} tone="bg-indigo-50 text-indigo-700">
+               {name}
             </Badge>
          ))}
       </p>

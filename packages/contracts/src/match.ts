@@ -107,11 +107,20 @@ export type MatchStatus = z.infer<typeof matchStatusSchema>;
 
 /** Where the vacancy is listed: one active posting on one job site. */
 export interface MatchPosting {
+   id: string;
    /** the job site's id, e.g. "djinni" */
    source: string;
    /** the job site's name to show, e.g. "Djinni" */
    sourceName: string;
    url: string;
+   /** my application through this job site, once started */
+   application: MatchApplication | null;
+}
+
+/** My application to a vacancy through JobPilot, as a match shows it. */
+export interface MatchApplication {
+   id: string;
+   status: ApplicationStatus;
 }
 
 /**
@@ -147,8 +156,8 @@ export interface MatchListItem {
    workModes: WorkMode[];
    status: MatchStatus;
    evaluatedAt: string;
-   /** my application to it through JobPilot, once started */
-   application: { id: string; status: ApplicationStatus } | null;
+   /** my application to it through JobPilot, once started; the latest one when there are several sites */
+   application: MatchApplication | null;
 }
 
 /** One vacancy in GET /matches/:vacancyId: the list item plus what only its own page shows. */

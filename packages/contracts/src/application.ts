@@ -102,6 +102,7 @@ export interface ApplicationListItem {
    /** the vacancy's title; null when the vacancy is gone */
    title: string | null;
    /** the job page the application goes through */
+   postingId: string;
    postingUrl: string;
    status: ApplicationStatus;
    /** why preparing or submitting failed */

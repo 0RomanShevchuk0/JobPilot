@@ -1,5 +1,5 @@
 import type { ApplicationListItem, ApplicationStatus, FormField } from "@jobpilot/contracts";
-import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { applications, postings, vacancies } from "../schema.js";
 
@@ -24,10 +24,8 @@ export interface ApplicationToPrepare {
 export type ApplicationToFill = ApplicationToPrepare;
 
 export interface ApplicationsRepository {
-   /** The vacancy's active posting, the last seen one; undefined when none. */
-   findPostingToApply(
-      vacancyId: string,
-   ): Promise<{ id: string; source: string; url: string } | undefined>;
+   /** Whether the posting can be applied through: it exists and is still on its job site. */
+   isPostingActive(postingId: string): Promise<boolean>;
    /**
     * Starts preparing the application to a posting: a new one, or the existing one again (its fields
     * stay until new answers replace them). Returns undefined when it was already submitted.
@@ -56,6 +54,7 @@ const listColumns = {
    id: applications.id,
    vacancyId: postings.vacancyId,
    title: vacancies.title,
+   postingId: applications.postingId,
    postingUrl: postings.url,
    status: applications.status,
    failureReason: applications.failureReason,
@@ -73,14 +72,12 @@ function withIsoDates<T extends { createdAt: Date; updatedAt: Date }>(row: T) {
 
 export function createApplicationsRepository(db: Drizzle): ApplicationsRepository {
    return {
-      async findPostingToApply(vacancyId) {
+      async isPostingActive(postingId) {
          const [row] = await db
-            .select({ id: postings.id, source: postings.sourceId, url: postings.url })
+            .select({ id: postings.id })
             .from(postings)
-            .where(and(eq(postings.vacancyId, vacancyId), isNull(postings.goneAt)))
-            .orderBy(desc(postings.lastSeenAt))
-            .limit(1);
-         return row;
+            .where(and(eq(postings.id, postingId), isNull(postings.goneAt)));
+         return row !== undefined;
       },
 
       async startPreparing(userId, postingId) {

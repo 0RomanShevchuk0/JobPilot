@@ -4,6 +4,7 @@ import type {
    JobPageCheck,
    ApplicationStatus,
    MatchAnalysis,
+   MatchApplication,
    MatchDetails,
    MatchListItem,
    MatchStatus,
@@ -149,6 +150,7 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
       const vacancyIds = rows.map((r) => r.vacancyId);
       const activePostings = await db
          .select({
+            id: postings.id,
             vacancyId: postings.vacancyId,
             source: postings.sourceId,
             sourceName: sources.name,
@@ -158,10 +160,11 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
          .innerJoin(sources, eq(sources.id, postings.sourceId))
          .where(and(inArray(postings.vacancyId, vacancyIds), isNull(postings.goneAt)))
          .orderBy(postings.firstSeenAt);
-      // a vacancy can have several postings, each with its own application: the latest one counts
+      // a vacancy can have several postings, each with its own application: the latest one first
       const userApplications = await db
          .select({
             vacancyId: postings.vacancyId,
+            postingId: applications.postingId,
             id: applications.id,
             status: applications.status,
          })
@@ -176,8 +179,14 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
          publishedAt: r.publishedAt.toISOString(),
          postings: activePostings
             .filter((p) => p.vacancyId === r.vacancyId)
-            .map(({ source, sourceName, url }) => ({ source, sourceName, url })),
-         application: applicationOf(userApplications, r.vacancyId),
+            .map(({ id, source, sourceName, url }) => ({
+               id,
+               source,
+               sourceName,
+               url,
+               application: applicationOf(userApplications, (a) => a.postingId === id),
+            })),
+         application: applicationOf(userApplications, (a) => a.vacancyId === r.vacancyId),
          verdict: analysis.ai?.verdict ?? null,
          summary: analysis.ai?.summary ?? null,
          concerns: analysis.ai?.concerns ?? [],
@@ -305,11 +314,19 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
    };
 }
 
+interface UserApplication {
+   vacancyId: string | null;
+   postingId: string;
+   id: string;
+   status: ApplicationStatus;
+}
+
+/** The latest of the user's applications that matches, as a match shows it. */
 function applicationOf(
-   userApplications: { vacancyId: string | null; id: string; status: ApplicationStatus }[],
-   vacancyId: string,
-): MatchListItem["application"] {
-   const found = userApplications.find((a) => a.vacancyId === vacancyId);
+   userApplications: UserApplication[],
+   matches: (a: UserApplication) => boolean,
+): MatchApplication | null {
+   const found = userApplications.find(matches);
    return found ? { id: found.id, status: found.status } : null;
 }
 

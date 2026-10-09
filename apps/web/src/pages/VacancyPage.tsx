@@ -29,7 +29,7 @@ function Vacancy({ match }: { match: MatchDetails }) {
             {places && <p className="text-sm text-gray-500">{places}</p>}
          </MatchHeader>
          <div className="mt-4">
-            <PostingLinks postings={match.postings} />
+            <PostingLinks match={match} />
          </div>
          <div className="mt-6">
             <MatchEvaluation match={match} withMatchedSkills />

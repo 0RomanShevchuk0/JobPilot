@@ -50,13 +50,13 @@ function useRefreshApplications() {
 }
 
 /**
- * Starts preparing an application to a vacancy, or prepares it again: the worker reads the form and
- * answers it. Resolves to the application's id.
+ * Starts preparing an application through one of the vacancy's postings, or prepares it again: the
+ * worker reads the form and answers it. Resolves to the application's id.
  */
 export function useStartApplication() {
    const refresh = useRefreshApplications();
    return useMutation({
-      mutationFn: (vacancyId: string) => apiPost<{ id: string }>("/applications", { vacancyId }),
+      mutationFn: (postingId: string) => apiPost<{ id: string }>("/applications", { postingId }),
       onSuccess: refresh,
    });
 }
