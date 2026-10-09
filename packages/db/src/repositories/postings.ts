@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { NormalizedPosting, PostingRef, RawPosting } from "@jobpilot/contracts";
-import { and, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { postingRaw, postings } from "../schema.js";
 
@@ -24,6 +24,8 @@ export interface PostingsRepository {
    ): Promise<void>;
    /** The source says the posting is closed or removed. */
    markGone(postingId: string): Promise<void>;
+   /** The vacancy's postings still on their sites, the last seen first. */
+   listActive(vacancyId: string): Promise<{ id: string; source: string; url: string }[]>;
    /** The parsed form of a posting, or undefined if it is not fetched and parsed yet. */
    getParsed(postingId: string): Promise<NormalizedPosting | undefined>;
    /** Ids of every parsed posting, e.g. to rebuild all vacancies after the rules for building them change. */
@@ -149,6 +151,14 @@ export function createPostingsRepository(db: Drizzle): PostingsRepository {
             .update(postings)
             .set({ goneAt: sql`now()` })
             .where(and(eq(postings.id, postingId), isNull(postings.goneAt)));
+      },
+
+      async listActive(vacancyId) {
+         return db
+            .select({ id: postings.id, source: postings.sourceId, url: postings.url })
+            .from(postings)
+            .where(and(eq(postings.vacancyId, vacancyId), isNull(postings.goneAt)))
+            .orderBy(desc(postings.lastSeenAt));
       },
    };
 }
