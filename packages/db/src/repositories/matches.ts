@@ -100,6 +100,12 @@ export interface MatchesRepository {
 export function createMatchesRepository(db: Drizzle): MatchesRepository {
    /** The user's evaluations made for their current profile version that also meet the condition, best first. */
    function selectMatches(userId: string, condition: SQL | undefined) {
+      // gone postings count too: a closed vacancy on its own page still has a date
+      const publishedAt = sql`(
+         select max(coalesce((${postings.parsed}->>'publishedAt')::timestamptz, ${postings.firstSeenAt}))
+         from ${postings}
+         where ${postings.vacancyId} = ${vacancies.id}
+      )`.mapWith(postings.firstSeenAt);
       return (
          db
             .select({
@@ -113,6 +119,7 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
                salaryCurrency: vacancies.salaryCurrency,
                salaryPeriod: vacancies.salaryPeriod,
                workModes: vacancies.workModes,
+               publishedAt,
                status: vacancyMatches.status,
                evaluatedAt: vacancyMatches.evaluatedAt,
             })
@@ -165,6 +172,7 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
       return rows.map(({ analysis, salaryMin, salaryMax, salaryCurrency, salaryPeriod, ...r }) => ({
          ...r,
          evaluatedAt: r.evaluatedAt.toISOString(),
+         publishedAt: r.publishedAt.toISOString(),
          postings: activePostings
             .filter((p) => p.vacancyId === r.vacancyId)
             .map(({ source, sourceName, url }) => ({ source, sourceName, url })),

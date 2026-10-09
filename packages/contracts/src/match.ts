@@ -125,6 +125,11 @@ export interface MatchListItem {
    company: string | null;
    /** the vacancy's active postings, the first seen first */
    postings: MatchPosting[];
+   /**
+    * The freshest date among its postings: when the job site published or last bumped it, else when
+    * JobPilot first saw it there
+    */
+   publishedAt: string;
    /** null: rejected by the prefilter or not scored yet */
    score: number | null;
    verdict: AiAssessment["verdict"] | null;

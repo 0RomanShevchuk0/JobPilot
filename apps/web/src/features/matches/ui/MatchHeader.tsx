@@ -2,6 +2,7 @@ import type { MatchListItem } from "@jobpilot/contracts";
 import type { ReactNode } from "react";
 import { Badge } from "../../../shared/ui";
 import {
+   formatPublishedDate,
    matchDetailsLine,
    matchVerdict,
    salaryFitLabels,
@@ -18,7 +19,10 @@ interface Props {
    children?: ReactNode;
 }
 
-/** The verdict with the score, the title, company · salary · work modes, and what I can do with it. */
+/**
+ * The verdict with the score, the title, company · salary · work modes, and on the right what I can do
+ * with it and when it was posted.
+ */
 export function MatchHeader({ match, title, children }: Props) {
    const verdict = matchVerdict(match);
    const details = matchDetailsLine(match);
@@ -38,7 +42,16 @@ export function MatchHeader({ match, title, children }: Props) {
                </p>
             )}
          </div>
-         <MatchActions match={match} />
+         <div className="ml-auto flex shrink-0 flex-col items-end gap-2">
+            <MatchActions match={match} />
+            {/* relative z-10: above the card's stretched link, so the tooltip shows in the list too */}
+            <p
+               className="relative z-10 text-sm text-gray-500"
+               title="Posted or last bumped on the job site"
+            >
+               {formatPublishedDate(match)}
+            </p>
+         </div>
       </div>
    );
 }
