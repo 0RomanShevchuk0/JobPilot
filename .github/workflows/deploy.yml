@@ -1,0 +1,60 @@
+name: Deploy
+
+on:
+   workflow_run:
+      workflows: [CI]
+      branches: [main]
+      types: [completed]
+   workflow_dispatch:
+
+jobs:
+   build:
+      if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+      runs-on: ubuntu-latest
+
+      # GITHUB_TOKEN is read-only by default; pushing to ghcr.io needs write.
+      permissions:
+         packages: write
+
+      steps:
+         - name: Checkout
+           uses: actions/checkout@v4
+
+         - name: Log in to ghcr.io
+           run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+         # ghcr.io rejects uppercase in image names, so the owner is spelled out in lower case.
+         # The runner is x86-64 like the server, so the image is built for it as is.
+         - name: Build the worker image
+           run: docker build -f apps/worker/Dockerfile -t ghcr.io/0romanshevchuk0/jobpilot-worker:latest .
+
+         - name: Push the image
+           run: docker push ghcr.io/0romanshevchuk0/jobpilot-worker:latest
+
+   deploy:
+      # Only runs if the build job finished successfully.
+      needs: build
+      runs-on: ubuntu-latest
+
+      steps:
+         - name: Install the deploy key
+           run: |
+              mkdir -p ~/.ssh
+              chmod 700 ~/.ssh
+              echo "${{ secrets.JOBPILOT_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+              chmod 600 ~/.ssh/deploy_key
+              # Records the server's host key so ssh does not stop to ask about it.
+              ssh-keyscan -H "${{ vars.JOBPILOT_HOST }}" >> ~/.ssh/known_hosts
+
+         # The container applies the database migrations itself before starting the new worker.
+         - name: Pull the new image and restart
+           run: |
+              ssh -i ~/.ssh/deploy_key "${{ secrets.JOBPILOT_SSH_USER }}@${{ vars.JOBPILOT_HOST }}" '
+                 set -eu
+                 # the repo is cloned as root into /opt/jobpilot, hence sudo throughout
+                 cd /opt/jobpilot
+                 sudo git pull --ff-only
+                 sudo docker compose -f docker-compose.prod.yml pull
+                 sudo docker compose -f docker-compose.prod.yml up -d
+                 sudo docker image prune -f
+              '
