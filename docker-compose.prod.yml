@@ -2,10 +2,19 @@
 # outside: no ports are published. The database is the shared one in Neon (DATABASE_URL in .env);
 # the API, the web app and filling forms in run on the user's machine.
 
+# Logs go to Google Cloud Logging (Logs Explorer), so they outlive the containers a deploy replaces;
+# `docker compose logs` still reads the local copy. The project and the VM come from its metadata.
+x-logging: &logging
+   driver: gcplogs
+   options:
+      # the container's command line in each entry: tells redis and the worker apart
+      gcp-log-cmd: "true"
+
 services:
    redis:
       image: redis:8-alpine
       restart: always
+      logging: *logging
       # BullMQ requirements: never evict keys, persist jobs across restarts
       command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
       volumes:
@@ -22,6 +31,7 @@ services:
          context: .
          dockerfile: apps/worker/Dockerfile
       restart: always
+      logging: *logging
       env_file: .env
       environment:
          # the Redis next to it, whatever .env says
