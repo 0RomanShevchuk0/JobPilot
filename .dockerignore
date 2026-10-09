@@ -1,0 +1,16 @@
+# installed and built inside the image, never copied from the machine building it
+**/node_modules
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+coverage
+
+# secrets: the server keeps its own .env and sessions next to the compose file
+.env
+.env.*
+!.env.example
+.data
+
+.git
+tmp
+.DS_Store
