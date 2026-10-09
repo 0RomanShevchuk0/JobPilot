@@ -1,0 +1,38 @@
+# The server: the worker collecting and scoring vacancies, and its Redis. Nothing is reachable from
+# outside: no ports are published. The database is the shared one in Neon (DATABASE_URL in .env);
+# the API, the web app and filling forms in run on the user's machine.
+
+services:
+   redis:
+      image: redis:8-alpine
+      restart: always
+      # BullMQ requirements: never evict keys, persist jobs across restarts
+      command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+      volumes:
+         - redisdata:/data
+      healthcheck:
+         test: ["CMD", "redis-cli", "ping"]
+         interval: 5s
+         timeout: 3s
+         retries: 10
+
+   worker:
+      image: ghcr.io/0romanshevchuk0/jobpilot-worker:latest
+      build:
+         context: .
+         dockerfile: apps/worker/Dockerfile
+      restart: always
+      env_file: .env
+      environment:
+         # the Redis next to it, whatever .env says
+         REDIS_URL: redis://redis:6379
+      volumes:
+         # saved by `pnpm login:<source>` on the user's machine and copied here; owned by uid 1000,
+         # the node user the image runs as
+         - ./.data/sessions:/app/.data/sessions:ro
+      depends_on:
+         redis:
+            condition: service_healthy
+
+volumes:
+   redisdata:
