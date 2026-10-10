@@ -5,6 +5,7 @@ import { DocumentsModule } from "./documents/documents.module.js";
 import { HealthController } from "./health/health.controller.js";
 import { InfraModule } from "./infra/infra.module.js";
 import { ProfileModule } from "./profile/profile.module.js";
+import { StatsModule } from "./stats/stats.module.js";
 
 @Module({
    imports: [
@@ -14,6 +15,7 @@ import { ProfileModule } from "./profile/profile.module.js";
       ProfileModule,
       DocumentsModule,
       ApplicationsModule,
+      StatsModule,
    ],
    controllers: [HealthController],
 })

@@ -1,0 +1,12 @@
+import { Module } from "@nestjs/common";
+import { AuthModule } from "../auth/auth.module.js";
+import { InfraModule } from "../infra/infra.module.js";
+import { StatsController } from "./stats.controller.js";
+import { StatsService } from "./stats.service.js";
+
+@Module({
+   imports: [InfraModule, AuthModule],
+   controllers: [StatsController],
+   providers: [StatsService],
+})
+export class StatsModule {}

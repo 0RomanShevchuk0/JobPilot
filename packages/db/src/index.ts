@@ -19,6 +19,7 @@ export type {
 export type { PostingsRepository, PostingToFetch } from "./repositories/postings.js";
 export type { ProfilesRepository, StoredProfile } from "./repositories/profiles.js";
 export type { SourceInfo, SourcesRepository } from "./repositories/sources.js";
+export type { StatsOptions, StatsRepository } from "./repositories/stats.js";
 export type { UsersRepository } from "./repositories/users.js";
 export type {
    LinkPostingInput,

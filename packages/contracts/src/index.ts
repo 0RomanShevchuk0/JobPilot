@@ -6,3 +6,4 @@ export * from "./profile.js";
 export * from "./match.js";
 export * from "./queues.js";
 export * from "./errors.js";
+export * from "./stats.js";
