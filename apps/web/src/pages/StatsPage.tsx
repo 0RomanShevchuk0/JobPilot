@@ -12,7 +12,7 @@ const periods: { period: StatsPeriod; title: string }[] = [
 
 /** How many vacancies were found over a period, how many suited me and what I did with them. */
 export function StatsPage() {
-   const [period, setPeriod] = useState<StatsPeriod>("week");
+   const [period, setPeriod] = useState<StatsPeriod>("day");
    const stats = useStats(period);
 
    return (
