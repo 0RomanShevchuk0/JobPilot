@@ -3,12 +3,14 @@ import { ApplicationPage } from "../pages/ApplicationPage";
 import { ApplicationsPage } from "../pages/ApplicationsPage";
 import { DocumentsPage } from "../pages/DocumentsPage";
 import { MatchesPage } from "../pages/MatchesPage";
+import { StatsPage } from "../pages/StatsPage";
 import { VacancyPage } from "../pages/VacancyPage";
 
 const pages = [
    { path: "/matches", title: "Matches" },
    { path: "/applications", title: "Applications" },
    { path: "/documents", title: "Documents" },
+   { path: "/stats", title: "Stats" },
 ];
 
 /** The app's pages under a top bar to switch between them. */
@@ -36,6 +38,7 @@ export function App() {
             <Route path="/applications" element={<ApplicationsPage />} />
             <Route path="/applications/:id" element={<ApplicationPage />} />
             <Route path="/documents" element={<DocumentsPage />} />
+            <Route path="/stats" element={<StatsPage />} />
             <Route path="*" element={<Navigate to="/matches" replace />} />
          </Routes>
       </>
