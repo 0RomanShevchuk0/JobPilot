@@ -3,7 +3,7 @@ import type { LlmRequest } from "@jobpilot/llm";
 import { describeCv, describeProfile, describeVacancy, type VacancyForPrompt } from "./describe.js";
 
 /** Bump on any change to the prompt or the schema: stored next to each assessment. */
-export const SCORING_PROMPT_VERSION = 7;
+export const SCORING_PROMPT_VERSION = 8;
 
 const SYSTEM = `You help a software developer decide which job vacancies are worth applying to.
 You get the candidate's profile (what they look for), their CV (what they have done) and one vacancy,
@@ -25,6 +25,7 @@ Requirements:
 - If the vacancy itself names an acceptable alternative ("X or Y", "Y also works") and the candidate
   has it, the requirement is met. Never assume alternatives the vacancy doesn't name.
 - missingSkills lists only required skills.
+- A stack the vacancy doesn't name is not a minus: don't guess it from the domain or the product.
 Role: if the job is not the kind of work the candidate looks for ("Looking for"), say why in
 roleMismatch even when the stack matches: people management, a role that is not software development.
 Salary: compare a stated salary with the candidate's target; a hidden salary is not a minus. "Salary per
