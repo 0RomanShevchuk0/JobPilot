@@ -9,6 +9,7 @@ import { createMatchesRepository, type MatchesRepository } from "./repositories/
 import { createPostingsRepository, type PostingsRepository } from "./repositories/postings.js";
 import { createProfilesRepository, type ProfilesRepository } from "./repositories/profiles.js";
 import { createSourcesRepository, type SourcesRepository } from "./repositories/sources.js";
+import { createStatsRepository, type StatsRepository } from "./repositories/stats.js";
 import { createUsersRepository, type UsersRepository } from "./repositories/users.js";
 import { createVacanciesRepository, type VacanciesRepository } from "./repositories/vacancies.js";
 import * as schema from "./schema.js";
@@ -26,6 +27,7 @@ export interface DatabaseClient {
    readonly matches: MatchesRepository;
    readonly documents: DocumentsRepository;
    readonly applications: ApplicationsRepository;
+   readonly stats: StatsRepository;
    ping(): Promise<void>;
    close(): Promise<void>;
 }
@@ -46,6 +48,7 @@ export function createDatabase(connectionString: string): DatabaseClient {
       matches: createMatchesRepository(db),
       documents: createDocumentsRepository(db),
       applications: createApplicationsRepository(db),
+      stats: createStatsRepository(db),
       async ping() {
          await pool.query("SELECT 1");
       },

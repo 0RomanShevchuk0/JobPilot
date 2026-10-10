@@ -34,6 +34,10 @@ export class Database implements OnApplicationShutdown {
       return this.client.applications;
    }
 
+   get stats() {
+      return this.client.stats;
+   }
+
    ping() {
       return this.client.ping();
    }
