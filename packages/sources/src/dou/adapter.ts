@@ -1,6 +1,7 @@
 import type { PostingRef, SourceAdapter } from "@jobpilot/contracts";
 import { getText } from "../http.js";
 import { checkDouJobPage } from "./account-page.js";
+import { DOU_CATEGORIES } from "./categories.js";
 import { readDouApplyForm } from "./apply-form.js";
 import { fillDouApplication } from "./fill.js";
 import { isClosedPage, parseJobPage } from "./job-page.js";
@@ -15,6 +16,7 @@ export function createDouAdapter(): SourceAdapter {
       baseUrl: DOU_BASE_URL,
       parserVersion: 1,
       fetchIntervalMs: 3000,
+      categories: DOU_CATEGORIES,
 
       /** keywords are DOU categories ("Node.js", "Front End"): the feed's only useful filter */
       async discover({ keywords }) {
