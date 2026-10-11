@@ -17,6 +17,9 @@ export const queryKeys = {
    documents: {
       all: ["documents"] as const,
    },
+   profile: {
+      all: ["profile"] as const,
+   },
    stats: {
       period: (period: string) => ["stats", period] as const,
    },
