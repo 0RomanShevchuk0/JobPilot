@@ -43,6 +43,9 @@ export async function handlePrepareApplication(
          err instanceof SessionExpiredError
             ? `${err.message}: ${loginHint(application.source)}, then prepare again`
             : (err as Error).message;
+      if (err instanceof SessionExpiredError) {
+         await database.sourceSessions.markExpired(application.userId, application.source);
+      }
       // not an error: the job site takes no application here, trying again won't change that
       if (err instanceof CannotApplyError) {
          await database.applications.setCannotApply(applicationId, reason);

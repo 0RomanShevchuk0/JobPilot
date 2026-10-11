@@ -129,6 +129,25 @@ export const users = pgTable("users", {
    createdAt: tstz("created_at").notNull().defaultNow(),
 });
 
+/**
+ * How the user's session on a source last went, as the worker found using it. No row = never failed.
+ * One session file per source is shared for now, so it expires for everyone using it at once.
+ */
+export const sourceSessions = pgTable(
+   "source_sessions",
+   {
+      userId: uuid("user_id")
+         .notNull()
+         .references(() => users.id, { onDelete: "cascade" }),
+      sourceId: text("source_id")
+         .notNull()
+         .references(() => sources.id),
+      // when a page of the site came back logged out; null = the last use of the session worked
+      expiredAt: tstz("expired_at"),
+   },
+   (t) => [primaryKey({ columns: [t.userId, t.sourceId] })],
+);
+
 /** Job-search profile, one per user. Shapes of the untyped jsonb columns get defined with the profile feature. */
 export const profiles = pgTable("profiles", {
    userId: uuid("user_id")

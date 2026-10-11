@@ -63,6 +63,9 @@ export async function handleFillApplication(
          err instanceof SessionExpiredError
             ? `${err.message}: ${loginHint(application.source)}, then fill again`
             : (err as Error).message;
+      if (err instanceof SessionExpiredError) {
+         await database.sourceSessions.markExpired(application.userId, application.source);
+      }
       await database.applications.setFillProblem(applicationId, reason);
       throw err;
    } finally {
