@@ -1,6 +1,7 @@
-import type { SalaryPeriod } from "@jobpilot/contracts";
+import type { ProfileCurrency, SalaryPeriod } from "@jobpilot/contracts";
 
 // Rough rates, good enough to tell "below my minimum" from "above it". Update when they drift noticeably.
+// Every profile currency needs one; a vacancy's may be any.
 const USD_PER_UNIT: Record<string, number> = {
    USD: 1,
    EUR: 1.08,
@@ -8,7 +9,7 @@ const USD_PER_UNIT: Record<string, number> = {
    PLN: 0.25,
    UAH: 0.024,
    CZK: 0.043,
-};
+} satisfies Record<string, number> & Record<ProfileCurrency, number>;
 
 const MONTHS_PER: Record<SalaryPeriod, number> = {
    month: 1,

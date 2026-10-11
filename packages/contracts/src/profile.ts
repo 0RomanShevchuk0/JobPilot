@@ -7,6 +7,13 @@ import {
    workModes,
 } from "./posting.js";
 
+/**
+ * Currencies my salary expectation can be in. Matching must have a rate for each: in another one the
+ * prefilter couldn't compare it with a vacancy's salary at all.
+ */
+export const profileCurrencies = ["UAH", "USD", "EUR"] as const;
+export type ProfileCurrency = (typeof profileCurrencies)[number];
+
 /** What goes into application forms: "Full name", "Phone", "LinkedIn"... */
 export const profileContactsSchema = z.object({
    fullName: z.string().min(1).optional(),
@@ -43,7 +50,7 @@ export const profileSchema = z.object({
       .object({
          min: z.number().positive(),
          target: z.number().positive().optional(),
-         currency: z.string().length(3),
+         currency: z.enum(profileCurrencies),
          period: z.enum(salaryPeriods),
       })
       .refine((s) => s.target === undefined || s.target >= s.min, {

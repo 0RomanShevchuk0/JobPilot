@@ -1,5 +1,5 @@
 import { type Profile, profileSchema } from "@jobpilot/contracts";
-import { Body, Controller, Get, NotFoundException, Put } from "@nestjs/common";
+import { Body, Controller, Get, Put } from "@nestjs/common";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { CurrentUser } from "../auth/current-user.service.js";
 import { ProfileService } from "./profile.service.js";
@@ -11,12 +11,11 @@ export class ProfileController {
       private readonly user: CurrentUser,
    ) {}
 
+   /** No body when there is no profile yet: a new user's normal state, not an error. */
    @Get()
    async get() {
       const userId = await this.user.id();
-      const stored = await this.profiles.get(userId);
-      if (!stored) throw new NotFoundException("No profile yet: create it with PUT /profile");
-      return stored;
+      return this.profiles.get(userId);
    }
 
    @Put()

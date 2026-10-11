@@ -3,12 +3,14 @@ import { ApplicationPage } from "../pages/ApplicationPage";
 import { ApplicationsPage } from "../pages/ApplicationsPage";
 import { DocumentsPage } from "../pages/DocumentsPage";
 import { MatchesPage } from "../pages/MatchesPage";
+import { ProfilePage } from "../pages/ProfilePage";
 import { StatsPage } from "../pages/StatsPage";
 import { VacancyPage } from "../pages/VacancyPage";
 
 const pages = [
    { path: "/matches", title: "Matches" },
    { path: "/applications", title: "Applications" },
+   { path: "/profile", title: "Profile" },
    { path: "/documents", title: "Documents" },
    { path: "/stats", title: "Stats" },
 ];
@@ -37,6 +39,7 @@ export function App() {
             <Route path="/matches/:vacancyId" element={<VacancyPage />} />
             <Route path="/applications" element={<ApplicationsPage />} />
             <Route path="/applications/:id" element={<ApplicationPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/documents" element={<DocumentsPage />} />
             <Route path="/stats" element={<StatsPage />} />
             <Route path="*" element={<Navigate to="/matches" replace />} />
