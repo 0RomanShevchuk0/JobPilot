@@ -3,6 +3,7 @@
 import { writeFile } from "node:fs/promises";
 import { sessionPath } from "../config.js";
 import { findSource, sources } from "../sources.js";
+import { scriptUserId } from "./script-user.js";
 
 const [source, jobUrl, htmlPath] = process.argv.slice(2);
 const entry = source ? findSource(source) : undefined;
@@ -11,7 +12,11 @@ if (!entry || !jobUrl) {
    throw new Error(`usage: pnpm read-form <source> <job url> [html file], source one of: ${known}`);
 }
 
-const form = await entry.adapter.account.readApplyForm(jobUrl, sessionPath(entry.adapter.source));
+const userId = await scriptUserId();
+const form = await entry.adapter.account.readApplyForm(
+   jobUrl,
+   sessionPath(userId, entry.adapter.source),
+);
 const { html, ...fields } = form;
 console.log(JSON.stringify(fields, null, 2));
 if (htmlPath) await writeFile(htmlPath, html);

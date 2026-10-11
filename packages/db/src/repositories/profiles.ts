@@ -24,7 +24,7 @@ export interface ProfilesRepository {
    bumpVersion(userId: string): Promise<number | undefined>;
    /** What anyone looks for on the source: every user's categories there, once each, sorted. */
    listAllUsersCategories(source: string): Promise<string[]>;
-   /** Users who picked a category on the source: the ones its session is used for. */
+   /** Users who picked a category on the source: the ones whose sessions there are used. */
    listUserIdsWithCategoriesOn(source: string): Promise<string[]>;
    /** Users who picked the category of one of the vacancy's active postings: the ones to evaluate it for. */
    listSubscriberIds(vacancyId: string): Promise<string[]>;

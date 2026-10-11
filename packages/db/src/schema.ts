@@ -130,8 +130,8 @@ export const users = pgTable("users", {
 });
 
 /**
- * How the user's session on a source last went, as the worker found using it. No row = never failed.
- * One session file per source is shared for now, so it expires for everyone using it at once.
+ * How the user's own session on a source last went, as the worker found using it. No row = never
+ * failed.
  */
 export const sourceSessions = pgTable(
    "source_sessions",

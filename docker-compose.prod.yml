@@ -37,8 +37,8 @@ services:
          # the Redis next to it, whatever .env says
          REDIS_URL: redis://redis:6379
       volumes:
-         # saved by `pnpm login:<source>` on the user's machine and copied here; owned by uid 1000,
-         # the node user the image runs as
+         # each user's own, .data/sessions/<user id>/<source>.json: saved by `pnpm login:<source>` on
+         # the user's machine and copied here; owned by uid 1000, the node user the image runs as
          - ./.data/sessions:/app/.data/sessions:ro
       depends_on:
          redis:
