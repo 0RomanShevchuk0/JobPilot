@@ -36,6 +36,14 @@ export interface SourceListItem {
    categories: SourceCategory[];
 }
 
+/** A job site where the user's session stopped working, as GET /sources/sessions lists them. */
+export interface ExpiredSession {
+   /** the source's id, e.g. "djinni" */
+   source: string;
+   /** when a page of the site first came back logged out */
+   expiredAt: string;
+}
+
 export interface DiscoverParams {
    /**
     * The site's own search filters, spelled as the site spells them, e.g. the category "Node.js": the

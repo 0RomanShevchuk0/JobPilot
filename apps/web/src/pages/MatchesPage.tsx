@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MatchCard, useMatches, type MatchesTab } from "../features/matches";
+import { ExpiredSessionsNotice } from "../features/sessions";
 import { Button } from "../shared/ui";
 
 const tabs: MatchesTab[] = ["new", "applied", "hidden"];
@@ -25,6 +26,8 @@ export function MatchesPage() {
                </label>
             )}
          </header>
+
+         <ExpiredSessionsNotice />
 
          <nav className="mb-4 flex gap-2">
             {tabs.map((t) => (

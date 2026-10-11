@@ -5,6 +5,7 @@ import { DocumentsModule } from "./documents/documents.module.js";
 import { HealthController } from "./health/health.controller.js";
 import { InfraModule } from "./infra/infra.module.js";
 import { ProfileModule } from "./profile/profile.module.js";
+import { SourcesModule } from "./sources/sources.module.js";
 import { StatsModule } from "./stats/stats.module.js";
 
 @Module({
@@ -13,6 +14,7 @@ import { StatsModule } from "./stats/stats.module.js";
       ConfigModule.forRoot({ isGlobal: true, envFilePath: "../../.env" }),
       InfraModule,
       ProfileModule,
+      SourcesModule,
       DocumentsModule,
       ApplicationsModule,
       StatsModule,

@@ -1,5 +1,6 @@
 import { CvCard, useDocuments } from "../features/documents";
 import { ProfileForm, useProfile } from "../features/profile";
+import { ExpiredSessionsNotice } from "../features/sessions";
 import { ReevaluatesMark } from "../shared/ui";
 
 /**
@@ -19,6 +20,7 @@ export function ProfilePage() {
                <ReevaluatesMark /> re-evaluates vacancies when changed
             </p>
          </header>
+         <ExpiredSessionsNotice />
          <div className="mb-4">
             {documents.isPending && <p className="text-gray-500">Loading…</p>}
             {documents.isError && <p className="text-red-600">{documents.error.message}</p>}
