@@ -8,6 +8,10 @@ import { createDocumentsRepository, type DocumentsRepository } from "./repositor
 import { createMatchesRepository, type MatchesRepository } from "./repositories/matches.js";
 import { createPostingsRepository, type PostingsRepository } from "./repositories/postings.js";
 import { createProfilesRepository, type ProfilesRepository } from "./repositories/profiles.js";
+import {
+   createSourceSessionsRepository,
+   type SourceSessionsRepository,
+} from "./repositories/source-sessions.js";
 import { createSourcesRepository, type SourcesRepository } from "./repositories/sources.js";
 import { createStatsRepository, type StatsRepository } from "./repositories/stats.js";
 import { createUsersRepository, type UsersRepository } from "./repositories/users.js";
@@ -20,6 +24,7 @@ import * as schema from "./schema.js";
  */
 export interface DatabaseClient {
    readonly sources: SourcesRepository;
+   readonly sourceSessions: SourceSessionsRepository;
    readonly postings: PostingsRepository;
    readonly vacancies: VacanciesRepository;
    readonly users: UsersRepository;
@@ -41,6 +46,7 @@ export function createDatabase(connectionString: string): DatabaseClient {
 
    return {
       sources: createSourcesRepository(db),
+      sourceSessions: createSourceSessionsRepository(db),
       postings: createPostingsRepository(db),
       vacancies: createVacanciesRepository(db),
       users: createUsersRepository(db),

@@ -18,6 +18,7 @@ export type {
 } from "./repositories/matches.js";
 export type { PostingsRepository, PostingToFetch } from "./repositories/postings.js";
 export type { ProfilesRepository, StoredProfile } from "./repositories/profiles.js";
+export type { SourceSessionsRepository } from "./repositories/source-sessions.js";
 export type { SourceInfo, SourcesRepository } from "./repositories/sources.js";
 export type { StatsOptions, StatsRepository } from "./repositories/stats.js";
 export type { UsersRepository } from "./repositories/users.js";

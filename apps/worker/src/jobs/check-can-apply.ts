@@ -41,7 +41,7 @@ export async function handleCheckCanApply(
    let notAsked = 0;
    let gone = 0;
    for (const posting of active) {
-      const result = await checkJobPage(posting);
+      const result = await checkJobPage(posting, userId, database);
       if (!result) {
          notAsked++;
       } else if (result.status === "gone") {
@@ -107,16 +107,25 @@ function combineChecks(
 }
 
 /** Asks the posting's job site; undefined when it can't be asked: no session, or it's over. */
-async function checkJobPage(posting: {
-   source: string;
-   url: string;
-}): Promise<JobPageResult | undefined> {
+async function checkJobPage(
+   posting: { source: string; url: string },
+   userId: string,
+   database: DatabaseClient,
+): Promise<JobPageResult | undefined> {
    const entry = findSource(posting.source);
    if (!entry) throw new Error(`no adapter for source ${posting.source}`);
    try {
-      return await entry.adapter.account.checkJobPage(posting.url, sessionPath(posting.source));
+      const result = await entry.adapter.account.checkJobPage(
+         posting.url,
+         sessionPath(posting.source),
+      );
+      // the site took the session: a warning about it in the web goes away
+      await database.sourceSessions.markWorking(userId, posting.source);
+      return result;
    } catch (err) {
       if (!(err instanceof SessionExpiredError)) throw err;
+      // for the web to tell: the checks are skipped until the user logs in again
+      await database.sourceSessions.markExpired(userId, posting.source);
       log(
          "check-can-apply",
          `${err.message} (${loginHint(posting.source)}); scoring without the check`,
