@@ -21,6 +21,7 @@ import {
    vacancies,
    vacancyMatches,
 } from "../schema.js";
+import { userSubscribedToVacancySql } from "./subscriptions.js";
 
 export interface MatchInput {
    userId: string;
@@ -219,6 +220,8 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
             userId,
             and(
                isNull(vacancies.closedAt),
+               // a category I unpicked hides its vacancies; their evaluations stay for when I pick it again
+               userSubscribedToVacancySql(userId),
                status === null ? isNull(vacancyMatches.status) : eq(vacancyMatches.status, status),
                status === null && !includeSkipped
                   ? inArray(verdict, ["apply", "stretch"])

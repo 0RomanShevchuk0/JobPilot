@@ -2,6 +2,7 @@ import type { Stats } from "@jobpilot/contracts";
 import { and, count, eq, gte, sql, type SQL } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { applications, vacancies, vacancyMatches } from "../schema.js";
+import { userSubscribedToVacancySql } from "./subscriptions.js";
 
 export interface StatsOptions {
    /** start of the period; null = all time */
@@ -14,9 +15,9 @@ export interface StatsOptions {
 
 export interface StatsRepository {
    /**
-    * The funnel of vacancies found since the start of the period, the user's applications sent or
-    * failed since then, and the found ones per hour or day. Evaluations made for older profile versions
-    * count too: the vacancy went through them all the same.
+    * The funnel of vacancies found in the user's categories since the start of the period, the user's
+    * applications sent or failed since then, and the found ones per hour or day. Evaluations made for
+    * older profile versions count too: the vacancy went through them all the same.
     */
    forUser(userId: string, options: StatsOptions): Promise<Omit<Stats, "period">>;
 }
@@ -32,6 +33,8 @@ export function createStatsRepository(db: Drizzle): StatsRepository {
    return {
       async forUser(userId, { since, bucket, timeZone }) {
          const createdInPeriod = since ? gte(vacancies.createdAt, since) : undefined;
+         // found means found in my categories: others' searches bring vacancies I never looked for
+         const mine = userSubscribedToVacancySql(userId);
 
          const [funnel] = await db
             .select({
@@ -46,7 +49,7 @@ export function createStatsRepository(db: Drizzle): StatsRepository {
             })
             .from(vacancies)
             .leftJoin(vacancyMatches, userMatch(userId))
-            .where(createdInPeriod);
+            .where(and(createdInPeriod, mine));
 
          const [applicationCounts] = await db
             .select({
@@ -93,6 +96,7 @@ export function createStatsRepository(db: Drizzle): StatsRepository {
             left join ${vacancies}
                on date_trunc(${bucket}, ${vacancies.createdAt}, ${timeZone}) = b.start
                and ${createdInPeriod ?? sql`true`}
+               and ${mine}
             left join ${vacancyMatches} on ${userMatch(userId)}
             group by b.start
             order by b.start
