@@ -35,6 +35,11 @@ export function CvCard({ cv }: { cv?: DocumentListItem }) {
                      No CV yet. Form answers and letters are written from it.
                   </p>
                )}
+               {/* matching reads the CV too: like a profile save, any change makes every evaluation stale */}
+               <p className="text-xs text-gray-500">
+                  {cv ? "Replacing or deleting it" : "Uploading it"} re-evaluates every open
+                  vacancy.
+               </p>
             </div>
 
             <div className="flex shrink-0 items-center gap-2">

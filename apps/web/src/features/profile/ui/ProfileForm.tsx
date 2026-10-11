@@ -28,7 +28,10 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
    });
    const save = useSaveProfile();
 
-   const submit = handleSubmit((profile) => save.mutate(profile));
+   // what was saved becomes the form's starting point: Discard comes back to it
+   const submit = handleSubmit((profile) =>
+      save.mutate(profile, { onSuccess: (stored) => reset(fromProfile(stored.profile)) }),
+   );
    const discard = () => {
       reset();
       save.reset();
@@ -154,26 +157,29 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
             </Field>
          </Section>
 
-         <div className="sticky bottom-0 flex items-center justify-between gap-4 border-t border-gray-200 bg-white py-3">
-            <div className="text-sm">
-               {hasErrors && <p className="text-red-600">Some fields need fixing, see above.</p>}
-               {save.error && <p className="text-red-600">{save.error.message}</p>}
-               {!hasErrors && !save.error && (
-                  <p className="text-gray-500">
-                     Saving re-evaluates every open vacancy, with an AI call for each that passes
-                     the filters.
-                  </p>
-               )}
+         {/* only while there is something to save: the CV above saves on its own, with no button */}
+         {isDirty && (
+            <div className="sticky bottom-0 flex items-center justify-between gap-4 border-t border-gray-200 bg-white py-3">
+               <div className="text-sm">
+                  {hasErrors && <p className="text-red-600">Some fields need fixing, see above.</p>}
+                  {save.error && <p className="text-red-600">{save.error.message}</p>}
+                  {!hasErrors && !save.error && (
+                     <p className="text-gray-500">
+                        Unsaved changes. Saving re-evaluates every open vacancy, with an AI call for
+                        each that passes the filters.
+                     </p>
+                  )}
+               </div>
+               <div className="flex shrink-0 gap-2">
+                  <Button onClick={discard} disabled={save.isPending}>
+                     Discard
+                  </Button>
+                  <Button type="submit" variant="primary" disabled={save.isPending}>
+                     {save.isPending ? "Saving…" : "Save"}
+                  </Button>
+               </div>
             </div>
-            <div className="flex shrink-0 gap-2">
-               <Button onClick={discard} disabled={!isDirty || save.isPending}>
-                  Discard
-               </Button>
-               <Button type="submit" variant="primary" disabled={!isDirty || save.isPending}>
-                  {save.isPending ? "Saving…" : "Save"}
-               </Button>
-            </div>
-         </div>
+         )}
       </form>
    );
 }
