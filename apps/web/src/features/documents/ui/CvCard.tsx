@@ -1,6 +1,6 @@
 import type { DocumentListItem } from "@jobpilot/contracts";
 import { useRef, useState } from "react";
-import { Button, buttonStyles } from "../../../shared/ui";
+import { Button, buttonStyles, ReevaluatesMark } from "../../../shared/ui";
 import { documentFileUrl, useDeleteDocument, useUploadCv } from "../api/queries";
 
 /** The CV: view, download, replace or delete it, or upload the first one. */
@@ -25,7 +25,11 @@ export function CvCard({ cv }: { cv?: DocumentListItem }) {
       <section className="rounded border border-gray-200 p-4">
          <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
-               <h2 className="font-medium">CV</h2>
+               <h2 className="flex items-center gap-1.5 font-medium">
+                  CV
+                  {/* matching reads it: replacing or deleting it re-evaluates, like a profile change */}
+                  <ReevaluatesMark />
+               </h2>
                {cv ? (
                   <p className="truncate text-sm text-gray-600">
                      {cv.fileName} · uploaded {new Date(cv.createdAt).toLocaleDateString()}
@@ -35,11 +39,6 @@ export function CvCard({ cv }: { cv?: DocumentListItem }) {
                      No CV yet. Form answers and letters are written from it.
                   </p>
                )}
-               {/* matching reads the CV too: like a profile save, any change makes every evaluation stale */}
-               <p className="text-xs text-gray-500">
-                  {cv ? "Replacing or deleting it" : "Uploading it"} re-evaluates every open
-                  vacancy.
-               </p>
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
