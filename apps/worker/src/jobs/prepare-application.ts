@@ -43,13 +43,13 @@ export async function handlePrepareApplication(
          err instanceof SessionExpiredError
             ? `${err.message}: ${loginHint(application.source)}, then prepare again`
             : (err as Error).message;
+      // not an error: the job site takes no application here, trying again won't change that
+      if (err instanceof CannotApplyError) {
+         await database.applications.setCannotApply(applicationId, reason);
+         throw new UnrecoverableError(reason);
+      }
       // a final failure must not leave the application "preparing" forever
-      if (
-         err instanceof UnrecoverableError ||
-         err instanceof SessionExpiredError ||
-         err instanceof CannotApplyError ||
-         lastAttempt
-      ) {
+      if (err instanceof UnrecoverableError || err instanceof SessionExpiredError || lastAttempt) {
          await database.applications.setFailed(applicationId, reason);
          throw new UnrecoverableError(reason);
       }

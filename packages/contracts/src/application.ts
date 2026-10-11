@@ -5,7 +5,10 @@ export const applicationStatuses = [
    "preparing",
    "ready_for_review",
    "submitted",
+   /** something broke (a selector, the LLM, an expired session): trying again can help */
    "failed",
+   /** the job site takes no application through JobPilot: applied already, closed, external only */
+   "cannot_apply",
 ] as const;
 export type ApplicationStatus = (typeof applicationStatuses)[number];
 
@@ -105,7 +108,7 @@ export interface ApplicationListItem {
    postingId: string;
    postingUrl: string;
    status: ApplicationStatus;
-   /** why preparing or submitting failed */
+   /** why preparing or submitting failed, or why the job site takes no application */
    failureReason: string | null;
    createdAt: string;
    updatedAt: string;
