@@ -1,0 +1,1 @@
+ALTER TABLE "profiles" ADD COLUMN "source_categories" jsonb DEFAULT '{}'::jsonb NOT NULL;

@@ -13,6 +13,7 @@ import { Button, ReevaluatesMark } from "../../../shared/ui";
 import { useSaveProfile } from "../api/queries";
 import { fromProfile, type ProfileDraft, profileFormSchema } from "../lib/draft";
 import { inputClasses, textareaClasses } from "./inputs";
+import { JobSites } from "./JobSites";
 import { LanguagesList, LinksList, LocationsList } from "./ListFields";
 import { TagsInput } from "./TagsInput";
 
@@ -63,6 +64,14 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
             <Field label="Application message" hint="Adapted to each vacancy when applying">
                <textarea {...register("applicationMessage")} className={textareaClasses} />
             </Field>
+         </Section>
+
+         {/* no mark: what is searched for decides what is found, not how it is evaluated */}
+         <Section
+            title="Job sites"
+            hint="Where to look: the categories to read on each site. A site with nothing picked is off."
+         >
+            <JobSites form={form} />
          </Section>
 
          <Section title="What I look for" reevaluates>

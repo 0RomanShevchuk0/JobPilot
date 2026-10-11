@@ -22,6 +22,12 @@ describe("sameForMatching", () => {
       expect(sameForMatching(profile, other)).toBe(true);
    });
 
+   it("ignores the sites to search", () => {
+      expect(sameForMatching(profile, edit({ sourceCategories: { djinni: ["Node.js"] } }))).toBe(
+         true,
+      );
+   });
+
    it("sees a change the prefilter reads", () => {
       const other = edit({ hardFilters: { ...profile.hardFilters, stopWords: ["PHP", "Java"] } });
       expect(sameForMatching(profile, other)).toBe(false);

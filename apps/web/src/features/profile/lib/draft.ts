@@ -8,6 +8,7 @@ import {
    type Seniority,
    type WorkMode,
 } from "@jobpilot/contracts";
+import { sourceCatalog } from "@jobpilot/sources/catalog";
 import { z } from "zod";
 
 /**
@@ -36,6 +37,8 @@ export interface ProfileDraft {
    };
    notes: string;
    applicationMessage: string;
+   /** every source of the catalog, [] when off: the boxes of each site make one list */
+   sourceCategories: Record<string, string[]>;
 }
 
 /** What the profile schema takes: fields with a default may be missing. */
@@ -79,6 +82,9 @@ export function fromProfile(saved?: Profile): ProfileDraft {
       },
       notes: p.notes,
       applicationMessage: p.applicationMessage,
+      sourceCategories: Object.fromEntries(
+         sourceCatalog.map((s) => [s.id, p.sourceCategories[s.id] ?? []]),
+      ),
    };
 }
 
@@ -120,6 +126,10 @@ function toProfile(d: ProfileDraft): ProfileInput {
       },
       notes: d.notes.trim(),
       applicationMessage: d.applicationMessage.trim(),
+      // a site with nothing picked is off: left out instead of stored as []
+      sourceCategories: Object.fromEntries(
+         Object.entries(d.sourceCategories).filter(([, categories]) => categories.length > 0),
+      ),
    };
 }
 

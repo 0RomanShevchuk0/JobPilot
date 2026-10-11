@@ -2,9 +2,10 @@ import type { Profile } from "@jobpilot/contracts";
 
 /**
  * Whether two versions of a profile evaluate vacancies alike. Everything in the profile goes into the
- * prefilter or the AI prompt except the contacts (used only to cut them out of the CV) and the message
- * to recruiters. A change there (a new phone number) leaves every evaluation as it is; any other one,
- * a field added later included, makes them all stale.
+ * prefilter or the AI prompt except the contacts (used only to cut them out of the CV), the message
+ * to recruiters and the sites to search (they decide what is found, not how it is evaluated). A change
+ * there (a new phone number) leaves every evaluation as it is; any other one, a field added later
+ * included, makes them all stale.
  */
 export function sameForMatching(a: Profile, b: Profile): boolean {
    return canonicalJson(matchingInput(a)) === canonicalJson(matchingInput(b));
@@ -14,6 +15,7 @@ function matchingInput(profile: Profile): Partial<Profile> {
    const input: Partial<Profile> = { ...profile };
    delete input.contacts;
    delete input.applicationMessage;
+   delete input.sourceCategories;
    return input;
 }
 
