@@ -24,6 +24,8 @@ export interface ProfilesRepository {
    bumpVersion(userId: string): Promise<number | undefined>;
    /** What anyone looks for on the source: every user's categories there, once each, sorted. */
    listAllUsersCategories(source: string): Promise<string[]>;
+   /** Users who picked a category on the source: the ones its session is used for. */
+   listUserIdsWithCategoriesOn(source: string): Promise<string[]>;
    /** Users who picked the category of one of the vacancy's active postings: the ones to evaluate it for. */
    listSubscriberIds(vacancyId: string): Promise<string[]>;
 }
@@ -107,6 +109,16 @@ export function createProfilesRepository(db: Drizzle): ProfilesRepository {
          const category = sql<string>`jsonb_array_elements_text(${profiles.sourceCategories} -> ${source})`;
          const rows = await db.selectDistinct({ category }).from(profiles);
          return rows.map((r) => r.category).sort();
+      },
+
+      async listUserIdsWithCategoriesOn(source) {
+         const rows = await db
+            .select({ userId: profiles.userId })
+            .from(profiles)
+            .where(
+               sql`jsonb_array_length(coalesce(${profiles.sourceCategories} -> ${source}, '[]')) > 0`,
+            );
+         return rows.map((r) => r.userId);
       },
 
       async listSubscriberIds(vacancyId) {
