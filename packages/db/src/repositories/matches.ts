@@ -8,6 +8,7 @@ import type {
    MatchDetails,
    MatchListItem,
    MatchStatus,
+   NormalizedPosting,
 } from "@jobpilot/contracts";
 import { and, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
@@ -155,6 +156,7 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
             source: postings.sourceId,
             sourceName: sources.name,
             url: postings.url,
+            apply: sql<NormalizedPosting["apply"] | null>`${postings.parsed}->'apply'`,
          })
          .from(postings)
          .innerJoin(sources, eq(sources.id, postings.sourceId))
@@ -179,11 +181,12 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
          publishedAt: r.publishedAt.toISOString(),
          postings: activePostings
             .filter((p) => p.vacancyId === r.vacancyId)
-            .map(({ id, source, sourceName, url }) => ({
+            .map(({ id, source, sourceName, url, apply }) => ({
                id,
                source,
                sourceName,
                url,
+               externalApplyUrl: externalApplyUrl(apply),
                application: applicationOf(userApplications, (a) => a.postingId === id),
             })),
          application: applicationOf(userApplications, (a) => a.vacancyId === r.vacancyId),
@@ -328,6 +331,11 @@ function applicationOf(
 ): MatchApplication | null {
    const found = userApplications.find(matches);
    return found ? { id: found.id, status: found.status } : null;
+}
+
+/** The employer's site the posting sends applicants to; null when they apply on the job site. */
+export function externalApplyUrl(apply: NormalizedPosting["apply"] | null): string | null {
+   return apply?.method === "external" ? (apply.url ?? null) : null;
 }
 
 function cannotApplyReason(applyCheck: ApplyCheck | undefined): string | null {

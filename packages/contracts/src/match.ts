@@ -113,6 +113,11 @@ export interface MatchPosting {
    /** the job site's name to show, e.g. "Djinni" */
    sourceName: string;
    url: string;
+   /**
+    * where the job site sends applicants: the employer's site or ATS. JobPilot can't apply through such
+    * a posting; null when applying happens on the job site itself
+    */
+   externalApplyUrl: string | null;
    /** my application through this job site, once started */
    application: MatchApplication | null;
 }
