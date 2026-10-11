@@ -36,7 +36,9 @@ export function prefilter(profile: Profile, vacancy: VacancyForPrefilter): Prefi
       checkSeniority(profile, vacancy),
       checkWorkMode(profile, vacancy),
       checkOfficeCity(profile, vacancy),
-      checkCandidateCountry(profile, vacancy),
+      // no candidate-country check: a job "for candidates from Ukraine" sometimes takes applicants from
+      // elsewhere too. The job site says so when asked under the user's account (check-can-apply), and
+      // the AI sees the location otherwise
       checkSalary(profile, vacancy),
       ...checkLanguages(profile, vacancy),
       checkStopWords(profile, vacancy),
@@ -69,18 +71,6 @@ function checkOfficeCity(p: Profile, v: VacancyForPrefilter): RejectReason | und
    if (!needsOffice || myCities.length === 0 || officeCities.length === 0) return;
    if (officeCities.some((c) => myCities.includes(c))) return;
    return { check: "office_city", detail: `office in ${officeCities.join("/")}` };
-}
-
-/** Where candidates may work from vs. where I work from. Regions ("Europe", "Worldwide") pass. */
-function checkCandidateCountry(p: Profile, v: VacancyForPrefilter): RejectReason | undefined {
-   const mine = p.locations.find((l) => l.kind === "candidate" && l.country)?.country;
-   const allowed = v.locations.filter((l) => l.kind === "candidate");
-   if (!mine || allowed.length === 0 || allowed.some((l) => !l.country)) return;
-   if (allowed.some((l) => l.country === mine)) return;
-   return {
-      check: "candidate_country",
-      detail: `candidates from ${allowed.map((l) => l.country).join("/")}, I am in ${mine}`,
-   };
 }
 
 /** Compares the top of the vacancy's range with my minimum, both converted to USD per month. */

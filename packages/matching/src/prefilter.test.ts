@@ -69,13 +69,11 @@ describe("prefilter", () => {
       expect(checksOf(office("Kyiv"))).toEqual([]);
    });
 
-   it("candidate country: rejects other countries, passes regions like Worldwide", () => {
+   it("candidate country: never rejects, the job site decides whether I can apply", () => {
       const from = (raw: string, country?: string): Partial<VacancyForPrefilter> => ({
          locations: [{ kind: "candidate", raw, country }],
       });
-      expect(checksOf(from("US", "US"))).toEqual(["candidate_country"]);
-      expect(checksOf(from("UA", "UA"))).toEqual([]);
-      expect(checksOf(from("Worldwide"))).toEqual([]);
+      expect(checksOf(from("US", "US"))).toEqual([]);
    });
 
    it("salary: compares the top of the range with my minimum across currencies and periods", () => {
