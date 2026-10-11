@@ -26,6 +26,8 @@ export interface PostingsRepository {
    markGone(postingId: string): Promise<void>;
    /** The vacancy's postings still on their sites, the last seen first. */
    listActive(vacancyId: string): Promise<{ id: string; source: string; url: string }[]>;
+   /** The last seen posting of the source still up: a page to open, e.g. to try a session on. */
+   getLastSeenActiveUrl(sourceId: string): Promise<string | undefined>;
    /** The parsed form of a posting, or undefined if it is not fetched and parsed yet. */
    getParsed(postingId: string): Promise<NormalizedPosting | undefined>;
    /** Ids of every parsed posting, e.g. to rebuild all vacancies after the rules for building them change. */
@@ -159,6 +161,16 @@ export function createPostingsRepository(db: Drizzle): PostingsRepository {
             .from(postings)
             .where(and(eq(postings.vacancyId, vacancyId), isNull(postings.goneAt)))
             .orderBy(desc(postings.lastSeenAt));
+      },
+
+      async getLastSeenActiveUrl(sourceId) {
+         const [row] = await db
+            .select({ url: postings.url })
+            .from(postings)
+            .where(and(eq(postings.sourceId, sourceId), isNull(postings.goneAt)))
+            .orderBy(desc(postings.lastSeenAt))
+            .limit(1);
+         return row?.url;
       },
    };
 }
