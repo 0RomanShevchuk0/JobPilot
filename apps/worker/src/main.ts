@@ -61,7 +61,7 @@ for (const entry of sources) {
       { every: config.discoverEveryMs },
       {
          name: "discover",
-         data: { source, keywords: entry.keywords },
+         data: { source },
          opts: discoverJobOptions,
       },
    );
@@ -161,7 +161,7 @@ for (const worker of workers) {
 
 log(
    "worker",
-   `started: ${sources.map((s) => `${s.adapter.source} [${s.keywords.join(", ") || "all"}]`).join(", ")}; ` +
+   `started: ${sources.map((s) => s.adapter.source).join(", ")}; ` +
       `discover every ${config.discoverEveryMs / 60_000} min; scoring with ${scoring.llm.model}`,
 );
 

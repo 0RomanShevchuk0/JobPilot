@@ -36,9 +36,9 @@ export const QueueNames = {
 /** Fetches and parses posting pages. One queue per source, so each source gets its own rate limit. */
 export const fetchQueueName = (source: string) => `fetch-${source}`;
 
+/** What to look for there is read when the job runs: the users' categories on the source. */
 export interface DiscoverJobData {
    source: string;
-   keywords: string[];
 }
 
 export interface FetchJobData {
