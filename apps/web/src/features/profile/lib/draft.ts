@@ -11,7 +11,7 @@ import {
 import { z } from "zod";
 
 /**
- * The profile as the form edits it: inputs as typed, lists of words one per line. Shaped as the
+ * The profile as the form edits it: inputs as typed, lists of words as lists. Shaped as the
  * profile, so the schema's complaints about a field ("salary.target") land on the input of that name.
  */
 export interface ProfileDraft {
@@ -21,17 +21,17 @@ export interface ProfileDraft {
       phone: string;
       links: { name: string; url: string }[];
    };
-   titles: string;
+   titles: string[];
    experienceYears: string;
-   skills: string;
+   skills: string[];
    salary: { min: string; target: string; currency: ProfileCurrency; period: SalaryPeriod };
    locations: { kind: LocationKind; raw: string; city: string; country: string }[];
    workModes: WorkMode[];
    languages: { code: string; level: LanguageLevel | "" }[];
    hardFilters: {
       seniorities: Seniority[];
-      excludeCompanies: string;
-      stopWords: string;
+      excludeCompanies: string[];
+      stopWords: string[];
       maxRequiredYears: string;
    };
    notes: string;
@@ -54,9 +54,9 @@ export function fromProfile(saved?: Profile): ProfileDraft {
          phone: p.contacts.phone ?? "",
          links: Object.entries(p.contacts.links ?? {}).map(([name, url]) => ({ name, url })),
       },
-      titles: p.titles.join("\n"),
+      titles: p.titles,
       experienceYears: p.experienceYears?.toString() ?? "",
-      skills: p.skills.join("\n"),
+      skills: p.skills,
       salary: {
          min: p.salary?.min.toString() ?? "",
          target: p.salary?.target?.toString() ?? "",
@@ -73,8 +73,8 @@ export function fromProfile(saved?: Profile): ProfileDraft {
       languages: p.languages.map((l) => ({ code: l.code, level: l.level ?? "" })),
       hardFilters: {
          seniorities: p.hardFilters.seniorities ?? [],
-         excludeCompanies: (p.hardFilters.excludeCompanies ?? []).join("\n"),
-         stopWords: (p.hardFilters.stopWords ?? []).join("\n"),
+         excludeCompanies: p.hardFilters.excludeCompanies ?? [],
+         stopWords: p.hardFilters.stopWords ?? [],
          maxRequiredYears: p.hardFilters.maxRequiredYears?.toString() ?? "",
       },
       notes: p.notes,
@@ -97,9 +97,9 @@ function toProfile(d: ProfileDraft): ProfileInput {
          phone: text(d.contacts.phone),
          links: links.length > 0 ? Object.fromEntries(links) : undefined,
       },
-      titles: lines(d.titles),
+      titles: d.titles,
       experienceYears: number(d.experienceYears),
-      skills: lines(d.skills),
+      skills: d.skills,
       salary: salary(d.salary),
       locations: d.locations.map((l) => ({
          kind: l.kind,
@@ -114,8 +114,8 @@ function toProfile(d: ProfileDraft): ProfileInput {
       })),
       hardFilters: {
          seniorities: nonEmpty(d.hardFilters.seniorities),
-         excludeCompanies: nonEmpty(lines(d.hardFilters.excludeCompanies)),
-         stopWords: nonEmpty(lines(d.hardFilters.stopWords)),
+         excludeCompanies: nonEmpty(d.hardFilters.excludeCompanies),
+         stopWords: nonEmpty(d.hardFilters.stopWords),
          maxRequiredYears: number(d.hardFilters.maxRequiredYears),
       },
       notes: d.notes.trim(),
@@ -138,13 +138,6 @@ function text(value: string): string | undefined {
 /** "abc" becomes NaN, which the schema rejects as not a number. */
 function number(value: string): number | undefined {
    return value.trim() === "" ? undefined : Number(value);
-}
-
-function lines(value: string): string[] {
-   return value
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
 }
 
 /** Empty hard filters mean no restriction: left out instead of stored as []. */

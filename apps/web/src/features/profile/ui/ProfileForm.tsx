@@ -7,28 +7,27 @@ import {
    workModes,
 } from "@jobpilot/contracts";
 import type { ReactNode } from "react";
-import { type UseFormRegisterReturn, useForm } from "react-hook-form";
+import { type Control, Controller, type UseFormRegisterReturn, useForm } from "react-hook-form";
 import { Button } from "../../../shared/ui";
 import { useSaveProfile } from "../api/queries";
 import { fromProfile, type ProfileDraft, profileFormSchema } from "../lib/draft";
-
-// red border while the Field around it shows an error
-const inputClasses =
-   "w-full rounded border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 shadow-xs transition-colors hover:border-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 focus:outline-none group-data-invalid:border-red-400";
-// grows with its text up to a point, then scrolls: a long skills list doesn't stretch the page
-const textareaClasses = `field-sizing-content min-h-20 max-h-72 ${inputClasses}`;
+import { inputClasses, textareaClasses } from "./inputs";
+import { LanguagesList, LinksList, LocationsList } from "./ListFields";
+import { TagsInput } from "./TagsInput";
 
 /** The whole profile as one form, saved at once: each save re-evaluates every open vacancy. */
 export function ProfileForm({ saved }: { saved?: Profile }) {
+   const form = useForm<ProfileDraft, unknown, Profile>({
+      defaultValues: fromProfile(saved),
+      resolver: zodResolver(profileFormSchema),
+   });
    const {
+      control,
       register,
       handleSubmit,
       reset,
       formState: { errors, isDirty },
-   } = useForm<ProfileDraft, unknown, Profile>({
-      defaultValues: fromProfile(saved),
-      resolver: zodResolver(profileFormSchema),
-   });
+   } = form;
    const save = useSaveProfile();
 
    // what was saved becomes the form's starting point: Discard comes back to it
@@ -43,7 +42,7 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
 
    return (
       <form onSubmit={submit} className="space-y-4">
-         <Section title="Contacts" hint="What goes into application forms.">
+         <Section title="Contacts" hint="How to reach me.">
             <div className="grid gap-4 sm:grid-cols-3">
                <Field label="Full name" error={errors.contacts?.fullName?.message}>
                   <input {...register("contacts.fullName")} className={inputClasses} />
@@ -55,16 +54,24 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
                   <input {...register("contacts.phone")} className={inputClasses} />
                </Field>
             </div>
+            <LinksList form={form} />
          </Section>
 
          <Section title="What I look for">
             <div className="grid gap-4 sm:grid-cols-2">
-               <Field label="Job titles" hint="One per line, e.g. Backend Developer">
-                  <textarea {...register("titles")} className={textareaClasses} />
-               </Field>
-               <Field label="Skills" hint="One per line, as written: Node.js, React…">
-                  <textarea {...register("skills")} className={textareaClasses} />
-               </Field>
+               <Tags
+                  control={control}
+                  name="titles"
+                  label="Job titles"
+                  placeholder="Backend Developer"
+               />
+               <Tags
+                  control={control}
+                  name="skills"
+                  label="Skills"
+                  hint="As written: Node.js, React…"
+                  placeholder="Node.js"
+               />
             </div>
             <div className="grid gap-4 sm:grid-cols-4">
                <Field
@@ -82,6 +89,11 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
                   />
                </div>
             </div>
+         </Section>
+
+         <Section title="Location and languages">
+            <LocationsList form={form} />
+            <LanguagesList form={form} />
          </Section>
 
          <Section
@@ -137,15 +149,20 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
                </Field>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-               <Field label="Stop words" hint="One per line: a word in the title rules it out">
-                  <textarea {...register("hardFilters.stopWords")} className={textareaClasses} />
-               </Field>
-               <Field label="Excluded companies" hint="One per line, named as on job sites">
-                  <textarea
-                     {...register("hardFilters.excludeCompanies")}
-                     className={textareaClasses}
-                  />
-               </Field>
+               <Tags
+                  control={control}
+                  name="hardFilters.stopWords"
+                  label="Stop words"
+                  hint="A word in the title rules the vacancy out"
+                  placeholder="PHP"
+               />
+               <Tags
+                  control={control}
+                  name="hardFilters.excludeCompanies"
+                  label="Excluded companies"
+                  hint="Named as on job sites"
+                  placeholder="Company name"
+               />
             </div>
          </Section>
 
@@ -205,18 +222,56 @@ interface FieldProps {
    label: string;
    hint?: string;
    error?: string;
+   /**
+    * "div" around inputs with buttons inside: a label passes a click anywhere in it on to the first
+    * button, and the chips' × would fire on a click at a chip
+    */
+   as?: "label" | "div";
    children: ReactNode;
 }
 
 /** One input under its label, with the schema's complaint about it. */
-function Field({ label, hint, error, children }: FieldProps) {
+function Field({ label, hint, error, as: Tag = "label", children }: FieldProps) {
    return (
-      <label className="group block" data-invalid={error ? "" : undefined}>
+      <Tag className="group block" data-invalid={error ? "" : undefined}>
          <span className="text-sm font-medium text-gray-800">{label}</span>
          {hint && <span className="block text-xs text-gray-500">{hint}</span>}
          <span className="mt-1 block">{children}</span>
          {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
-      </label>
+      </Tag>
+   );
+}
+
+interface TagsProps {
+   control: Control<ProfileDraft, unknown, Profile>;
+   name: "titles" | "skills" | "hardFilters.stopWords" | "hardFilters.excludeCompanies";
+   label: string;
+   hint?: string;
+   placeholder: string;
+}
+
+/** A list of words as chips, under its label. */
+function Tags({ control, name, label, hint, placeholder }: TagsProps) {
+   return (
+      <Field
+         label={label}
+         hint={hint ?? "Enter after each; a pasted list adds one per line"}
+         as="div"
+      >
+         <Controller
+            control={control}
+            name={name}
+            render={({ field }) => (
+               <TagsInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  label={label}
+                  placeholder={placeholder}
+               />
+            )}
+         />
+      </Field>
    );
 }
 
