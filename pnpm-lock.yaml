@@ -184,6 +184,9 @@ importers:
       '@jobpilot/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@jobpilot/matching':
+        specifier: workspace:*
+        version: link:../../packages/matching
       '@jobpilot/storage':
         specifier: workspace:*
         version: link:../../packages/storage
