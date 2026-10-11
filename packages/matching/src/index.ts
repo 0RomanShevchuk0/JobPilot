@@ -1,3 +1,4 @@
+export { sameForMatching } from "./matching-input.js";
 export { prefilter, type VacancyForPrefilter } from "./prefilter.js";
 export { redactContacts } from "./redact.js";
 export { toUsdPerMonth } from "./salary.js";

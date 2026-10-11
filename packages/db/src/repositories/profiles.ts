@@ -11,8 +11,11 @@ export interface StoredProfile {
 
 export interface ProfilesRepository {
    get(userId: string): Promise<StoredProfile | undefined>;
-   /** Creates or replaces the profile. Returns its new version. */
-   save(userId: string, profile: Profile): Promise<number>;
+   /**
+    * Creates or replaces the profile. A replaced one gets the next version only when newVersion is set:
+    * the change makes the evaluations stale. Returns the version it has now.
+    */
+   save(userId: string, profile: Profile, options: { newVersion: boolean }): Promise<number>;
    /**
     * +1 to the version without changing the profile: something else matching reads changed (the CV),
     * so every evaluation is stale. Returns the new version, or undefined when there is no profile yet.
@@ -51,7 +54,7 @@ export function createProfilesRepository(db: Drizzle): ProfilesRepository {
          };
       },
 
-      async save(userId, p) {
+      async save(userId, p, { newVersion }) {
          const columns = {
             contacts: p.contacts,
             titles: p.titles,
@@ -73,7 +76,11 @@ export function createProfilesRepository(db: Drizzle): ProfilesRepository {
             .values({ userId, ...columns })
             .onConflictDoUpdate({
                target: profiles.userId,
-               set: { ...columns, version: sql`${profiles.version} + 1`, updatedAt: sql`now()` },
+               set: {
+                  ...columns,
+                  version: newVersion ? sql`${profiles.version} + 1` : profiles.version,
+                  updatedAt: sql`now()`,
+               },
             })
             .returning({ version: profiles.version });
          return row.version;
