@@ -26,8 +26,12 @@ export class ApplicationsService {
     * the job site; refreshForm reads the form again first.
     */
    async prepare(userId: string, postingId: string, refreshForm: boolean): Promise<{ id: string }> {
-      if (!(await this.db.applications.isPostingActive(postingId))) {
-         throw new NotFoundException("The job is no longer on this site");
+      const posting = await this.db.applications.getPostingToApply(postingId);
+      if (!posting) throw new NotFoundException("The job is no longer on this site");
+      if (posting.externalApplyUrl) {
+         throw new ConflictException(
+            `This job is applied to on the employer's site: ${posting.externalApplyUrl}`,
+         );
       }
       const application = await this.db.applications.startPreparing(userId, postingId);
       if (!application) throw new ConflictException("Already applied through this site");

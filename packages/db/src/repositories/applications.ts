@@ -2,6 +2,7 @@ import type { ApplicationListItem, ApplicationStatus, FormField } from "@jobpilo
 import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { applications, postings, vacancies } from "../schema.js";
+import { externalApplyUrl } from "./matches.js";
 
 /** An application with its answers, as stored. */
 export interface StoredApplication extends ApplicationListItem {
@@ -24,8 +25,11 @@ export interface ApplicationToPrepare {
 export type ApplicationToFill = ApplicationToPrepare;
 
 export interface ApplicationsRepository {
-   /** Whether the posting can be applied through: it exists and is still on its job site. */
-   isPostingActive(postingId: string): Promise<boolean>;
+   /**
+    * The posting to apply through, if it exists and is still on its job site: whether that site sends
+    * applicants to the employer's site instead (externalApplyUrl).
+    */
+   getPostingToApply(postingId: string): Promise<{ externalApplyUrl: string | null } | undefined>;
    /**
     * Starts preparing the application to a posting: a new one, or the existing one again (its fields
     * stay until new answers replace them). Returns undefined when it was already submitted.
@@ -74,12 +78,12 @@ function withIsoDates<T extends { createdAt: Date; updatedAt: Date }>(row: T) {
 
 export function createApplicationsRepository(db: Drizzle): ApplicationsRepository {
    return {
-      async isPostingActive(postingId) {
+      async getPostingToApply(postingId) {
          const [row] = await db
-            .select({ id: postings.id })
+            .select({ parsed: postings.parsed })
             .from(postings)
             .where(and(eq(postings.id, postingId), isNull(postings.goneAt)));
-         return row !== undefined;
+         return row && { externalApplyUrl: externalApplyUrl(row.parsed?.apply ?? null) };
       },
 
       async startPreparing(userId, postingId) {

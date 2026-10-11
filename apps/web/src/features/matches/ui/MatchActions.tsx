@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { Button, buttonStyles } from "../../../shared/ui";
 import { applicationStatusLabels, useStartApplication } from "../../applications";
 import { useMarkMatch } from "../api/queries";
+import { ExternalApplyLink } from "./ExternalApplyLink";
 
 /** What I can do with a vacancy: apply through JobPilot (or open my application), mark it or unmark it. */
 export function MatchActions({ match }: { match: MatchListItem }) {
@@ -28,6 +29,9 @@ export function MatchActions({ match }: { match: MatchListItem }) {
       }
       // no job site takes an application: the reason is shown with the vacancy
       if (match.cannotApplyReason) return null;
+      if (onlyPosting?.externalApplyUrl) {
+         return <ExternalApplyLink url={onlyPosting.externalApplyUrl} />;
+      }
       if (onlyPosting) {
          return (
             <Button

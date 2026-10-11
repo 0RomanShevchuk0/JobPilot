@@ -2,6 +2,7 @@ import type { MatchListItem, MatchPosting } from "@jobpilot/contracts";
 import { Link, useNavigate } from "react-router";
 import { Button, buttonStyles } from "../../../shared/ui";
 import { applicationStatusLabels, useStartApplication } from "../../applications";
+import { ExternalApplyLink } from "./ExternalApplyLink";
 
 /**
  * Every job site the vacancy is listed on, as links: "On: Djinni · DOU". With several, each gets its
@@ -48,6 +49,8 @@ function PostingsToApply({ postings }: { postings: MatchPosting[] }) {
                      >
                         Application: {applicationStatusLabels[posting.application.status]}
                      </Link>
+                  ) : posting.externalApplyUrl ? (
+                     <ExternalApplyLink url={posting.externalApplyUrl} />
                   ) : (
                      <Button
                         variant="primary"
