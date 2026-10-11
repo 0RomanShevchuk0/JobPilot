@@ -25,9 +25,8 @@ export function ExpiredSessionsNotice() {
                      Until you log in again, vacancies there are scored without checking whether you
                      can apply, and applications can't be prepared. Run{" "}
                      <code className="rounded bg-amber-100 px-1">pnpm login:{source}</code> in
-                     apps/worker, then copy{" "}
-                     <code className="rounded bg-amber-100 px-1">.data/sessions/{source}.json</code>{" "}
-                     to the server. The warning goes away once the worker gets in with it.
+                     apps/worker and copy the session file it saves to the server, where it says.
+                     The warning goes away once the worker gets in with it.
                   </p>
                </div>
             );

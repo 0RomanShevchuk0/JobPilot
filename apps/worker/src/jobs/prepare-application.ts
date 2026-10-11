@@ -78,7 +78,7 @@ async function prepare(
    // the questions are read from the job site once; answering again reuses them
    const form =
       refreshForm || application.fields.length === 0
-         ? await readForm(entry, postingUrl)
+         ? await readForm(entry, postingUrl, userId)
          : storedForm(application.fields);
    const answers =
       form.questions.length > 0
@@ -187,9 +187,9 @@ function storedForm(fields: FormField[]): Pick<ApplyForm, "questions" | "message
    };
 }
 
-async function readForm(entry: SourceEntry, jobUrl: string): Promise<ApplyForm> {
+async function readForm(entry: SourceEntry, jobUrl: string, userId: string): Promise<ApplyForm> {
    await waitForTurn(entry);
-   return entry.adapter.account.readApplyForm(jobUrl, sessionPath(entry.adapter.source));
+   return entry.adapter.account.readApplyForm(jobUrl, sessionPath(userId, entry.adapter.source));
 }
 
 function formField(

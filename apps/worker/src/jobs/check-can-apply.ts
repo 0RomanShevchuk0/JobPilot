@@ -117,7 +117,7 @@ async function checkJobPage(
    try {
       const result = await entry.adapter.account.checkJobPage(
          posting.url,
-         sessionPath(posting.source),
+         sessionPath(userId, posting.source),
       );
       // the site took the session: a warning about it in the web goes away
       await database.sourceSessions.markWorking(userId, posting.source);

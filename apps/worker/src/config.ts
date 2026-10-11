@@ -11,7 +11,7 @@ export const config = {
    databaseUrl: required("DATABASE_URL"),
    redisUrl: required("REDIS_URL"),
    discoverEveryMs: Number(process.env.DISCOVER_EVERY_MINUTES ?? 180) * 60_000,
-   // single-user for now: one session per source, saved by `pnpm login:<source>` (.data/ is gitignored)
+   // one folder per user, saved by `pnpm login:<source>` (.data/ is gitignored)
    sessionsDir: "../../.data/sessions",
    // where document files live (the CV attached to applications): the same storage as the API's
    storage: {
@@ -28,9 +28,12 @@ export const config = {
    },
 };
 
-/** Where the user's session on a source is kept: .data/sessions/<source>.json */
-export function sessionPath(source: string): string {
-   return `${config.sessionsDir}/${source}.json`;
+/**
+ * Where a user's own session on a source is kept: .data/sessions/<user id>/<source>.json. Everything
+ * the worker does on a site for a user goes with their session; without one it isn't done for them.
+ */
+export function sessionPath(userId: string, source: string): string {
+   return `${config.sessionsDir}/${userId}/${source}.json`;
 }
 
 /** How the user logs in to a source again, for messages about a missing or expired session. */

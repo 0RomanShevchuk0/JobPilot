@@ -39,7 +39,7 @@ export async function handleFillApplication(
       const values = await fillValues(application, database, storage, cvDir);
       const outcome = await entry.adapter.account.fillApplicationForm(
          application.postingUrl,
-         sessionPath(application.source),
+         sessionPath(application.userId, application.source),
          values,
       );
       if (outcome.status === "cancelled") {
