@@ -12,8 +12,11 @@ import { Button } from "../../../shared/ui";
 import { useSaveProfile } from "../api/queries";
 import { fromProfile, type ProfileDraft, profileFormSchema } from "../lib/draft";
 
-const inputClasses = "w-full rounded border border-gray-300 px-2 py-1 text-sm";
-const textareaClasses = `field-sizing-content min-h-16 ${inputClasses}`;
+// red border while the Field around it shows an error
+const inputClasses =
+   "w-full rounded border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 shadow-xs transition-colors hover:border-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 focus:outline-none group-data-invalid:border-red-400";
+// grows with its text up to a point, then scrolls: a long skills list doesn't stretch the page
+const textareaClasses = `field-sizing-content min-h-20 max-h-72 ${inputClasses}`;
 
 /** The whole profile as one form, saved at once: each save re-evaluates every open vacancy. */
 export function ProfileForm({ saved }: { saved?: Profile }) {
@@ -39,7 +42,7 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
    const hasErrors = Object.keys(errors).length > 0;
 
    return (
-      <form onSubmit={submit} className="space-y-8">
+      <form onSubmit={submit} className="space-y-4">
          <Section title="Contacts" hint="What goes into application forms.">
             <div className="grid gap-4 sm:grid-cols-3">
                <Field label="Full name" error={errors.contacts?.fullName?.message}>
@@ -66,17 +69,19 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
             <div className="grid gap-4 sm:grid-cols-4">
                <Field
                   label="Experience, years"
-                  hint="Total professional experience, whole years"
+                  hint="Whole years, in total"
                   error={errors.experienceYears?.message}
                >
                   <NumberInput registration={register("experienceYears")} />
                </Field>
+               <div className="sm:col-span-3">
+                  <Checkboxes
+                     label="Work modes"
+                     options={workModes}
+                     registration={register("workModes")}
+                  />
+               </div>
             </div>
-            <Checkboxes
-               label="Work modes"
-               options={workModes}
-               registration={register("workModes")}
-            />
          </Section>
 
          <Section
@@ -115,14 +120,16 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
             title="Hard filters"
             hint="Checked before any AI call: a vacancy that fails one is skipped. Empty means no restriction."
          >
-            <Checkboxes
-               label="Seniority"
-               options={seniorities}
-               registration={register("hardFilters.seniorities")}
-            />
             <div className="grid gap-4 sm:grid-cols-4">
+               <div className="sm:col-span-3">
+                  <Checkboxes
+                     label="Seniority"
+                     options={seniorities}
+                     registration={register("hardFilters.seniorities")}
+                  />
+               </div>
                <Field
-                  label="Max required experience, years"
+                  label="Max years required"
                   hint="Skip vacancies asking for more"
                   error={errors.hardFilters?.maxRequiredYears?.message}
                >
@@ -159,7 +166,7 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
 
          {/* only while there is something to save: the CV above saves on its own, with no button */}
          {isDirty && (
-            <div className="sticky bottom-0 flex items-center justify-between gap-4 border-t border-gray-200 bg-white py-3">
+            <div className="sticky bottom-4 flex items-center justify-between gap-4 rounded border border-gray-200 bg-white px-4 py-3 shadow-lg">
                <div className="text-sm">
                   {hasErrors && <p className="text-red-600">Some fields need fixing, see above.</p>}
                   {save.error && <p className="text-red-600">{save.error.message}</p>}
@@ -186,10 +193,10 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
    return (
-      <section>
+      <section className="rounded border border-gray-200 p-4">
          <h2 className="font-medium">{title}</h2>
-         {hint && <p className="text-sm text-gray-500">{hint}</p>}
-         <div className="mt-3 space-y-4">{children}</div>
+         {hint && <p className="text-sm text-gray-600">{hint}</p>}
+         <div className="mt-4 space-y-4">{children}</div>
       </section>
    );
 }
@@ -204,8 +211,8 @@ interface FieldProps {
 /** One input under its label, with the schema's complaint about it. */
 function Field({ label, hint, error, children }: FieldProps) {
    return (
-      <label className="block">
-         <span className="text-sm text-gray-700">{label}</span>
+      <label className="group block" data-invalid={error ? "" : undefined}>
+         <span className="text-sm font-medium text-gray-800">{label}</span>
          {hint && <span className="block text-xs text-gray-500">{hint}</span>}
          <span className="mt-1 block">{children}</span>
          {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
@@ -229,11 +236,16 @@ interface CheckboxesProps {
 function Checkboxes({ label, options, registration }: CheckboxesProps) {
    return (
       <fieldset>
-         <legend className="text-sm text-gray-700">{label}</legend>
-         <div className="mt-1 flex flex-wrap gap-4 text-sm">
+         <legend className="text-sm font-medium text-gray-800">{label}</legend>
+         <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-700">
             {options.map((option) => (
-               <label key={option} className="flex items-center gap-2">
-                  <input type="checkbox" value={option} {...registration} />
+               <label key={option} className="flex cursor-pointer items-center gap-2">
+                  <input
+                     type="checkbox"
+                     value={option}
+                     {...registration}
+                     className="size-4 cursor-pointer accent-gray-900"
+                  />
                   {option}
                </label>
             ))}
