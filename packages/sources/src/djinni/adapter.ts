@@ -1,6 +1,7 @@
 import type { PostingRef, SourceAdapter } from "@jobpilot/contracts";
 import { getText } from "../http.js";
 import { checkDjinniJobPage } from "./account-page.js";
+import { DJINNI_CATEGORIES } from "./categories.js";
 import { readDjinniApplyForm } from "./apply-form.js";
 import { fillDjinniApplication } from "./fill.js";
 import { isClosedPage, parseJobPage } from "./job-page.js";
@@ -15,6 +16,7 @@ export function createDjinniAdapter(): SourceAdapter {
       baseUrl: DJINNI_BASE_URL,
       parserVersion: 3,
       fetchIntervalMs: 3000,
+      categories: DJINNI_CATEGORIES,
 
       async discover({ keywords }) {
          const urls = keywords?.length ? keywords.map((k) => rssUrl(k)) : [rssUrl()];

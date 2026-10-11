@@ -19,6 +19,23 @@ export interface RawPosting {
 
 export type FetchResult = { status: "ok"; raw: RawPosting } | { status: "gone" };
 
+/** One of the site's own search filters, to pick what to look for there. */
+export interface SourceCategory {
+   /** as the site spells it in its search: what discover() gets, e.g. "React.js" */
+   value: string;
+   /** what the site calls it, when not just the value: "C# / .NET" */
+   label?: string;
+   /** the site's heading over it, when it groups them: "Development" */
+   group?: string;
+}
+
+/** A job site as the web shows it, with the categories a user picks from. */
+export interface SourceListItem {
+   id: string;
+   name: string;
+   categories: SourceCategory[];
+}
+
 export interface DiscoverParams {
    /**
     * The site's own search filters, spelled as the site spells them, e.g. the category "Node.js": the
@@ -71,6 +88,8 @@ export interface SourceAdapter {
    readonly parserVersion: number;
    /** At most one fetch() per this many ms, to stay polite and avoid bans. */
    readonly fetchIntervalMs: number;
+   /** Every search filter the site has: users pick theirs from these, discover() gets the picked values. */
+   readonly categories: readonly SourceCategory[];
    discover(params: DiscoverParams): Promise<PostingRef[]>;
    fetch(ref: PostingRef): Promise<FetchResult>;
    /** Pure: no network. Must never guess — a field it is not sure about stays undefined. */

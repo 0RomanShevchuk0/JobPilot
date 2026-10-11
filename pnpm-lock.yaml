@@ -248,6 +248,9 @@ importers:
       '@jobpilot/matching':
         specifier: workspace:*
         version: link:../../packages/matching
+      '@jobpilot/sources':
+        specifier: workspace:*
+        version: link:../../packages/sources
       '@tanstack/react-query':
         specifier: ^5.104.0
         version: 5.104.0(react@19.3.0)

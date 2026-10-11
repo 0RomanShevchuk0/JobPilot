@@ -12,6 +12,7 @@
       "@hookform/resolvers": "^5.9.1",
       "@jobpilot/contracts": "workspace:*",
       "@jobpilot/matching": "workspace:*",
+      "@jobpilot/sources": "workspace:*",
       "@tanstack/react-query": "^5.104.0",
       "react": "^19.3.0",
       "react-dom": "^19.3.0",
