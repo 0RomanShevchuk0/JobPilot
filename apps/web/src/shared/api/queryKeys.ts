@@ -20,6 +20,9 @@ export const queryKeys = {
    profile: {
       all: ["profile"] as const,
    },
+   sessions: {
+      expired: ["sessions", "expired"] as const,
+   },
    stats: {
       period: (period: string) => ["stats", period] as const,
    },
