@@ -6,9 +6,10 @@ import {
    seniorities,
    workModes,
 } from "@jobpilot/contracts";
+import { sameForMatching } from "@jobpilot/matching";
 import type { ReactNode } from "react";
 import { type Control, Controller, type UseFormRegisterReturn, useForm } from "react-hook-form";
-import { Button } from "../../../shared/ui";
+import { Button, ReevaluatesMark } from "../../../shared/ui";
 import { useSaveProfile } from "../api/queries";
 import { fromProfile, type ProfileDraft, profileFormSchema } from "../lib/draft";
 import { inputClasses, textareaClasses } from "./inputs";
@@ -26,6 +27,7 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
       register,
       handleSubmit,
       reset,
+      watch,
       formState: { errors, isDirty },
    } = form;
    const save = useSaveProfile();
@@ -39,10 +41,13 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
       save.reset();
    };
    const hasErrors = Object.keys(errors).length > 0;
+   // the check the API makes on save; while the form doesn't pass the schema, say the costly case
+   const edited = isDirty ? profileFormSchema.safeParse(watch()) : undefined;
+   const reevaluates = !saved || !edited?.success || !sameForMatching(saved, edited.data);
 
    return (
       <form onSubmit={submit} className="space-y-4">
-         <Section title="Contacts" hint="How to reach me.">
+         <Section title="Applying" hint="How to reach me and my usual message to recruiters.">
             <div className="grid gap-4 sm:grid-cols-3">
                <Field label="Full name" error={errors.contacts?.fullName?.message}>
                   <input {...register("contacts.fullName")} className={inputClasses} />
@@ -55,9 +60,12 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
                </Field>
             </div>
             <LinksList form={form} />
+            <Field label="Application message" hint="Adapted to each vacancy when applying">
+               <textarea {...register("applicationMessage")} className={textareaClasses} />
+            </Field>
          </Section>
 
-         <Section title="What I look for">
+         <Section title="What I look for" reevaluates>
             <div className="grid gap-4 sm:grid-cols-2">
                <Tags
                   control={control}
@@ -91,13 +99,14 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
             </div>
          </Section>
 
-         <Section title="Location and languages">
+         <Section title="Location and languages" reevaluates>
             <LocationsList form={form} />
             <LanguagesList form={form} />
          </Section>
 
          <Section
             title="Salary"
+            reevaluates
             hint="Vacancies paying less than the minimum are skipped; AI weighs the rest against the target."
          >
             <div className="grid gap-4 sm:grid-cols-4">
@@ -130,6 +139,7 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
 
          <Section
             title="Hard filters"
+            reevaluates
             hint="Checked before any AI call: a vacancy that fails one is skipped. Empty means no restriction."
          >
             <div className="grid gap-4 sm:grid-cols-4">
@@ -166,19 +176,12 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
             </div>
          </Section>
 
-         <Section title="For AI">
-            <Field
-               label="Notes"
-               hint="Facts for scoring and form answers: notice period, work permit, relocation…"
-            >
-               <textarea {...register("notes")} className={textareaClasses} />
-            </Field>
-            <Field
-               label="Application message"
-               hint="My usual short message to recruiters, adapted to each vacancy"
-            >
-               <textarea {...register("applicationMessage")} className={textareaClasses} />
-            </Field>
+         <Section
+            title="Notes"
+            hint="Facts for scoring and form answers: notice period, work permit, relocation…"
+            reevaluates
+         >
+            <textarea {...register("notes")} aria-label="Notes" className={textareaClasses} />
          </Section>
 
          {/* only while there is something to save: the CV above saves on its own, with no button */}
@@ -188,9 +191,11 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
                   {hasErrors && <p className="text-red-600">Some fields need fixing, see above.</p>}
                   {save.error && <p className="text-red-600">{save.error.message}</p>}
                   {!hasErrors && !save.error && (
-                     <p className="text-gray-500">
-                        Unsaved changes. Saving re-evaluates every open vacancy, with an AI call for
-                        each that passes the filters.
+                     <p className="flex items-center gap-1.5 text-gray-500">
+                        {reevaluates && <ReevaluatesMark />}
+                        {reevaluates
+                           ? "Unsaved changes. Saving re-evaluates every open vacancy, with an AI call for each that passes the filters."
+                           : "Unsaved changes. They don't affect evaluations: nothing is re-evaluated."}
                      </p>
                   )}
                </div>
@@ -208,10 +213,21 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
    );
 }
 
-function Section({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
+interface SectionProps {
+   title: string;
+   hint?: string;
+   /** every field in it is one matching reads: the mark goes on the section, not on each field */
+   reevaluates?: boolean;
+   children: ReactNode;
+}
+
+function Section({ title, hint, reevaluates, children }: SectionProps) {
    return (
       <section className="rounded border border-gray-200 p-4">
-         <h2 className="font-medium">{title}</h2>
+         <h2 className="flex items-center gap-1.5 font-medium">
+            {title}
+            {reevaluates && <ReevaluatesMark />}
+         </h2>
          {hint && <p className="text-sm text-gray-600">{hint}</p>}
          <div className="mt-4 space-y-4">{children}</div>
       </section>

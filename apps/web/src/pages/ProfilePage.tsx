@@ -1,5 +1,6 @@
 import { CvCard, useDocuments } from "../features/documents";
 import { ProfileForm, useProfile } from "../features/profile";
+import { ReevaluatesMark } from "../shared/ui";
 
 /**
  * Me, as vacancies are evaluated and form answers written: the CV and the job-search profile. Each
@@ -11,7 +12,13 @@ export function ProfilePage() {
 
    return (
       <main className="mx-auto max-w-4xl p-6">
-         <h1 className="mb-6 text-2xl font-semibold">Profile</h1>
+         <header className="mb-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <h1 className="text-2xl font-semibold">Profile</h1>
+            {/* the legend for the mark on sections: what changing them costs */}
+            <p className="flex items-center gap-1.5 text-xs text-gray-500">
+               <ReevaluatesMark /> re-evaluates vacancies when changed
+            </p>
+         </header>
          <div className="mb-4">
             {documents.isPending && <p className="text-gray-500">Loading…</p>}
             {documents.isError && <p className="text-red-600">{documents.error.message}</p>}
