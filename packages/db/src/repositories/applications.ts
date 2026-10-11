@@ -38,6 +38,8 @@ export interface ApplicationsRepository {
    /** The form was read and answered: ready for the user to review. */
    setPrepared(applicationId: string, fields: FormField[]): Promise<void>;
    setFailed(applicationId: string, reason: string): Promise<void>;
+   /** The job site takes no application to this job through JobPilot; reason says why. */
+   setCannotApply(applicationId: string, reason: string): Promise<void>;
    getToFill(applicationId: string): Promise<ApplicationToFill | undefined>;
    /** The user sent the form. */
    setSubmitted(applicationId: string): Promise<void>;
@@ -180,6 +182,13 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
          await db
             .update(applications)
             .set({ status: "failed", failureReason: reason })
+            .where(eq(applications.id, applicationId));
+      },
+
+      async setCannotApply(applicationId, reason) {
+         await db
+            .update(applications)
+            .set({ status: "cannot_apply", failureReason: reason })
             .where(eq(applications.id, applicationId));
       },
    };

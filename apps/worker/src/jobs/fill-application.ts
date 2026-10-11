@@ -1,4 +1,5 @@
 import {
+   CannotApplyError,
    SessionExpiredError,
    type FillApplicationJobData,
    type FillValue,
@@ -53,6 +54,11 @@ export async function handleFillApplication(
       log("fill-application", `${application.postingUrl}: sent`);
       return "submitted";
    } catch (err) {
+      // closed or applied to since it was prepared: filling again won't help
+      if (err instanceof CannotApplyError) {
+         await database.applications.setCannotApply(applicationId, err.message);
+         throw new UnrecoverableError(err.message);
+      }
       const reason =
          err instanceof SessionExpiredError
             ? `${err.message}: ${loginHint(application.source)}, then fill again`

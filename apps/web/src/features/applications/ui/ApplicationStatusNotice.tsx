@@ -1,6 +1,9 @@
 import type { ApplicationView } from "@jobpilot/contracts";
 
-/** Where the application stands, above its answers: preparing, failed, sent, open in a browser. */
+/**
+ * Where the application stands, above its answers: preparing, failed, refused by the job site, sent,
+ * open in a browser.
+ */
 export function ApplicationStatusNotice({ app }: { app: ApplicationView }) {
    return (
       <>
@@ -18,6 +21,9 @@ export function ApplicationStatusNotice({ app }: { app: ApplicationView }) {
          )}
          {app.status === "failed" && (
             <p className="text-red-600">Couldn't prepare it: {app.failureReason}</p>
+         )}
+         {app.status === "cannot_apply" && (
+            <p className="text-gray-600">Can't apply through JobPilot: {app.failureReason}</p>
          )}
          {app.status === "submitted" && (
             <p className="text-green-700">

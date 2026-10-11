@@ -38,18 +38,19 @@ export function StatsPage() {
                <StatsFunnel funnel={stats.data.funnel} />
 
                <section className="flex gap-4">
-                  <div className="flex-1 rounded border border-gray-200 px-4 py-3">
-                     <p className="text-sm text-gray-600">Applications sent</p>
-                     <p className="text-2xl font-semibold tabular-nums">
-                        {stats.data.applications.submitted}
-                     </p>
-                  </div>
-                  <div className="flex-1 rounded border border-gray-200 px-4 py-3">
-                     <p className="text-sm text-gray-600">Applications failed</p>
-                     <p className="text-2xl font-semibold tabular-nums">
-                        {stats.data.applications.failed}
-                     </p>
-                  </div>
+                  {[
+                     { label: "Applications sent", value: stats.data.applications.submitted },
+                     { label: "Applications failed", value: stats.data.applications.failed },
+                     { label: "Couldn't apply", value: stats.data.applications.cannotApply },
+                  ].map((card) => (
+                     <div
+                        key={card.label}
+                        className="flex-1 rounded border border-gray-200 px-4 py-3"
+                     >
+                        <p className="text-sm text-gray-600">{card.label}</p>
+                        <p className="text-2xl font-semibold tabular-nums">{card.value}</p>
+                     </div>
+                  ))}
                </section>
 
                <section>

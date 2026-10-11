@@ -21,6 +21,8 @@ export interface StatsFunnel {
 export interface StatsApplications {
    submitted: number;
    failed: number;
+   /** the job site took no application: applied already, closed, external only */
+   cannotApply: number;
 }
 
 /** One bar of the timeline: an hour for "day", a calendar day otherwise. */

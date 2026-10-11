@@ -56,10 +56,16 @@ export function createStatsRepository(db: Drizzle): StatsRepository {
                      since ? gte(applications.submittedAt, since) : undefined,
                   ),
                ),
-               // a failed application has no date of its own: the failure is its last update
+               // failed and cannot_apply have no date of their own: it is their last update
                failed: countWhere(
                   and(
                      eq(applications.status, "failed"),
+                     since ? gte(applications.updatedAt, since) : undefined,
+                  ),
+               ),
+               cannotApply: countWhere(
+                  and(
+                     eq(applications.status, "cannot_apply"),
                      since ? gte(applications.updatedAt, since) : undefined,
                   ),
                ),

@@ -7,6 +7,7 @@ export const applicationStatusLabels: Record<ApplicationStatus, string> = {
    ready_for_review: "ready",
    submitted: "sent",
    failed: "failed",
+   cannot_apply: "can't apply",
 };
 
 export const applicationStatusStyles: Record<ApplicationStatus, string> = {
@@ -15,4 +16,5 @@ export const applicationStatusStyles: Record<ApplicationStatus, string> = {
    ready_for_review: "bg-amber-100 text-amber-800",
    submitted: "bg-green-100 text-green-800",
    failed: "bg-red-100 text-red-700",
+   cannot_apply: "bg-gray-100 text-gray-600",
 };
