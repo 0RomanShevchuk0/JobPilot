@@ -21,6 +21,8 @@ export interface ProfilesRepository {
     * so every evaluation is stale. Returns the new version, or undefined when there is no profile yet.
     */
    bumpVersion(userId: string): Promise<number | undefined>;
+   /** What anyone looks for on the source: every user's categories there, once each, sorted. */
+   listAllUsersCategories(source: string): Promise<string[]>;
 }
 
 export function createProfilesRepository(db: Drizzle): ProfilesRepository {
@@ -95,6 +97,13 @@ export function createProfilesRepository(db: Drizzle): ProfilesRepository {
             .where(eq(profiles.userId, userId))
             .returning({ version: profiles.version });
          return row?.version;
+      },
+
+      async listAllUsersCategories(source) {
+         // one row per category in each profile's list for the source; a profile without it gives none
+         const category = sql<string>`jsonb_array_elements_text(${profiles.sourceCategories} -> ${source})`;
+         const rows = await db.selectDistinct({ category }).from(profiles);
+         return rows.map((r) => r.category).sort();
       },
    };
 }

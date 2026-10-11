@@ -5,17 +5,26 @@ import { log } from "../log.js";
 import { fetchJobOptions } from "../queues.js";
 import { findSource } from "../sources.js";
 
-/** RSS/listing → postings table → one fetch job per new or bumped posting. */
+/**
+ * The categories users picked on the source → its RSS/listing → postings table → one fetch job per
+ * new or bumped posting.
+ */
 export async function handleDiscover(
    job: Job<DiscoverJobData>,
    database: DatabaseClient,
    fetchQueues: Map<string, Queue<FetchJobData>>,
 ) {
-   const { source, keywords } = job.data;
+   const { source } = job.data;
    const entry = findSource(source);
    const fetchQueue = fetchQueues.get(source);
    if (!entry || !fetchQueue) throw new UnrecoverableError(`unknown source "${source}"`);
 
+   const keywords = await database.profiles.listAllUsersCategories(source);
+   // nobody looks here: the site is left alone rather than read unfiltered
+   if (keywords.length === 0) {
+      log("discover", `${source}: no user picked a category, skipped`);
+      return { found: 0, queued: 0 };
+   }
    const refs = await entry.adapter.discover({ keywords });
    const toFetch = await database.postings.markSeen(source, refs);
 
@@ -33,7 +42,7 @@ export async function handleDiscover(
 
    log(
       "discover",
-      `${source} [${keywords.join(", ") || "all"}]: ${refs.length} found, ${toFetch.length} new or updated → queued for fetch`,
+      `${source} [${keywords.join(", ")}]: ${refs.length} found, ${toFetch.length} new or updated → queued for fetch`,
    );
    return { found: refs.length, queued: toFetch.length };
 }
