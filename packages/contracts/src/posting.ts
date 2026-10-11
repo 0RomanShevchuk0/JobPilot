@@ -62,6 +62,9 @@ export const normalizedPostingSchema = z.object({
    url: z.url(),
    title: z.string().min(1),
    description: z.string().min(1), // markdown
+   // the site's own category of the job, as its search spells it (a SourceCategory value): users who
+   // picked it on the site are the ones it is evaluated for
+   category: z.string().min(1),
    // undefined = the employer is hidden (confidential postings, recruiting agencies)
    company: z
       .object({

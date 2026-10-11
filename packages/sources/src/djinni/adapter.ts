@@ -14,7 +14,7 @@ export function createDjinniAdapter(): SourceAdapter {
       source: DJINNI_ID,
       name: DJINNI_NAME,
       baseUrl: DJINNI_BASE_URL,
-      parserVersion: 3,
+      parserVersion: 4,
       fetchIntervalMs: 3000,
       categories: DJINNI_CATEGORIES,
 

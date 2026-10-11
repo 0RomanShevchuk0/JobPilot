@@ -83,6 +83,7 @@ const posting = (
       externalId: id,
       url: `https://djinni.co/jobs/${id}-x/`,
       title: "Senior Node.js Developer",
+      category: "Node.js",
       description: `description of ${id}`,
       company: { name: "Zeely" },
       ...parsed,
