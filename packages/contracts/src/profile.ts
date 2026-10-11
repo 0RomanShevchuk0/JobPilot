@@ -65,5 +65,8 @@ export const profileSchema = z.object({
    notes: z.string().default(""), // free-form facts for AI: notice period, work permit, relocation...
    // my usual short message to recruiters; the application message is this, lightly adapted to each vacancy
    applicationMessage: z.string().default(""),
+   // where to look: by source id, the site's own categories to read there ("djinni": ["Node.js"]);
+   // a source with none is off for me
+   sourceCategories: z.record(z.string(), z.array(z.string().min(1))).default({}),
 });
 export type Profile = z.infer<typeof profileSchema>;

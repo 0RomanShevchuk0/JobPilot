@@ -50,6 +50,7 @@ export function createProfilesRepository(db: Drizzle): ProfilesRepository {
                hardFilters: row.hardFilters,
                notes: row.notes,
                applicationMessage: row.applicationMessage,
+               sourceCategories: row.sourceCategories,
             },
          };
       },
@@ -70,6 +71,7 @@ export function createProfilesRepository(db: Drizzle): ProfilesRepository {
             hardFilters: p.hardFilters,
             notes: p.notes,
             applicationMessage: p.applicationMessage,
+            sourceCategories: p.sourceCategories,
          };
          const [row] = await db
             .insert(profiles)

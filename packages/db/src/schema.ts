@@ -148,6 +148,11 @@ export const profiles = pgTable("profiles", {
    workModes: text("work_modes").array().$type<WorkMode[]>().notNull().default(emptyTextArray),
    languages: jsonb("languages").$type<Language[]>().notNull().default([]),
    hardFilters: jsonb("hard_filters").$type<HardFilters>().notNull().default({}),
+   // by source id, the categories to search there; a source missing or empty is off for the user
+   sourceCategories: jsonb("source_categories")
+      .$type<Record<string, string[]>>()
+      .notNull()
+      .default({}),
    notes: text("notes").notNull().default(""), // free-form facts for AI: notice period, work permit, relocation...
    applicationMessage: text("application_message").notNull().default(""),
    updatedAt: tstz("updated_at")
