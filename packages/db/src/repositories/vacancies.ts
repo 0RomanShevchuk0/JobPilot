@@ -10,7 +10,8 @@ import type {
 } from "@jobpilot/contracts";
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
-import { companies, postings, vacancies } from "../schema.js";
+import { companies, postings, profiles, vacancies } from "../schema.js";
+import { profilePickedPostingCategorySql } from "./subscriptions.js";
 
 export interface LinkPostingInput {
    postingId: string;
@@ -60,8 +61,8 @@ export interface VacanciesRepository {
    /** Stores the merged fields. Returns false when they are the same as stored: updatedAt stays as is. */
    update(vacancyId: string, fields: VacancyFields): Promise<boolean>;
    getForMatching(vacancyId: string): Promise<VacancyForMatching | undefined>;
-   /** Ids of vacancies that still have an active posting. */
-   listOpenIds(): Promise<string[]>;
+   /** Open vacancies with an active posting in a category the user picked on its source. */
+   listOpenIdsSubscribedBy(userId: string): Promise<string[]>;
 }
 
 export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
@@ -195,11 +196,13 @@ export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
          };
       },
 
-      async listOpenIds() {
+      async listOpenIdsSubscribedBy(userId) {
          const rows = await db
-            .select({ id: vacancies.id })
+            .selectDistinct({ id: vacancies.id })
             .from(vacancies)
-            .where(isNull(vacancies.closedAt));
+            .innerJoin(postings, and(eq(postings.vacancyId, vacancies.id), isNull(postings.goneAt)))
+            .innerJoin(profiles, eq(profiles.userId, userId))
+            .where(and(isNull(vacancies.closedAt), profilePickedPostingCategorySql));
          return rows.map((r) => r.id);
       },
    };

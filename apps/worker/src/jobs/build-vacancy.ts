@@ -35,7 +35,8 @@ export async function handleBuildVacancy(
    const changed = await database.vacancies.update(vacancyId, vacancy);
 
    if (!vacancy.closedAt) {
-      const userIds = await database.users.listIds();
+      // only the users who picked its category: others never look for such jobs
+      const userIds = await database.profiles.listSubscriberIds(vacancyId);
       const jobs = userIds.map((userId) => ({
          name: "match-vacancy",
          data: { userId, vacancyId },
