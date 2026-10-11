@@ -1,6 +1,6 @@
 import { type Profile, profileSchema } from "@jobpilot/contracts";
 import { describe, expect, it } from "vitest";
-import { sameForMatching } from "./matching-input.js";
+import { picksNewCategories, sameForMatching } from "./matching-input.js";
 
 const profile = profileSchema.parse({
    contacts: { fullName: "Jane Doe", email: "jane@example.com" },
@@ -43,5 +43,28 @@ describe("sameForMatching", () => {
          hardFilters: { stopWords: ["PHP"], seniorities: ["middle"] },
       });
       expect(sameForMatching(profile, reordered)).toBe(true);
+   });
+});
+
+describe("picksNewCategories", () => {
+   const withCategories = (sourceCategories: Profile["sourceCategories"]) =>
+      edit({ sourceCategories });
+   const before = withCategories({ djinni: ["Node.js"] });
+
+   it("sees a category added on a source already picked", () => {
+      expect(picksNewCategories(before, withCategories({ djinni: ["Node.js", "Fullstack"] }))).toBe(
+         true,
+      );
+   });
+
+   it("sees a source turned on", () => {
+      expect(
+         picksNewCategories(before, withCategories({ djinni: ["Node.js"], dou: ["Node.js"] })),
+      ).toBe(true);
+   });
+
+   it("ignores categories dropped or kept", () => {
+      expect(picksNewCategories(before, withCategories({}))).toBe(false);
+      expect(picksNewCategories(before, withCategories({ djinni: ["Node.js"] }))).toBe(false);
    });
 });
