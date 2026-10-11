@@ -53,7 +53,8 @@ export function parseJobPage(raw: RawPosting): NormalizedPosting {
    const $ = cheerio.load(raw.body);
    const ld = findJobPosting($);
    const descriptionHtml = $(".job-post__description").first().html();
-   if (!ld?.title || !descriptionHtml) {
+   // the category says whom the job is for: without it the page isn't one we can read
+   if (!ld?.title || !ld.category || !descriptionHtml) {
       // a layout change, not a closed job: fail loudly instead of saving half a posting
       throw new Error(`djinni ${raw.externalId}: job page layout not recognized`);
    }
@@ -65,6 +66,7 @@ export function parseJobPage(raw: RawPosting): NormalizedPosting {
       externalId: raw.externalId,
       url,
       title: ld.title.trim(),
+      category: ld.category,
       description: toMarkdown(descriptionHtml),
       company: org?.name ? { name: org.name.trim(), website: validUrl(org.sameAs) } : undefined,
       // Djinni's datePosted has no offset; it is Kyiv wall-clock time

@@ -160,6 +160,21 @@ describe("closed job page", () => {
 });
 
 // pages loaded with a session, saved on 2026-10-08; the account's name, contacts and ids replaced
+describe("job page: category", () => {
+   const url = "https://jobs.dou.ua/companies/apextech/vacancies/368779/";
+
+   it("is the breadcrumbs' category, spelled as the search's category", () => {
+      expect(parseJobPage(raw("368779", url, "job-salary-external.html")).category).toBe("Node.js");
+   });
+
+   it("fails the page without one: no category, no one to evaluate the job for", () => {
+      // the breadcrumb links lose their ?category= filter
+      const body = fixture("job-salary-external.html").replaceAll("?category=", "?section=");
+      const page = { ...raw("368779", url, "job-salary-external.html"), body };
+      expect(() => parseJobPage(page)).toThrow(/layout not recognized/);
+   });
+});
+
 describe("job page under the account", () => {
    it("lets the user apply through DOU's form", () => {
       expect(readJobPage(fixture("account-can-apply.html"))).toEqual({

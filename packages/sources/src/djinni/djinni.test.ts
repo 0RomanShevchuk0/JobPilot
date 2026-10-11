@@ -83,6 +83,24 @@ describe("job page: remote job without salary", () => {
    });
 });
 
+describe("job page: category", () => {
+   const page = (file: string, body?: string) => ({
+      ...raw("846773", "https://djinni.co/jobs/846773-ppc-specialist/", file),
+      ...(body !== undefined && { body }),
+   });
+
+   it("is the JSON-LD category, spelled as the search's primary_keyword", () => {
+      expect(parseJobPage(page("job-remote.html")).category).toBe("PPC");
+      expect(parseJobPage(page("job-office-salary.html")).category).toBe("ML AI");
+      expect(parseJobPage(page("job-confidential.html")).category).toBe("Node.js");
+   });
+
+   it("fails the page without one: no category, no one to evaluate the job for", () => {
+      const body = fixture("job-remote.html").replace('"category": "PPC", ', "");
+      expect(() => parseJobPage(page("job-remote.html", body))).toThrow(/layout not recognized/);
+   });
+});
+
 describe("job page: office job with salary and skills", () => {
    const posting = parseJobPage(
       raw(

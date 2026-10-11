@@ -14,7 +14,7 @@ export function createDouAdapter(): SourceAdapter {
       source: DOU_ID,
       name: DOU_NAME,
       baseUrl: DOU_BASE_URL,
-      parserVersion: 1,
+      parserVersion: 2,
       fetchIntervalMs: 3000,
       categories: DOU_CATEGORIES,
 

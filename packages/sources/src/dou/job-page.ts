@@ -43,13 +43,14 @@ export function parseJobPage(raw: RawPosting): NormalizedPosting {
    const $ = cheerio.load(raw.body);
    const title = $(TITLE_SELECTOR).first().text().trim();
    const descriptionHtml = $(DESCRIPTION_SELECTOR).first().html();
-   if ($(CLOSED_JOB_SELECTOR).length > 0 || !title || !descriptionHtml) {
+   // the category says whom the job is for: without it the page isn't one we can read
+   const category = categoryOnPage($);
+   if ($(CLOSED_JOB_SELECTOR).length > 0 || !title || !descriptionHtml || !category) {
       // a layout change or a closed job: fail loudly instead of saving half a posting
       throw new Error(`dou ${raw.externalId}: job page layout not recognized`);
    }
    const places = placesOnPage($);
    const company = $(COMPANY_SELECTOR).first().text().trim();
-   const category = categoryOnPage($);
    // the block's own text: badges like "бронювання" or "deftech" are links inside it
    const date = $(DATE_SELECTOR)
       .first()
@@ -62,6 +63,7 @@ export function parseJobPage(raw: RawPosting): NormalizedPosting {
       externalId: raw.externalId,
       url: raw.url,
       title,
+      category,
       description: toMarkdown(descriptionHtml),
       company: company ? { name: company } : undefined,
       publishedAt: publishedAt(date),
@@ -71,7 +73,7 @@ export function parseJobPage(raw: RawPosting): NormalizedPosting {
          places.filter((p) => p !== REMOTE).map((p) => ({ kind: "office" as const, raw: p })),
       ),
       salary: parseSalary($(SALARY_SELECTOR).first().text()),
-      skills: category ? [category] : undefined,
+      skills: [category],
       apply: apply($, raw.url),
    };
 }
