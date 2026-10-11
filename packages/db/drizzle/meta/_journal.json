@@ -71,6 +71,13 @@
       "when": 1791677531186,
       "tag": "0009_application_cannot_apply",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791678400278,
+      "tag": "0010_prefilter_no_candidate_country",
+      "breakpoints": true
     }
   ]
 }

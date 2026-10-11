@@ -6,6 +6,7 @@ export type PrefilterCheck =
    | "seniority"
    | "work_mode"
    | "office_city"
+   // no longer checked; kept for evaluations of closed vacancies, which are never re-evaluated
    | "candidate_country"
    | "salary"
    | "language"
