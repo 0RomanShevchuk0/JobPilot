@@ -6,7 +6,7 @@ import {
    seniorities,
    workModes,
 } from "@jobpilot/contracts";
-import { sameForMatching } from "@jobpilot/matching";
+import { picksNewCategories, sameForMatching } from "@jobpilot/matching";
 import type { ReactNode } from "react";
 import { type Control, Controller, type UseFormRegisterReturn, useForm } from "react-hook-form";
 import { Button, ReevaluatesMark } from "../../../shared/ui";
@@ -45,6 +45,13 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
    // the check the API makes on save; while the form doesn't pass the schema, say the costly case
    const edited = isDirty ? profileFormSchema.safeParse(watch()) : undefined;
    const reevaluates = !saved || !edited?.success || !sameForMatching(saved, edited.data);
+   // a category added on a job site: the vacancies already found in it get evaluated, nothing else
+   const evaluatesNew = !reevaluates && picksNewCategories(saved, edited.data);
+   const saveNote = reevaluates
+      ? "Unsaved changes. Saving re-evaluates every open vacancy, with an AI call for each that passes the filters."
+      : evaluatesNew
+        ? "Unsaved changes. Saving evaluates the vacancies already found in the categories you added."
+        : "Unsaved changes. They don't affect evaluations: nothing is re-evaluated.";
 
    return (
       <form onSubmit={submit} className="space-y-4">
@@ -202,9 +209,7 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
                   {!hasErrors && !save.error && (
                      <p className="flex items-center gap-1.5 text-gray-500">
                         {reevaluates && <ReevaluatesMark />}
-                        {reevaluates
-                           ? "Unsaved changes. Saving re-evaluates every open vacancy, with an AI call for each that passes the filters."
-                           : "Unsaved changes. They don't affect evaluations: nothing is re-evaluated."}
+                        {saveNote}
                      </p>
                   )}
                </div>

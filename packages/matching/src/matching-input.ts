@@ -11,6 +11,17 @@ export function sameForMatching(a: Profile, b: Profile): boolean {
    return canonicalJson(matchingInput(a)) === canonicalJson(matchingInput(b));
 }
 
+/**
+ * Whether the second version picks a category the first didn't, on any source. Vacancies already found
+ * in it (for other users) have no evaluation for this one yet: they need one, the rest stay as they are.
+ */
+export function picksNewCategories(before: Profile, after: Profile): boolean {
+   return Object.entries(after.sourceCategories).some(([source, categories]) => {
+      const had = before.sourceCategories[source] ?? [];
+      return categories.some((category) => !had.includes(category));
+   });
+}
+
 function matchingInput(profile: Profile): Partial<Profile> {
    const input: Partial<Profile> = { ...profile };
    delete input.contacts;
