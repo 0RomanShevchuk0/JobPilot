@@ -1,7 +1,8 @@
 import type { Profile } from "@jobpilot/contracts";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
-import { profiles } from "../schema.js";
+import { postings, profiles } from "../schema.js";
+import { profilePickedPostingCategorySql } from "./subscriptions.js";
 
 export interface StoredProfile {
    profile: Profile;
@@ -23,6 +24,8 @@ export interface ProfilesRepository {
    bumpVersion(userId: string): Promise<number | undefined>;
    /** What anyone looks for on the source: every user's categories there, once each, sorted. */
    listAllUsersCategories(source: string): Promise<string[]>;
+   /** Users who picked the category of one of the vacancy's active postings: the ones to evaluate it for. */
+   listSubscriberIds(vacancyId: string): Promise<string[]>;
 }
 
 export function createProfilesRepository(db: Drizzle): ProfilesRepository {
@@ -104,6 +107,15 @@ export function createProfilesRepository(db: Drizzle): ProfilesRepository {
          const category = sql<string>`jsonb_array_elements_text(${profiles.sourceCategories} -> ${source})`;
          const rows = await db.selectDistinct({ category }).from(profiles);
          return rows.map((r) => r.category).sort();
+      },
+
+      async listSubscriberIds(vacancyId) {
+         const rows = await db
+            .selectDistinct({ userId: profiles.userId })
+            .from(profiles)
+            .innerJoin(postings, and(eq(postings.vacancyId, vacancyId), isNull(postings.goneAt)))
+            .where(profilePickedPostingCategorySql);
+         return rows.map((r) => r.userId);
       },
    };
 }
