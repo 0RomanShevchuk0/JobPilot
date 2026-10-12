@@ -130,8 +130,8 @@ export const users = pgTable("users", {
 });
 
 /**
- * How the user's own session on a source last went, as the worker found using it. No row = never
- * failed.
+ * The user's own session on a source: the session itself, for the server's worker, and how it last
+ * went, as the worker found using it. No row = never logged in from a machine nor failed.
  */
 export const sourceSessions = pgTable(
    "source_sessions",
@@ -142,6 +142,9 @@ export const sourceSessions = pgTable(
       sourceId: text("source_id")
          .notNull()
          .references(() => sources.id),
+      // the session's cookies, encrypted with the server's public key: anyone with the database can
+      // write theirs, only the server reads them (see encryptSession). Null = not logged in from a machine yet
+      encryptedSession: text("encrypted_session"),
       // when a page of the site came back logged out; null = the last use of the session worked
       expiredAt: tstz("expired_at"),
    },
