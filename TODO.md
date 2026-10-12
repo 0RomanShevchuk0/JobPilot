@@ -6,9 +6,9 @@
        воркера — нет (`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`): отклики готовит только локальный воркер
 2. [x] `CHROME_PATHS` знает и Windows: `%ProgramFiles%`, `%ProgramFiles(x86)%`, `%LOCALAPPDATA%`
 3. [x] README: установка, запуск, вход на площадки, отдельно про Windows
-   - Claude Code на Windows — только нативный установщик: `spawn("claude")` в
-     `packages/llm/src/claude-cli.ts` без shell не находит npm-шим `claude.cmd`. Если мешает — искать
-     `claude` с учётом `.cmd` или запускать через shell
+   - Claude Code на Windows — только нативный установщик: npm-шим `claude.cmd` запускается лишь через
+     `cmd.exe`, а многострочный промпт и JSON-схему через него не передать. Без `claude` в `PATH` —
+     понятная ошибка вместо `spawn claude ENOENT`
 4. [x] исчерпанные попытки подготовки → отклик в `failed` с причиной: уже было
        (`prepare-application.ts`), «висело» только на время повторов
 
