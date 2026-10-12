@@ -50,6 +50,7 @@ function Application({ app }: { app: ApplicationView }) {
    const clearDrafts = () => setDrafts({});
 
    const busy = save.isPending || prepareAgain.isPending || fill.isPending;
+   const preparingStopped = app.status === "preparing" && !app.preparationRunning;
    const error = save.error ?? prepareAgain.error ?? fill.error;
    // the answers can change while they are up for review and not open in a browser window
    const editable = app.status === "ready_for_review" && !app.filling && !busy;
@@ -104,12 +105,12 @@ function Application({ app }: { app: ApplicationView }) {
                   Open in browser
                </Button>
             )}
-            {(app.status === "ready_for_review" || app.status === "failed") && (
+            {(app.status === "ready_for_review" || app.status === "failed" || preparingStopped) && (
                <Button
                   onClick={() => prepareAgain.mutate(app.postingId, { onSuccess: clearDrafts })}
                   disabled={busy || app.filling}
                >
-                  {app.status === "failed" ? "Try again" : "Answer again"}
+                  {app.status === "ready_for_review" ? "Answer again" : "Try again"}
                </Button>
             )}
          </div>

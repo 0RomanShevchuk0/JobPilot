@@ -104,7 +104,12 @@ export class ApplicationsService {
 
    async get(userId: string, applicationId: string): Promise<ApplicationView | undefined> {
       const application = await this.db.applications.get(userId, applicationId);
-      return application && { ...application, filling: await this.queue.isFilling(applicationId) };
+      if (!application) return undefined;
+      const [filling, preparationRunning] = await Promise.all([
+         this.queue.isFilling(applicationId),
+         this.queue.isPreparing(applicationId),
+      ]);
+      return { ...application, filling, preparationRunning };
    }
 }
 
