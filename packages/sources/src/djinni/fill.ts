@@ -1,8 +1,9 @@
 import type { FillOutcome, FillValue } from "@jobpilot/contracts";
-import type { BrowserContext, Request } from "playwright";
+import type { BrowserContext, Page, Request } from "playwright";
 import { launchBrowser } from "../browser.js";
 import { fillFields, SLOW_MO_MS, waitForUser } from "../form-filling.js";
 import { openSessionContext } from "../saved-session.js";
+import { readApplyCheck } from "./account-page.js";
 import { openApplyForm } from "./apply-form.js";
 import { DJINNI_NAME } from "./site.js";
 
@@ -49,5 +50,15 @@ async function fillForm(
    if (!jobId) throw new Error(`not a Djinni job URL: ${jobUrl}`);
    // pressing "Send application" posts the form to the job's own page
    const isSending = (request: Request) => request.url().includes(`/jobs/${jobId}`);
-   return waitForUser(page, isSending, DJINNI_NAME);
+   return waitForUser(page, isSending, DJINNI_NAME, isApplied);
+}
+
+/**
+ * Whether the page Djinni answered the post with has the application through: the "Apply" button is
+ * gone from it (the job page then links to the dialog). A rejected form comes back on the job page, the
+ * button still there, with "Перегляньте форму" and the fields to fix.
+ */
+async function isApplied(page: Page): Promise<boolean> {
+   const html = await page.content();
+   return !readApplyCheck(html).canApply;
 }
