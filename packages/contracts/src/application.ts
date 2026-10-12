@@ -120,4 +120,9 @@ export interface ApplicationView extends ApplicationListItem {
    fields: FormField[];
    /** the form is open in a browser window right now, for the user to send or close */
    filling: boolean;
+   /**
+    * a worker on this machine is on it: its prepare job is queued or running. "preparing" without it is
+    * a lost preparation (Redis was down, the worker was stopped mid-job, or another machine has it)
+    */
+   preparationRunning: boolean;
 }

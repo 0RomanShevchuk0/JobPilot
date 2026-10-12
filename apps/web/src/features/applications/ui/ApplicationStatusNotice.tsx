@@ -7,7 +7,7 @@ import type { ApplicationView } from "@jobpilot/contracts";
 export function ApplicationStatusNotice({ app }: { app: ApplicationView }) {
    return (
       <>
-         {app.status === "preparing" && (
+         {app.status === "preparing" && app.preparationRunning && (
             <div className="flex items-center gap-3 rounded border border-blue-200 bg-blue-50 p-4 text-blue-900">
                <span className="size-4 shrink-0 animate-spin rounded-full border-2 border-blue-300 border-t-blue-700" />
                <div>
@@ -18,6 +18,12 @@ export function ApplicationStatusNotice({ app }: { app: ApplicationView }) {
                   </p>
                </div>
             </div>
+         )}
+         {app.status === "preparing" && !app.preparationRunning && (
+            <p className="text-red-600">
+               Preparing stopped: no worker on this machine is on it. Redis or the worker may have
+               been down when it started.
+            </p>
          )}
          {app.status === "failed" && (
             <p className="text-red-600">Couldn't prepare it: {app.failureReason}</p>

@@ -7,7 +7,7 @@ import { Injectable, type OnApplicationShutdown } from "@nestjs/common";
 import { Queue, type JobState } from "bullmq";
 import { RedisService } from "../infra/redis.service.js";
 
-// a fill job in one of these states has not finished: its browser window is open, or about to open
+// a job in one of these states has not finished: it runs now, or is about to (again)
 const UNFINISHED_JOB_STATES: readonly (JobState | "unknown")[] = [
    "waiting",
    "prioritized",
@@ -63,14 +63,27 @@ export class ApplicationQueue implements OnApplicationShutdown {
     * The job ends when the user sends the form, closes the window or lets it time out, so this needs
     * no state of its own, and a crashed worker's job is cleaned up by BullMQ, not left "open".
     */
-   async isFilling(applicationId: string): Promise<boolean> {
-      const jobId = await this.fillQueue.getDeduplicationJobId(applicationId);
-      if (!jobId) return false;
-      const state = await this.fillQueue.getJobState(jobId);
-      return UNFINISHED_JOB_STATES.includes(state);
+   isFilling(applicationId: string): Promise<boolean> {
+      return hasUnfinishedJob(this.fillQueue, applicationId);
+   }
+
+   /**
+    * The application's prepare job is queued, running or waiting to retry in this machine's Redis. The
+    * worker always settles the application before its job ends, so "preparing" without one is lost.
+    */
+   isPreparing(applicationId: string): Promise<boolean> {
+      return hasUnfinishedJob(this.queue, applicationId);
    }
 
    async onApplicationShutdown() {
       await Promise.all([this.queue.close(), this.fillQueue.close()]);
    }
+}
+
+/** The application's job in this queue (one at a time, by deduplication) has not finished. */
+async function hasUnfinishedJob(queue: Queue, applicationId: string): Promise<boolean> {
+   const jobId = await queue.getDeduplicationJobId(applicationId);
+   if (!jobId) return false;
+   const state = await queue.getJobState(jobId);
+   return UNFINISHED_JOB_STATES.includes(state);
 }

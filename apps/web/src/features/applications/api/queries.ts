@@ -28,7 +28,7 @@ export function useApplication(id: string) {
       queryFn: () => apiGet<ApplicationView>(`/applications/${id}`),
       refetchInterval: (query) => {
          const app = query.state.data;
-         if (app?.status === "preparing") return PREPARING_POLL_MS;
+         if (app?.status === "preparing" && app.preparationRunning) return PREPARING_POLL_MS;
          // the window is open: watch for the user sending the form or closing it
          if (app?.filling) return FILLING_POLL_MS;
          return false;
