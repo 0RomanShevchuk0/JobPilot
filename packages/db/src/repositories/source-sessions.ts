@@ -3,6 +3,8 @@ import type { Drizzle } from "../drizzle.js";
 import { sourceSessions } from "../schema.js";
 
 export interface SourceSessionsRepository {
+   /** The user logged in on their machine: the session, encrypted for the server, and working again. */
+   saveSession(userId: string, sourceId: string, encryptedSession: string): Promise<void>;
    /** The site answered as if logged out: the user's session there is over. Keeps when it was first seen. */
    markExpired(userId: string, sourceId: string): Promise<void>;
    /** A page of the site came with the user's session accepted. */
@@ -13,6 +15,16 @@ export interface SourceSessionsRepository {
 
 export function createSourceSessionsRepository(db: Drizzle): SourceSessionsRepository {
    return {
+      async saveSession(userId, sourceId, encryptedSession) {
+         await db
+            .insert(sourceSessions)
+            .values({ userId, sourceId, encryptedSession })
+            .onConflictDoUpdate({
+               target: [sourceSessions.userId, sourceSessions.sourceId],
+               set: { encryptedSession, expiredAt: null },
+            });
+      },
+
       async markExpired(userId, sourceId) {
          await db
             .insert(sourceSessions)
