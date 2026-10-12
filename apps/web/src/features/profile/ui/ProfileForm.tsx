@@ -7,18 +7,24 @@ import {
    workModes,
 } from "@jobpilot/contracts";
 import { picksNewCategories, sameForMatching } from "@jobpilot/matching";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { type Control, Controller, type UseFormRegisterReturn, useForm } from "react-hook-form";
 import { Button, ReevaluatesMark } from "../../../shared/ui";
-import { useSaveProfile } from "../api/queries";
-import { fromProfile, type ProfileDraft, profileFormSchema } from "../lib/draft";
+import { useProfileFromCv, useSaveProfile } from "../api/queries";
+import { fillFromCv, fromProfile, type ProfileDraft, profileFormSchema } from "../lib/draft";
 import { inputClasses, textareaClasses } from "./inputs";
 import { JobSites } from "./JobSites";
 import { LanguagesList, LinksList, LocationsList } from "./ListFields";
 import { TagsInput } from "./TagsInput";
 
+interface ProfileFormProps {
+   saved?: Profile;
+   /** a CV is uploaded: its fields can fill the form */
+   hasCv: boolean;
+}
+
 /** The whole profile as one form, saved at once: each save re-evaluates every open vacancy. */
-export function ProfileForm({ saved }: { saved?: Profile }) {
+export function ProfileForm({ saved, hasCv }: ProfileFormProps) {
    const form = useForm<ProfileDraft, unknown, Profile>({
       defaultValues: fromProfile(saved),
       resolver: zodResolver(profileFormSchema),
@@ -28,18 +34,36 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
       register,
       handleSubmit,
       reset,
+      getValues,
       watch,
       formState: { errors, isDirty },
    } = form;
    const save = useSaveProfile();
+   const fromCv = useProfileFromCv();
+   // the CV gave nothing for the empty fields, or none was empty: said instead of a silent no-op
+   const [nothingFilled, setNothingFilled] = useState(false);
 
    // what was saved becomes the form's starting point: Discard comes back to it
    const submit = handleSubmit((profile) =>
       save.mutate(profile, { onSuccess: (stored) => reset(fromProfile(stored.profile)) }),
    );
+   // the saved profile stays the starting point: the filled fields are unsaved changes, Discard drops them
+   const fill = () => {
+      setNothingFilled(false);
+      fromCv.mutate(undefined, {
+         onSuccess: (fields) => {
+            const current = getValues();
+            const filled = fillFromCv(current, fields);
+            if (JSON.stringify(filled) === JSON.stringify(current)) setNothingFilled(true);
+            else reset(filled, { keepDefaultValues: true });
+         },
+      });
+   };
    const discard = () => {
       reset();
       save.reset();
+      fromCv.reset();
+      setNothingFilled(false);
    };
    const hasErrors = Object.keys(errors).length > 0;
    // the check the API makes on save; while the form doesn't pass the schema, say the costly case
@@ -55,6 +79,25 @@ export function ProfileForm({ saved }: { saved?: Profile }) {
 
    return (
       <form onSubmit={submit} className="space-y-4">
+         {hasCv && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+               <Button onClick={fill} disabled={fromCv.isPending}>
+                  {fromCv.isPending ? "Reading the CV…" : "Fill from CV"}
+               </Button>
+               {fromCv.error ? (
+                  <p className="text-red-600">{fromCv.error.message}</p>
+               ) : nothingFilled ? (
+                  <p className="text-gray-500">
+                     Nothing to fill: those fields are already filled, or the CV doesn't have them.
+                  </p>
+               ) : (
+                  <p className="text-gray-500">
+                     AI fills the empty titles, skills, experience, location and languages. Nothing
+                     is saved until you press Save.
+                  </p>
+               )}
+            </div>
+         )}
          <Section title="Applying" hint="How to reach me and my usual message to recruiters.">
             <div className="grid gap-4 sm:grid-cols-3">
                <Field label="Full name" error={errors.contacts?.fullName?.message}>

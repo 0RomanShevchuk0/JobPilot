@@ -3,6 +3,7 @@ import {
    type LocationKind,
    type Profile,
    type ProfileCurrency,
+   type ProfileFromCv,
    profileSchema,
    type SalaryPeriod,
    type Seniority,
@@ -85,6 +86,19 @@ export function fromProfile(saved?: Profile): ProfileDraft {
       sourceCategories: Object.fromEntries(
          sourceCatalog.map((s) => [s.id, p.sourceCategories[s.id] ?? []]),
       ),
+   };
+}
+
+/** The fields read from the CV put into the form where it is empty: what is typed there stays. */
+export function fillFromCv(draft: ProfileDraft, fromCv: ProfileFromCv): ProfileDraft {
+   const cv = fromProfile(profileSchema.parse(fromCv));
+   return {
+      ...draft,
+      titles: draft.titles.length > 0 ? draft.titles : cv.titles,
+      experienceYears: draft.experienceYears.trim() ? draft.experienceYears : cv.experienceYears,
+      skills: draft.skills.length > 0 ? draft.skills : cv.skills,
+      locations: draft.locations.length > 0 ? draft.locations : cv.locations,
+      languages: draft.languages.length > 0 ? draft.languages : cv.languages,
    };
 }
 
