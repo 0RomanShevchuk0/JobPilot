@@ -15,8 +15,18 @@ services:
       image: redis:8-alpine
       restart: always
       logging: *logging
-      # BullMQ requirements: never evict keys, persist jobs across restarts
-      command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+      # BullMQ requirements: never evict keys, persist jobs across restarts. Warnings only in the logs:
+      # at the default level every snapshot (one per 5 min under BullMQ's polling) writes six lines
+      command:
+         [
+            "redis-server",
+            "--appendonly",
+            "yes",
+            "--maxmemory-policy",
+            "noeviction",
+            "--loglevel",
+            "warning",
+         ]
       volumes:
          - redisdata:/data
       healthcheck:
