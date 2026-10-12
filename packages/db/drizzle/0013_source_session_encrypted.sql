@@ -1,0 +1,1 @@
+ALTER TABLE "source_sessions" ADD COLUMN "encrypted_session" text;

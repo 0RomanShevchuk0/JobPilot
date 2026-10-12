@@ -92,6 +92,13 @@
       "when": 1791751181188,
       "tag": "0012_source_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791812738136,
+      "tag": "0013_source_session_encrypted",
+      "breakpoints": true
     }
   ]
 }
