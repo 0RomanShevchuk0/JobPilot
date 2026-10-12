@@ -52,22 +52,38 @@ export interface DiscoverParams {
    keywords?: string[];
 }
 
+/** A user's session on a job site: the site's cookies, as Playwright saves a browser's state. */
+export interface SiteSession {
+   cookies: {
+      name: string;
+      value: string;
+      domain: string;
+      path: string;
+      /** in seconds; -1 for a cookie that lives as long as the browser session */
+      expires: number;
+      httpOnly: boolean;
+      secure: boolean;
+      sameSite: "Strict" | "Lax" | "None";
+   }[];
+   origins: { origin: string; localStorage: { name: string; value: string }[] }[];
+}
+
 /** What the platform does under the user's own account on the source. */
 export interface SourceAccount {
    /** Interactive: the user logs in, the session is saved to sessionPath for later runs. */
    login(sessionPath: string): Promise<void>;
    /**
     * What the job page shows the logged-in user: whether they can apply, the salary against their
-    * expectations there; gone when the job is closed or removed. Throws SessionExpiredError without
-    * a valid session.
+    * expectations there; gone when the job is closed or removed. Throws SessionExpiredError when the
+    * site doesn't take the session.
     */
-   checkJobPage(url: string, sessionPath: string): Promise<JobPageResult>;
+   checkJobPage(url: string, session: SiteSession): Promise<JobPageResult>;
    /**
     * Opens the job's application form under the account and reads it; nothing is filled in or sent.
     * Throws SessionExpiredError, or CannotApplyError when the site offers no form (applied already,
     * the job is closed, the profile doesn't meet its requirements).
     */
-   readApplyForm(url: string, sessionPath: string): Promise<ApplyForm>;
+   readApplyForm(url: string, session: SiteSession): Promise<ApplyForm>;
    /**
     * Opens the job's application form in a visible browser on this machine, fills in the answers and
     * hands over to the user, who sends it or closes the window: never sends anything itself. Resolves
@@ -75,7 +91,7 @@ export interface SourceAccount {
     */
    fillApplicationForm(
       url: string,
-      sessionPath: string,
+      session: SiteSession,
       answers: FillValue[],
    ): Promise<FillOutcome>;
    /** Pause between automated form opens, ms, picked at random: one account shouldn't look like a bot. */

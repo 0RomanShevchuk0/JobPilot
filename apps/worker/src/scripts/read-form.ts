@@ -1,5 +1,6 @@
 // Reads the application form of one job with the saved session and prints its fields.
 // Nothing is filled in or sent. Usage: pnpm read-form <source> <job url> [file to save the form's HTML to]
+import { readSessionFile } from "@jobpilot/sources";
 import { writeFile } from "node:fs/promises";
 import { sessionPath } from "../config.js";
 import { findSource, sources } from "../sources.js";
@@ -13,10 +14,9 @@ if (!entry || !jobUrl) {
 }
 
 const userId = await scriptUserId();
-const form = await entry.adapter.account.readApplyForm(
-   jobUrl,
-   sessionPath(userId, entry.adapter.source),
-);
+const path = sessionPath(userId, entry.adapter.source);
+const session = await readSessionFile(path, entry.adapter.name);
+const form = await entry.adapter.account.readApplyForm(jobUrl, session);
 const { html, ...fields } = form;
 console.log(JSON.stringify(fields, null, 2));
 if (htmlPath) await writeFile(htmlPath, html);

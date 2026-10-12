@@ -5,6 +5,8 @@ import { sourceSessions } from "../schema.js";
 export interface SourceSessionsRepository {
    /** The user logged in on their machine: the session, encrypted for the server, and working again. */
    saveSession(userId: string, sourceId: string, encryptedSession: string): Promise<void>;
+   /** The session saveSession saved, encrypted; undefined before the user's first login. */
+   getEncryptedSession(userId: string, sourceId: string): Promise<string | undefined>;
    /** The site answered as if logged out: the user's session there is over. Keeps when it was first seen. */
    markExpired(userId: string, sourceId: string): Promise<void>;
    /** A page of the site came with the user's session accepted. */
@@ -23,6 +25,14 @@ export function createSourceSessionsRepository(db: Drizzle): SourceSessionsRepos
                target: [sourceSessions.userId, sourceSessions.sourceId],
                set: { encryptedSession, expiredAt: null },
             });
+      },
+
+      async getEncryptedSession(userId, sourceId) {
+         const [row] = await db
+            .select({ encryptedSession: sourceSessions.encryptedSession })
+            .from(sourceSessions)
+            .where(and(eq(sourceSessions.userId, userId), eq(sourceSessions.sourceId, sourceId)));
+         return row?.encryptedSession ?? undefined;
       },
 
       async markExpired(userId, sourceId) {

@@ -10,8 +10,9 @@ import { type Job, UnrecoverableError } from "bullmq";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { loginHint, sessionPath } from "../config.js";
+import { loginHint } from "../config.js";
 import { log } from "../log.js";
+import { loadSession } from "../session.js";
 import { findSource } from "../sources.js";
 
 /**
@@ -37,9 +38,10 @@ export async function handleFillApplication(
    const cvDir = await mkdtemp(join(tmpdir(), "jobpilot-cv-"));
    try {
       const values = await fillValues(application, database, storage, cvDir);
+      const session = await loadSession(database, application.userId, entry);
       const outcome = await entry.adapter.account.fillApplicationForm(
          application.postingUrl,
-         sessionPath(application.userId, application.source),
+         session,
          values,
       );
       if (outcome.status === "cancelled") {

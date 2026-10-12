@@ -1,4 +1,4 @@
-import type { FillOutcome, FillValue } from "@jobpilot/contracts";
+import type { FillOutcome, FillValue, SiteSession } from "@jobpilot/contracts";
 import type { BrowserContext, Page, Request } from "playwright";
 import { launchBrowser } from "../browser.js";
 import { fillFields, SLOW_MO_MS, waitForUser } from "../form-filling.js";
@@ -18,12 +18,12 @@ const SEND_BUTTON_SELECTOR = ".replied-btn.send";
  */
 export async function fillDouApplication(
    jobUrl: string,
-   sessionPath: string,
+   session: SiteSession,
    values: FillValue[],
 ): Promise<FillOutcome> {
    const browser = await launchBrowser({ visible: true, slowMo: SLOW_MO_MS });
    try {
-      const context = await openSessionContext(browser, sessionPath, DOU_NAME);
+      const context = await openSessionContext(browser, session);
       return await fillForm(context, jobUrl, values);
    } finally {
       await browser.close();

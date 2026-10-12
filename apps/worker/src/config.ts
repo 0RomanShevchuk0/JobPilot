@@ -7,12 +7,21 @@ function required(name: string): string {
    return value;
 }
 
+// where the worker runs: "server" (set in docker-compose.prod.yml) or "local", the user's own machine
+const role = process.env.WORKER_ROLE || "local";
+if (role !== "server" && role !== "local") {
+   throw new Error(`WORKER_ROLE is "${role}": server or local`);
+}
+
 export const config = {
+   role,
    databaseUrl: required("DATABASE_URL"),
    redisUrl: required("REDIS_URL"),
    discoverEveryMs: Number(process.env.DISCOVER_EVERY_MINUTES ?? 180) * 60_000,
-   // one folder per user, saved by `pnpm login:<source>` (.data/ is gitignored)
+   // one folder per user, saved by `pnpm login:<source>` (.data/ is gitignored): read by a local worker
    sessionsDir: "../../.data/sessions",
+   // the server's only: decrypts the users' sessions in the database (see SESSION_PUBLIC_KEY)
+   sessionPrivateKey: role === "server" ? required("SESSION_PRIVATE_KEY") : undefined,
    // where document files live (the CV attached to applications): the same storage as the API's
    storage: {
       endpoint: required("S3_ENDPOINT"),

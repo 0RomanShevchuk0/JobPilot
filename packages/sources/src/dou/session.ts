@@ -1,7 +1,7 @@
-import { SessionExpiredError } from "@jobpilot/contracts";
+import { SessionExpiredError, type SiteSession } from "@jobpilot/contracts";
 import * as cheerio from "cheerio";
 import { getText } from "../http.js";
-import { loginInChrome, sessionCookieHeader } from "../saved-session.js";
+import { loginInChrome, readSessionFile, sessionCookieHeader } from "../saved-session.js";
 import { DOU_BASE_URL, DOU_NAME } from "./site.js";
 
 // "Вхід і реєстрація" in the header, opens the login dialog: on every page, for anonymous visitors only
@@ -12,12 +12,13 @@ export async function loginToDou(sessionPath: string): Promise<void> {
    // one account for all of dou.ua: the login page is on the main site, the session works on jobs.dou.ua
    const site = { name: DOU_NAME, loginUrl: "https://dou.ua/login/", domain: "dou.ua" };
    await loginInChrome(site, sessionPath);
-   if (!(await isLoggedIn(sessionPath))) throw new SessionExpiredError(DOU_NAME);
+   const session = await readSessionFile(sessionPath, DOU_NAME);
+   if (!(await isLoggedIn(session))) throw new SessionExpiredError(DOU_NAME);
 }
 
 /** Loads the jobs page with the session, over plain HTTP: the header shows who is logged in. */
-async function isLoggedIn(sessionPath: string): Promise<boolean> {
-   const cookie = await sessionCookieHeader(sessionPath, DOU_NAME);
+async function isLoggedIn(session: SiteSession): Promise<boolean> {
+   const cookie = sessionCookieHeader(session);
    const res = await getText(`${DOU_BASE_URL}/`, { cookie });
    if (res.status !== 200) throw new Error(`dou ${DOU_BASE_URL}/: HTTP ${res.status}`);
    const $ = cheerio.load(res.body);

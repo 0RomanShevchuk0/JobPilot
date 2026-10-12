@@ -1,4 +1,4 @@
-import { SessionExpiredError } from "@jobpilot/contracts";
+import { SessionExpiredError, type SiteSession } from "@jobpilot/contracts";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -80,7 +80,7 @@ async function saveSiteCookies(
    try {
       const state = await context.storageState();
       const isSite = (host: string) => host === domain || host.endsWith(`.${domain}`);
-      const siteOnly = {
+      const siteOnly: SiteSession = {
          cookies: state.cookies.filter((c) => isSite(c.domain.replace(/^\./, ""))), // ".djinni.co" → "djinni.co"
          origins: state.origins.filter((o) => isSite(new URL(o.origin).hostname)),
       };
@@ -91,40 +91,33 @@ async function saveSiteCookies(
    }
 }
 
-/**
- * The saved session as a Cookie header, for plain HTTP requests without a browser. Expired cookies are
- * left out; whether the site still accepts the rest only a request tells.
- */
-export async function sessionCookieHeader(sessionPath: string, siteName: string): Promise<string> {
+/** The session loginInChrome saved to sessionPath; SessionExpiredError when there is none yet. */
+export async function readSessionFile(sessionPath: string, siteName: string): Promise<SiteSession> {
    let file: string;
    try {
       file = await readFile(sessionPath, "utf8");
    } catch {
       throw new SessionExpiredError(siteName); // no session file yet
    }
-   const { cookies } = JSON.parse(file) as {
-      cookies: { name: string; value: string; expires: number }[];
-   };
+   return JSON.parse(file) as SiteSession;
+}
+
+/**
+ * The session as a Cookie header, for plain HTTP requests without a browser. Expired cookies are left
+ * out; whether the site still accepts the rest only a request tells.
+ */
+export function sessionCookieHeader(session: SiteSession): string {
    const nowSeconds = Date.now() / 1000;
-   // expires is in seconds, -1 for a cookie that lives as long as the browser session
-   const live = cookies.filter((c) => c.expires === -1 || c.expires > nowSeconds);
+   const live = session.cookies.filter((c) => c.expires === -1 || c.expires > nowSeconds);
    return live.map((c) => `${c.name}=${c.value}`).join("; ");
 }
 
-/** A browser context with the saved session, introducing itself as an ordinary desktop Chrome. */
-export async function openSessionContext(
+/** A browser context with the session, introducing itself as an ordinary desktop Chrome. */
+export function openSessionContext(
    browser: Browser,
-   sessionPath: string,
-   siteName: string,
+   session: SiteSession,
 ): Promise<BrowserContext> {
-   try {
-      return await browser.newContext({
-         storageState: sessionPath,
-         userAgent: desktopUserAgent(browser),
-      });
-   } catch {
-      throw new SessionExpiredError(siteName); // no session file yet
-   }
+   return browser.newContext({ storageState: session, userAgent: desktopUserAgent(browser) });
 }
 
 /**
