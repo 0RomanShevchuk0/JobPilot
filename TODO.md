@@ -4,11 +4,11 @@
 
 1. [x] браузеры Playwright ставятся на `pnpm install` (`postinstall` в `packages/sources`); в образе
        воркера — нет (`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`): отклики готовит только локальный воркер
-2. [ ] `CHROME_PATHS` в `packages/sources/src/saved-session.ts` только для macOS и Linux: на Windows
-       `pnpm login:<source>` падает с «Google Chrome is not installed». Добавить
-       `%ProgramFiles%`, `%ProgramFiles(x86)%`, `%LocalAppData%` + `Google\Chrome\Application\chrome.exe`
+2. [x] `CHROME_PATHS` знает и Windows: `%ProgramFiles%`, `%ProgramFiles(x86)%`, `%LOCALAPPDATA%`
 3. [ ] README: Node ≥ 24, pnpm (Corepack только в Node 24, в 25+ — `npm i -g pnpm`), `.env`,
        `pnpm infra:up`, браузеры, `pnpm login:<source>`, запуск; отдельно про Windows
+   - `LLM_PROVIDER=claude-cli` на Windows: Claude Code ставить нативным установщиком (`claude.exe`);
+     `spawn("claude")` в `packages/llm/src/claude-cli.ts` без shell не находит npm-шим `claude.cmd`
 4. [ ] когда попытки подготовки исчерпаны — отклик в `failed` с понятной причиной; сейчас ошибка
        браузера пользователю не видна, отклик остаётся в `preparing`
 

@@ -11,6 +11,10 @@ const CHROME_PATHS = [
    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
    "/usr/bin/google-chrome",
    "/usr/bin/google-chrome-stable",
+   // Windows: installed for all users (64- or 32-bit), or for the current user only
+   ...[process.env.ProgramFiles, process.env["ProgramFiles(x86)"], process.env.LOCALAPPDATA]
+      .filter((dir) => dir !== undefined)
+      .map((dir) => join(dir, "Google", "Chrome", "Application", "chrome.exe")),
 ];
 
 /** A job site to log in to. */
