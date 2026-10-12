@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
    applicationMessage,
    buildApplicationAnswersRequest,
+   pickNumber,
    pickOption,
    tidyAnswer,
 } from "./answers.js";
@@ -31,6 +32,7 @@ describe("buildApplicationAnswersRequest", () => {
       questions: [
          { label: "Have you worked with Angular?", options: ["Так", "Ні"] },
          { label: "Years with Node.js?" },
+         { label: "Share of AI-generated code (0–100%)?", numeric: true },
       ],
    });
 
@@ -38,6 +40,10 @@ describe("buildApplicationAnswersRequest", () => {
       expect(prompt).toContain(
          "# Questions\n1. Have you worked with Angular?\n   Options: Так | Ні\n2. Years with Node.js?",
       );
+   });
+
+   it("marks a numeric question", () => {
+      expect(prompt).toContain("3. Share of AI-generated code (0–100%)?\n   Answer: a number");
    });
 
    it("passes the strongest matches", () => {
@@ -78,5 +84,18 @@ describe("pickOption", () => {
 
    it("is undefined for an answer that names no option", () => {
       expect(pickOption("Yes, I have shipped Next.js apps.", ["Так", "Ні"])).toBeUndefined();
+   });
+});
+
+describe("pickNumber", () => {
+   it("takes the one number of the answer, with a decimal point", () => {
+      expect(pickNumber("70")).toBe("70");
+      expect(pickNumber("about 70%")).toBe("70");
+      expect(pickNumber("1,5 роки")).toBe("1.5");
+   });
+
+   it("is undefined for an answer with no number or several", () => {
+      expect(pickNumber("Точного відсотка не вимірював.")).toBeUndefined();
+      expect(pickNumber("between 60 and 80")).toBeUndefined();
    });
 });

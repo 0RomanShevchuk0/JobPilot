@@ -73,7 +73,20 @@ function AnswerInput({ field, value, editable, onChange, fileUrl }: AnswerProps)
          </select>
       );
    }
-   if (field.kind === "text" || field.kind === "textarea" || field.kind === "number") {
+   // the form's input takes digits only: words typed here would fail the filling
+   if (field.kind === "number") {
+      return (
+         <input
+            type="number"
+            step="any"
+            value={value}
+            disabled={!editable}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-32 rounded border border-gray-300 px-2 py-1 text-sm text-gray-700 disabled:bg-gray-50"
+         />
+      );
+   }
+   if (field.kind === "text" || field.kind === "textarea") {
       return (
          <textarea
             value={value}

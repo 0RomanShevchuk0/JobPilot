@@ -13,6 +13,7 @@ import type { LlmProvider } from "@jobpilot/llm";
 import {
    applicationMessage,
    buildApplicationAnswersRequest,
+   pickNumber,
    pickOption,
    tidyAnswer,
 } from "@jobpilot/matching";
@@ -123,6 +124,7 @@ async function answerQuestions(
    const questionsForModel = questions.map((q) => ({
       label: q.label,
       options: choiceFieldKinds.includes(q.kind) ? q.options : undefined,
+      numeric: q.kind === "number",
    }));
    const request = buildApplicationAnswersRequest({
       profile,
@@ -137,6 +139,14 @@ async function answerQuestions(
    }
    return questions.map((question, i) => {
       const answer = tidyAnswer(answers[i]!);
+      if (question.kind === "number") {
+         const number = pickNumber(answer);
+         // a number input takes nothing else: thrown, so the job retries, as for a wrong option
+         if (!number) {
+            throw new Error(`the model answered "${answer}" to "${question.label}", not a number`);
+         }
+         return number;
+      }
       if (!choiceFieldKinds.includes(question.kind) || !question.options) return answer;
       const option = pickOption(answer, question.options);
       // thrown, so the job retries: the model usually gets it right the next time

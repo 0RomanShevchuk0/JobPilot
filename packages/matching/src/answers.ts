@@ -37,6 +37,10 @@ A question with options (listed under it as "Options: …"):
 - Pick the option the CV and the profile support. When the candidate lacks what is asked, that is the
   negative option, without explaining.
 
+A question marked "Answer: a number":
+- The answer is the number alone, in digits: "4", not "4 years" or "about 4". The form takes nothing else.
+- When the CV and the profile give no exact figure, give an honest estimate from them: a number is a must.
+
 Any other question:
 - Answer exactly what is asked, in the first person and briefly: a number and a few words for "how many
   years", at most two short sentences otherwise.
@@ -74,10 +78,26 @@ export function pickOption(answer: string, options: string[]): string | undefine
    return options.find((option) => normalize(option) === normalize(answer));
 }
 
-/** A recruiter's question; a choice one comes with its options, to answer with one of them. */
+// every number in an answer, with a decimal point or comma: "about 70%" → "70", "1,5 роки" → "1,5"
+const NUMBERS = /\d+(?:[.,]\d+)?/g;
+
+/**
+ * The number a numeric answer gives, as a number input takes it ("1,5" → "1.5"); undefined when it gives
+ * none or several. Words around it don't matter: the model was asked for the number alone, not always does.
+ */
+export function pickNumber(answer: string): string | undefined {
+   const numbers = answer.match(NUMBERS) ?? [];
+   return numbers.length === 1 ? numbers[0]!.replace(",", ".") : undefined;
+}
+
+/**
+ * A recruiter's question; a choice one comes with its options, to answer with one of them, a numeric one
+ * is answered with a number alone.
+ */
 export interface ApplicationQuestion {
    label: string;
    options?: string[];
+   numeric?: boolean;
 }
 
 /**
@@ -103,7 +123,9 @@ export function buildApplicationAnswersRequest(input: {
    return { system: SYSTEM, prompt: sections.join("\n\n"), schema: applicationAnswersSchema };
 }
 
-function describeQuestion({ label, options }: ApplicationQuestion, index: number): string {
+function describeQuestion({ label, options, numeric }: ApplicationQuestion, index: number): string {
    const line = `${index + 1}. ${label}`;
-   return options ? `${line}\n   Options: ${options.join(" | ")}` : line;
+   if (options) return `${line}\n   Options: ${options.join(" | ")}`;
+   if (numeric) return `${line}\n   Answer: a number`;
+   return line;
 }
