@@ -1,4 +1,9 @@
-import { CannotApplyError, type ApplyForm, type ApplyFormField } from "@jobpilot/contracts";
+import {
+   CannotApplyError,
+   type ApplyForm,
+   type ApplyFormField,
+   type SiteSession,
+} from "@jobpilot/contracts";
 import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
 import type { Element } from "domhandler";
@@ -6,7 +11,6 @@ import { getText } from "../http.js";
 import { sessionCookieHeader } from "../saved-session.js";
 import { readJobPage } from "./account-page.js";
 import { EXTERNAL_APPLY_SELECTOR } from "./job-page.js";
-import { DOU_NAME } from "./site.js";
 
 // DOU's application form: in the page from the start, hidden until "Відгукнутися" is pressed
 export const APPLY_FORM_SELECTOR = "form#replied-id";
@@ -20,8 +24,8 @@ const CV_NAME = "user_cv";
  * form is in the page as it comes. Reads only: nothing is filled in or sent. Throws SessionExpiredError,
  * or CannotApplyError when there is no form to fill in on DOU.
  */
-export async function readDouApplyForm(jobUrl: string, sessionPath: string): Promise<ApplyForm> {
-   const cookie = await sessionCookieHeader(sessionPath, DOU_NAME);
+export async function readDouApplyForm(jobUrl: string, session: SiteSession): Promise<ApplyForm> {
+   const cookie = sessionCookieHeader(session);
    const res = await getText(jobUrl, { cookie });
    if (res.status === 404 || res.status === 410) {
       throw new CannotApplyError("The job is no longer on DOU");

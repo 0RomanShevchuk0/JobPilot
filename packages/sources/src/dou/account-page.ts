@@ -1,4 +1,9 @@
-import { SessionExpiredError, type ApplyCheck, type JobPageResult } from "@jobpilot/contracts";
+import {
+   SessionExpiredError,
+   type ApplyCheck,
+   type JobPageResult,
+   type SiteSession,
+} from "@jobpilot/contracts";
 import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
 import { getText } from "../http.js";
@@ -15,10 +20,13 @@ const ALREADY_APPLIED_SELECTOR = "form#replied-id.sent";
 /**
  * What DOU shows the user on a job page: whether they can apply, or that the job is gone (closed or
  * removed). Loads the page with their session over plain HTTP, no browser. DOU says nothing of the
- * salary against the user's expectations. Throws SessionExpiredError when the session is missing or over.
+ * salary against the user's expectations. Throws SessionExpiredError when the session is over.
  */
-export async function checkDouJobPage(jobUrl: string, sessionPath: string): Promise<JobPageResult> {
-   const cookie = await sessionCookieHeader(sessionPath, DOU_NAME);
+export async function checkDouJobPage(
+   jobUrl: string,
+   session: SiteSession,
+): Promise<JobPageResult> {
+   const cookie = sessionCookieHeader(session);
    const res = await getText(jobUrl, { cookie });
    if (res.status === 404 || res.status === 410) return { status: "gone" };
    if (res.status !== 200) throw new Error(`dou ${jobUrl}: HTTP ${res.status}`);

@@ -18,8 +18,9 @@ import {
    tidyAnswer,
 } from "@jobpilot/matching";
 import { type Job, UnrecoverableError } from "bullmq";
-import { loginHint, sessionPath } from "../config.js";
+import { loginHint } from "../config.js";
 import { log } from "../log.js";
+import { loadSession } from "../session.js";
 import { findSource, type SourceEntry } from "../sources.js";
 
 /**
@@ -79,7 +80,7 @@ async function prepare(
    // the questions are read from the job site once; answering again reuses them
    const form =
       refreshForm || application.fields.length === 0
-         ? await readForm(entry, postingUrl, userId)
+         ? await readForm(entry, postingUrl, userId, database)
          : storedForm(application.fields);
    const answers =
       form.questions.length > 0
@@ -197,9 +198,16 @@ function storedForm(fields: FormField[]): Pick<ApplyForm, "questions" | "message
    };
 }
 
-async function readForm(entry: SourceEntry, jobUrl: string, userId: string): Promise<ApplyForm> {
+async function readForm(
+   entry: SourceEntry,
+   jobUrl: string,
+   userId: string,
+   database: DatabaseClient,
+): Promise<ApplyForm> {
+   // before the wait: without a session there is nothing to wait for
+   const session = await loadSession(database, userId, entry);
    await waitForTurn(entry);
-   return entry.adapter.account.readApplyForm(jobUrl, sessionPath(userId, entry.adapter.source));
+   return entry.adapter.account.readApplyForm(jobUrl, session);
 }
 
 function formField(

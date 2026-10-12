@@ -24,7 +24,6 @@ ENV NODE_ENV=production
 # CLAUDE_CODE_OAUTH_TOKEN from the environment
 RUN npm install -g @anthropic-ai/claude-code && npm cache clean --force
 
-# config.ts finds the sessions at ../../.data/sessions, as in the repo: /app/.data/sessions
 WORKDIR /app/apps/worker
 COPY --chown=node:node --from=build /out ./
 USER node

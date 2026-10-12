@@ -10,9 +10,10 @@ import {
 import type { DatabaseClient } from "@jobpilot/db";
 import { SCORING_PROMPT_VERSION } from "@jobpilot/matching";
 import type { Job, Queue } from "bullmq";
-import { loginHint, sessionPath } from "../config.js";
+import { loginHint } from "../config.js";
 import { log } from "../log.js";
 import { buildVacancyJobOptions, scoreVacancyJobOptions } from "../queues.js";
+import { loadSession } from "../session.js";
 import { findSource } from "../sources.js";
 
 /**
@@ -115,10 +116,8 @@ async function checkJobPage(
    const entry = findSource(posting.source);
    if (!entry) throw new Error(`no adapter for source ${posting.source}`);
    try {
-      const result = await entry.adapter.account.checkJobPage(
-         posting.url,
-         sessionPath(userId, posting.source),
-      );
+      const session = await loadSession(database, userId, entry);
+      const result = await entry.adapter.account.checkJobPage(posting.url, session);
       // the site took the session: a warning about it in the web goes away
       await database.sourceSessions.markWorking(userId, posting.source);
       return result;

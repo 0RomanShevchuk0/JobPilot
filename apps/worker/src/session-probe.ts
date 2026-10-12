@@ -1,6 +1,6 @@
 import { SessionExpiredError } from "@jobpilot/contracts";
 import type { DatabaseClient } from "@jobpilot/db";
-import { sessionPath } from "./config.js";
+import { loadSession } from "./session.js";
 import { findSource } from "./sources.js";
 
 export type ProbeResult = "ok" | "logged out" | "unknown";
@@ -9,7 +9,7 @@ export type ProbeResult = "ok" | "logged out" | "unknown";
  * Tries the session of everyone searching on the source, each their own, on a page of one of its
  * postings still up, as the can-apply check would, and records how it went for them. Run with every
  * discover, so a session that is over shows in the web without waiting for a new vacancy, and one
- * logged into again stops showing. A user without a session file is logged out with no request made.
+ * logged into again stops showing. A user without a session is logged out with no request made.
  */
 export async function probeSessions(
    source: string,
@@ -36,7 +36,8 @@ async function probeSession(
 ): Promise<ProbeResult> {
    const entry = findSource(source)!;
    try {
-      const result = await entry.adapter.account.checkJobPage(url, sessionPath(userId, source));
+      const session = await loadSession(database, userId, entry);
+      const result = await entry.adapter.account.checkJobPage(url, session);
       // a removed job answers before the session is looked at: it says nothing of it
       if (result.status === "gone") return "unknown";
       await database.sourceSessions.markWorking(userId, source);

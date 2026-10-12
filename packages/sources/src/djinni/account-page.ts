@@ -3,6 +3,7 @@ import {
    type ApplyCheck,
    type JobPageResult,
    type SalaryFit,
+   type SiteSession,
 } from "@jobpilot/contracts";
 import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
@@ -66,13 +67,13 @@ function whyNoApplyButton($: CheerioAPI): string {
 /**
  * What Djinni shows the user on a job page: whether they can apply and how the salary compares with
  * their expectations, or that the job is gone (closed or removed). Loads the page with their session
- * over plain HTTP, no browser. Throws SessionExpiredError when the session is missing or over.
+ * over plain HTTP, no browser. Throws SessionExpiredError when the session is over.
  */
 export async function checkDjinniJobPage(
    jobUrl: string,
-   sessionPath: string,
+   session: SiteSession,
 ): Promise<JobPageResult> {
-   const cookie = await sessionCookieHeader(sessionPath, DJINNI_NAME);
+   const cookie = sessionCookieHeader(session);
    const response = await fetch(jobUrl, {
       headers: { cookie, "User-Agent": USER_AGENT, Referer: `${DJINNI_BASE_URL}/jobs/` },
       signal: AbortSignal.timeout(TIMEOUT_MS),

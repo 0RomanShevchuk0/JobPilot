@@ -3,6 +3,7 @@ import {
    SessionExpiredError,
    type ApplyForm,
    type ApplyFormField,
+   type SiteSession,
 } from "@jobpilot/contracts";
 import type { Page } from "playwright";
 import { launchBrowser } from "../browser.js";
@@ -29,10 +30,13 @@ export async function openApplyForm(page: Page, jobUrl: string): Promise<void> {
  * Opens a job page with the user's session in a browser of its own, presses "Apply for the job" and
  * reads the form that appears. Reads only: nothing is filled in or sent.
  */
-export async function readDjinniApplyForm(jobUrl: string, sessionPath: string): Promise<ApplyForm> {
+export async function readDjinniApplyForm(
+   jobUrl: string,
+   session: SiteSession,
+): Promise<ApplyForm> {
    const browser = await launchBrowser();
    try {
-      const context = await openSessionContext(browser, sessionPath, DJINNI_NAME);
+      const context = await openSessionContext(browser, session);
       const page = await context.newPage();
       await openApplyForm(page, jobUrl);
       const form = page.locator("#apply_form");
