@@ -70,3 +70,16 @@ export const profileSchema = z.object({
    sourceCategories: z.record(z.string(), z.array(z.string().min(1))).default({}),
 });
 export type Profile = z.infer<typeof profileSchema>;
+
+/**
+ * The profile fields a model fills from the CV (POST /profile/from-cv): the form puts them into its
+ * empty fields, the user saves. No contacts: the CV goes to the model without them.
+ */
+export const profileFromCvSchema = profileSchema.pick({
+   titles: true,
+   experienceYears: true,
+   skills: true,
+   languages: true,
+   locations: true,
+});
+export type ProfileFromCv = z.infer<typeof profileFromCvSchema>;

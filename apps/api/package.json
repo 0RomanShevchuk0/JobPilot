@@ -11,6 +11,7 @@
    "dependencies": {
       "@jobpilot/contracts": "workspace:*",
       "@jobpilot/db": "workspace:*",
+      "@jobpilot/llm": "workspace:*",
       "@jobpilot/matching": "workspace:*",
       "@jobpilot/storage": "workspace:*",
       "@nestjs/common": "^12.1.0",

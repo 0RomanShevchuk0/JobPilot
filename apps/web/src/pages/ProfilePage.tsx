@@ -29,7 +29,12 @@ export function ProfilePage() {
          {profile.isPending && <p className="text-gray-500">Loading…</p>}
          {profile.isError && <p className="text-red-600">{profile.error.message}</p>}
          {/* not keyed by version: a CV upload bumps it too, and must not wipe unsaved edits */}
-         {profile.isSuccess && <ProfileForm saved={profile.data?.profile} />}
+         {profile.isSuccess && (
+            <ProfileForm
+               saved={profile.data?.profile}
+               hasCv={documents.data?.some((d) => d.isBase) ?? false}
+            />
+         )}
       </main>
    );
 }
