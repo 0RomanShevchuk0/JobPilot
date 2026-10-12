@@ -3,6 +3,9 @@ packages:
    - packages/*
 allowBuilds:
    "@google/genai": false
+   # its postinstall downloads Playwright's browsers: a dependency only in the worker's image
+   # (`pnpm deploy`), which needs none. In the workspace it runs as the project's own script
+   "@jobpilot/sources": false
    esbuild: true
    msgpackr-extract: false
    protobufjs: false
