@@ -16,7 +16,8 @@
       "build": "tsc -p tsconfig.build.json",
       "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
       "typecheck": "tsc",
-      "test": "vitest run"
+      "test": "vitest run",
+      "postinstall": "node scripts/install-browsers.js"
    },
    "dependencies": {
       "@jobpilot/contracts": "workspace:*",
