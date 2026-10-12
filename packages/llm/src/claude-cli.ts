@@ -53,6 +53,9 @@ export class ClaudeCliProvider implements LlmProvider {
    }
 }
 
+const CLI_NOT_FOUND =
+   "claude cli not found: install Claude Code (on Windows, the native installer)";
+
 function run(args: string[], stdin: string, timeoutMs: number): Promise<string> {
    return new Promise((resolve, reject) => {
       // tmpdir: keep project CLAUDE.md files and settings out of the request
@@ -61,7 +64,11 @@ function run(args: string[], stdin: string, timeoutMs: number): Promise<string> 
       let stderr = "";
       child.stdout.on("data", (chunk) => (stdout += chunk));
       child.stderr.on("data", (chunk) => (stderr += chunk));
-      child.on("error", reject); // e.g. claude is not installed
+      child.on("error", (err: NodeJS.ErrnoException) => {
+         // npm's claude.cmd on Windows doesn't count: a .cmd starts only through cmd.exe, and the
+         // multi-line prompt and the JSON schema can't pass through it intact
+         reject(err.code === "ENOENT" ? new Error(CLI_NOT_FOUND) : err);
+      });
       child.on("close", (code, signal) => {
          if (code === 0) resolve(stdout);
          else reject(new Error(`claude cli exited with ${signal ?? code}: ${stderr || stdout}`));
