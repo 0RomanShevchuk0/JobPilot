@@ -8,6 +8,7 @@ export {
    applicationAnswersSchema,
    applicationMessage,
    buildApplicationAnswersRequest,
+   pickNumber,
    pickOption,
    tidyAnswer,
    type ApplicationAnswers,
