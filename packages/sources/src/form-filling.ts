@@ -65,12 +65,15 @@ async function fillField(form: Locator, { name, kind, value }: FillValue): Promi
 /**
  * Waits for the user with the filled-in form: a POST that isSending tells apart is them sending it
  * (any status below 400: sites answer a form post with a redirect); the page closing is them giving up,
- * and so is the window sitting too long.
+ * and so is the window sitting too long. A site that answers a rejected form with the same form and its
+ * errors (status 200 all the same) gets isAccepted: the page it answered with is checked, and while it
+ * shows the form back, the user is waited for again, to fix it and send once more.
  */
 export function waitForUser(
    page: Page,
    isSending: (request: Request) => boolean,
    siteName: string,
+   isAccepted?: (page: Page) => Promise<boolean>,
 ): Promise<FillOutcome> {
    return new Promise((resolve, reject) => {
       let done = false;
@@ -94,10 +97,31 @@ export function waitForUser(
             );
             return;
          }
-         // sent: from here on it counts as submitted, whatever happens to the page
-         finish(() => void showResult(page).then(() => resolve({ status: "submitted" })));
+         void wasAccepted(page, isAccepted).then((accepted) => {
+            // rejected: the form is back on screen with the site's errors, for the user to fix
+            if (!accepted) return;
+            // sent: from here on it counts as submitted, whatever happens to the page
+            finish(() => void showResult(page).then(() => resolve({ status: "submitted" })));
+         });
       });
    });
+}
+
+/**
+ * Whether the site took the form: by the page it answered with, once loaded. Without isAccepted, or
+ * with the page closed before it loaded, the post going through is all there is to go by.
+ */
+async function wasAccepted(
+   page: Page,
+   isAccepted: ((page: Page) => Promise<boolean>) | undefined,
+): Promise<boolean> {
+   if (!isAccepted) return true;
+   try {
+      await page.waitForEvent("load");
+      return await isAccepted(page);
+   } catch {
+      return true;
+   }
 }
 
 /** Lets the page after sending load and stay on screen for a moment; the user may have closed it already. */
