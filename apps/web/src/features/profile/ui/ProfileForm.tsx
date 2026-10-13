@@ -79,25 +79,25 @@ export function ProfileForm({ saved, hasCv }: ProfileFormProps) {
 
    return (
       <form onSubmit={submit} className="space-y-4">
-         {hasCv && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-               <Button onClick={fill} disabled={fromCv.isPending}>
-                  {fromCv.isPending ? "Reading the CV…" : "Fill from CV"}
-               </Button>
-               {fromCv.error ? (
-                  <p className="text-red-600">{fromCv.error.message}</p>
-               ) : nothingFilled ? (
-                  <p className="text-gray-500">
-                     Nothing to fill: those fields are already filled, or the CV doesn't have them.
-                  </p>
-               ) : (
-                  <p className="text-gray-500">
-                     AI fills the empty titles, skills, experience, location and languages. Nothing
-                     is saved until you press Save.
-                  </p>
-               )}
-            </div>
-         )}
+         {/* shown without a CV too: whoever starts typing first learns the CV can fill the rest */}
+         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <Button onClick={fill} disabled={!hasCv || fromCv.isPending}>
+               {fromCv.isPending ? "Reading the CV…" : "Fill from CV"}
+            </Button>
+            {!hasCv ? (
+               <p className="text-gray-500">Upload a CV above to fill the empty fields from it.</p>
+            ) : fromCv.error ? (
+               <p className="text-red-600">{fromCv.error.message}</p>
+            ) : nothingFilled ? (
+               <p className="text-gray-500">
+                  Nothing to fill: those fields are already filled, or the CV doesn't have them.
+               </p>
+            ) : (
+               <p className="text-gray-500">
+                  Fills the empty fields from your CV. Check them before saving.
+               </p>
+            )}
+         </div>
          <Section title="Applying" hint="How to reach me and my usual message to recruiters.">
             <div className="grid gap-4 sm:grid-cols-3">
                <Field label="Full name" error={errors.contacts?.fullName?.message}>
