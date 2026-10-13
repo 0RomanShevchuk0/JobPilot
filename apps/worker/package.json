@@ -11,6 +11,7 @@
       "postings:reparse": "tsc && node dist/scripts/reparse-postings.js",
       "matches:refresh": "tsc && node dist/scripts/refresh-matches.js",
       "sessions:check": "tsc && node dist/scripts/check-sessions.js",
+      "queues:status": "tsc && node dist/scripts/queues-status.js",
       "login:djinni": "tsc && node dist/scripts/login.js djinni",
       "login:dou": "tsc && node dist/scripts/login.js dou",
       "read-form": "tsc && node dist/scripts/read-form.js",
