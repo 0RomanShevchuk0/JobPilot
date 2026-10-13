@@ -15,6 +15,7 @@
       "test": "vitest run"
    },
    "dependencies": {
+      "@jobpilot/contacts": "workspace:*",
       "@jobpilot/contracts": "workspace:*",
       "@jobpilot/llm": "workspace:*",
       "@jobpilot/vacancies": "workspace:*",

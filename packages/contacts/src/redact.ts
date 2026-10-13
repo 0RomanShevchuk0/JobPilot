@@ -1,22 +1,10 @@
 import type { ProfileContacts } from "@jobpilot/contracts";
+import { EMAIL, HTTP_URL, isPhone, PHONE_LIKE, PROFILE_LINK } from "./patterns.js";
 
 const REMOVED = "[removed]";
 
-// "roman.dev+jobs@mail.example.com"
-const EMAIL = /[\w.+-]+@[\w-]+(\.[\w-]+)+/g;
-// any web address with its scheme: "https://example.com/me"
-const HTTP_URL = /https?:\/\/\S+/gi;
-// profile links written without a scheme: "linkedin.com/in/someone", "t.me/someone"
-const PROFILE_LINK =
-   /\b(?:www\.)?(?:linkedin\.com|github\.com|gitlab\.com|t\.me|telegram\.me|wa\.me|x\.com|twitter\.com)\/\S+/gi;
-// a digit, then digits, spaces, dots, dashes or brackets, ending in a digit: "+49 155 66057903", "(067) 123-45-67"
-const PHONE_LIKE = /\+?\d[\d\s().-]{6,}\d/g;
-// one digit, to count them in a phone-like match
-const DIGIT = /\d/g;
 // any run of spaces, tabs or line breaks: splits "Jane  Doe" into its parts
 const WHITESPACE = /\s+/;
-// fewer digits than this is a year range or a number in the text, not a phone
-const MIN_PHONE_DIGITS = 9;
 
 /**
  * Takes contact details out of a text (a CV) before it goes to a model: no prompt needs them, and the
@@ -43,9 +31,7 @@ export function redactContacts(text: string, contacts: ProfileContacts): string 
       .replace(EMAIL, REMOVED)
       .replace(HTTP_URL, REMOVED)
       .replace(PROFILE_LINK, REMOVED)
-      .replace(PHONE_LIKE, (match) =>
-         (match.match(DIGIT) ?? []).length >= MIN_PHONE_DIGITS ? REMOVED : match,
-      );
+      .replace(PHONE_LIKE, (match) => (isPhone(match) ? REMOVED : match));
 }
 
 /** "Doe" as a word, any case: matches "doe" and "DOE", not the "Doe" inside "Doerte". */

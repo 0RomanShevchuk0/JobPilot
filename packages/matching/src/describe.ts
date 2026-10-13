@@ -1,3 +1,4 @@
+import { redactContacts } from "@jobpilot/contacts";
 import type {
    Language,
    Location,
@@ -7,7 +8,6 @@ import type {
    Seniority,
    WorkMode,
 } from "@jobpilot/contracts";
-import { redactContacts } from "./redact.js";
 
 // How the candidate and a vacancy are written into prompts: shared by scoring and application answers.
 

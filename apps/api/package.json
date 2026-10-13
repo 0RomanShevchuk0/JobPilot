@@ -9,6 +9,7 @@
       "typecheck": "tsc --noEmit"
    },
    "dependencies": {
+      "@jobpilot/contacts": "workspace:*",
       "@jobpilot/contracts": "workspace:*",
       "@jobpilot/db": "workspace:*",
       "@jobpilot/llm": "workspace:*",

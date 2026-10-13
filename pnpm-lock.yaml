@@ -178,6 +178,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@jobpilot/contacts':
+        specifier: workspace:*
+        version: link:../../packages/contacts
       '@jobpilot/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -335,6 +338,19 @@ importers:
         specifier: ~6.0.3
         version: 6.0.3
 
+  packages/contacts:
+    dependencies:
+      '@jobpilot/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^5.0.2
+        version: 5.0.2(@types/node@24.13.6)(vite@8.3.1(@types/node@24.13.6)(esbuild@0.28.2)(tsx@4.23.15))
+
   packages/contracts:
     dependencies:
       zod:
@@ -388,6 +404,9 @@ importers:
 
   packages/matching:
     dependencies:
+      '@jobpilot/contacts':
+        specifier: workspace:*
+        version: link:../contacts
       '@jobpilot/contracts':
         specifier: workspace:*
         version: link:../contracts

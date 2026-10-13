@@ -72,10 +72,11 @@ export const profileSchema = z.object({
 export type Profile = z.infer<typeof profileSchema>;
 
 /**
- * The profile fields a model fills from the CV (POST /profile/from-cv): the form puts them into its
- * empty fields, the user saves. No contacts: the CV goes to the model without them.
+ * The profile fields read from the CV (POST /profile/from-cv): the form puts them into its empty
+ * fields, the user saves. Contacts are found by patterns, the rest by a model that never sees them.
  */
 export const profileFromCvSchema = profileSchema.pick({
+   contacts: true,
    titles: true,
    experienceYears: true,
    skills: true,

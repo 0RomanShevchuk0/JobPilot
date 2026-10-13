@@ -89,11 +89,22 @@ export function fromProfile(saved?: Profile): ProfileDraft {
    };
 }
 
-/** The fields read from the CV put into the form where it is empty: what is typed there stays. */
+/**
+ * The fields read from the CV put into the form where it is empty: what is typed there stays. A link
+ * goes in when none of its name ("linkedin", any case) is there.
+ */
 export function fillFromCv(draft: ProfileDraft, fromCv: ProfileFromCv): ProfileDraft {
    const cv = fromProfile(profileSchema.parse(fromCv));
+   const linkNames = new Set(draft.contacts.links.map((l) => l.name.trim().toLowerCase()));
+   const newLinks = cv.contacts.links.filter((l) => !linkNames.has(l.name));
    return {
       ...draft,
+      contacts: {
+         ...draft.contacts,
+         email: draft.contacts.email.trim() ? draft.contacts.email : cv.contacts.email,
+         phone: draft.contacts.phone.trim() ? draft.contacts.phone : cv.contacts.phone,
+         links: [...draft.contacts.links, ...newLinks],
+      },
       titles: draft.titles.length > 0 ? draft.titles : cv.titles,
       experienceYears: draft.experienceYears.trim() ? draft.experienceYears : cv.experienceYears,
       skills: draft.skills.length > 0 ? draft.skills : cv.skills,

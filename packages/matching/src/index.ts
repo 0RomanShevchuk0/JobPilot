@@ -1,6 +1,5 @@
 export { picksNewCategories, sameForMatching } from "./matching-input.js";
 export { prefilter, type VacancyForPrefilter } from "./prefilter.js";
-export { redactContacts } from "./redact.js";
 export { toUsdPerMonth } from "./salary.js";
 export { applyHardLimits, buildScoringRequest, SCORING_PROMPT_VERSION } from "./scoring.js";
 export type { VacancyForPrompt } from "./describe.js";
