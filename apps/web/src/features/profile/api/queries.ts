@@ -29,7 +29,7 @@ export function useSaveProfile() {
 }
 
 /**
- * Profile fields an AI reads from the CV, checked against the schema the profile is saved with. Saves
+ * Profile fields read from the CV, checked against the schema the profile is saved with. Saves
  * nothing: the form fills its empty fields, the user saves.
  */
 export function useProfileFromCv() {
