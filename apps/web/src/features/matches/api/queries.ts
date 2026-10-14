@@ -1,5 +1,11 @@
 import type { MatchDetails, MatchListPage, MatchStatus } from "@jobpilot/contracts";
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+   type InfiniteData,
+   useInfiniteQuery,
+   useMutation,
+   useQuery,
+   useQueryClient,
+} from "@tanstack/react-query";
 import { apiGet, apiPatch } from "../../../shared/api/client";
 import { queryKeys } from "../../../shared/api/queryKeys";
 
@@ -38,7 +44,31 @@ export function useMarkMatch(vacancyId: string) {
    const queryClient = useQueryClient();
    return useMutation({
       mutationFn: (status: MatchStatus) => apiPatch(`/matches/${vacancyId}`, { status }),
-      // the vacancy moves to another tab: every list may have changed, and its own page
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.matches.all }),
+      onSuccess: () => {
+         // the vacancy leaves the list it was in: taken out of the loaded pages, not every page
+         // reloaded. A next page still starts after it: the API reads where it stands from the table
+         queryClient.setQueriesData<InfiniteData<MatchListPage>>(
+            { queryKey: queryKeys.matches.lists },
+            (data) => data && withoutVacancy(data, vacancyId),
+         );
+         // the list it moves to isn't shown now: it loads anew when opened
+         void queryClient.invalidateQueries({
+            queryKey: queryKeys.matches.lists,
+            type: "inactive",
+         });
+         void queryClient.invalidateQueries({ queryKey: queryKeys.matches.details(vacancyId) });
+      },
    });
+}
+
+/** The loaded pages of a list without the vacancy. */
+function withoutVacancy(
+   data: InfiniteData<MatchListPage>,
+   vacancyId: string,
+): InfiniteData<MatchListPage> {
+   const pages = data.pages.map((page) => ({
+      ...page,
+      items: page.items.filter((match) => match.vacancyId !== vacancyId),
+   }));
+   return { ...data, pages };
 }
