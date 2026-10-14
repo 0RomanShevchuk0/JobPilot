@@ -166,6 +166,13 @@ export interface MatchListItem {
    application: MatchApplication | null;
 }
 
+/** A page of GET /matches. */
+export interface MatchListPage {
+   items: MatchListItem[];
+   /** what to pass as ?after= for the next page; null on the last one */
+   nextCursor: string | null;
+}
+
 /** One vacancy in GET /matches/:vacancyId: the list item plus what only its own page shows. */
 export interface MatchDetails extends MatchListItem {
    description: string; // markdown

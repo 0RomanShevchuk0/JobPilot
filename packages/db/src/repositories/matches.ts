@@ -55,13 +55,16 @@ export interface MatchListOptions {
    status: MatchStatus;
    /** new vacancies only: add AI skips, prefilter rejections and the ones waiting for a score */
    includeSkipped: boolean;
+   /** the last vacancy of the previous page: the list goes on after it; absent = from the top */
+   after?: string;
+   limit: number;
 }
 
 export interface MatchesRepository {
    /**
-    * Open vacancies evaluated for the user's current profile version, best score first. New ones are
-    * by default only those worth a look (verdict apply or stretch); marked ones are listed whatever
-    * their verdict, since the user has already decided about them.
+    * Open vacancies evaluated for the user's current profile version, best score first, a page at a
+    * time. New ones are by default only those worth a look (verdict apply or stretch); marked ones are
+    * listed whatever their verdict, since the user has already decided about them.
     */
    listForUser(userId: string, options: MatchListOptions): Promise<MatchListItem[]>;
    /**
@@ -139,7 +142,13 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
             .innerJoin(vacancies, eq(vacancies.id, vacancyMatches.vacancyId))
             .leftJoin(companies, eq(companies.id, vacancies.companyId))
             .where(and(eq(vacancyMatches.userId, userId), condition))
-            .orderBy(sql`${vacancyMatches.score} desc nulls last`, desc(vacancyMatches.evaluatedAt))
+            // best score first, unscored (null) as -1 below any score; then the latest evaluated; the id
+            // last, so that no two tie. listForUser pages by the same three columns
+            .orderBy(
+               sql`coalesce(${vacancyMatches.score}, -1) desc`,
+               desc(vacancyMatches.evaluatedAt),
+               desc(vacancyMatches.vacancyId),
+            )
       );
    }
 
@@ -212,10 +221,19 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
    }
 
    return {
-      async listForUser(userId, { status, includeSkipped }) {
+      async listForUser(userId, { status, includeSkipped, after, limit }) {
          const verdict = sql`${vacancyMatches.analysis}->'ai'->>'verdict'`;
          // absent when the job site wasn't asked: such vacancies stay
          const canApply = sql`(${vacancyMatches.analysis}->'applyCheck'->>'canApply') is distinct from 'false'`;
+         // the next page: what comes below the last vacancy shown, in the order of selectMatches.
+         // (a, b, c) < (x, y, z) compares like words: b only when a ties, c only when b does. Its
+         // values are read from the table, not sent by the client: JS dates would drop microseconds
+         const belowLastShown = sql`
+            (coalesce(${vacancyMatches.score}, -1), ${vacancyMatches.evaluatedAt}, ${vacancyMatches.vacancyId}) < (
+               select coalesce(last_shown.score, -1), last_shown.evaluated_at, last_shown.vacancy_id
+               from vacancy_matches last_shown
+               where last_shown.user_id = ${userId} and last_shown.vacancy_id = ${after}
+            )`;
          const rows = await selectMatches(
             userId,
             and(
@@ -228,8 +246,9 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
                   : undefined,
                // what the job site won't let me apply to is no use among the new ones
                status === null && !includeSkipped ? canApply : undefined,
+               after ? belowLastShown : undefined,
             ),
-         );
+         ).limit(limit);
          return toListItems(userId, rows);
       },
 
