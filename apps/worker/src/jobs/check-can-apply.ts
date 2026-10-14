@@ -13,7 +13,7 @@ import type { Job, Queue } from "bullmq";
 import { loginHint } from "../config.js";
 import { log } from "../log.js";
 import { buildVacancyJobOptions, scoreVacancyJobOptions } from "../queues.js";
-import { loadSession } from "../session.js";
+import { canUseSessionOf, loadSession } from "../session.js";
 import { findSource } from "../sources.js";
 
 /**
@@ -107,7 +107,10 @@ function combineChecks(
    return { applyCheck, salaryFit };
 }
 
-/** Asks the posting's job site; undefined when it can't be asked: no session, or it's over. */
+/**
+ * Asks the posting's job site; undefined when it can't be asked: no session, it's over, or it is on
+ * another machine (left as it is, see canUseSessionOf).
+ */
 async function checkJobPage(
    posting: { source: string; url: string },
    userId: string,
@@ -115,6 +118,7 @@ async function checkJobPage(
 ): Promise<JobPageResult | undefined> {
    const entry = findSource(posting.source);
    if (!entry) throw new Error(`no adapter for source ${posting.source}`);
+   if (!(await canUseSessionOf(database, userId))) return undefined;
    try {
       const session = await loadSession(database, userId, entry);
       const result = await entry.adapter.account.checkJobPage(posting.url, session);
