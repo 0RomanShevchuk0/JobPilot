@@ -5,6 +5,7 @@
 export const queryKeys = {
    matches: {
       all: ["matches"] as const,
+      lists: ["matches", "list"] as const,
       list: (filter: { status: string; includeSkipped: boolean }) =>
          ["matches", "list", filter] as const,
       details: (vacancyId: string) => ["matches", "details", vacancyId] as const,
