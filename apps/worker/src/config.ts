@@ -22,6 +22,8 @@ export const config = {
    sessionsDir: "../../.data/sessions",
    // the server's only: decrypts the users' sessions in the database (see SESSION_PUBLIC_KEY)
    sessionPrivateKey: role === "server" ? required("SESSION_PRIVATE_KEY") : undefined,
+   // a local worker's only: the user whose sessions are on this machine, as for the API
+   userEmail: role === "local" ? required("USER_EMAIL") : undefined,
    // where document files live (the CV attached to applications): the same storage as the API's
    storage: {
       endpoint: required("S3_ENDPOINT"),
