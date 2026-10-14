@@ -3,6 +3,8 @@
 Finds jobs on Djinni and DOU, scores them against your profile and CV with an LLM, and fills in
 applications for you to review and send.
 
+https://github.com/user-attachments/assets/398b6d31-5c2e-4a5b-aaf4-2e83c86d9fd0
+
 ## Usage
 
 1. Fill in your profile and upload a CV in the web app.
@@ -11,7 +13,15 @@ applications for you to review and send.
 
 ## Setup
 
-Requirements: Node 24+, pnpm 12.6.0, Docker, Google Chrome; Claude Code for `LLM_PROVIDER=claude-cli`.
+Requirements:
+
+- **Node 24+** and **pnpm 12.6.0** (`corepack enable pnpm`).
+- **Docker**: local Postgres (pgvector) and Redis, `pnpm infra:up`.
+- **Google Chrome**: you log in to the job sites in it. Playwright's Chromium for headless runs comes with `pnpm install`.
+- **An LLM**, one of:
+  - `LLM_PROVIDER=claude-cli`: [Claude Code](https://docs.claude.com/en/docs/claude-code/setup) on your `PATH`, logged in to a Claude subscription (run `claude` once).
+  - `LLM_PROVIDER=gemini`: a Gemini API key in `GEMINI_API_KEY`, the free tier is enough ([get one](https://aistudio.google.com/apikey)).
+- **S3-compatible storage** for the CV: a bucket and its keys in `S3_*`.
 
 ```sh
 git clone https://github.com/0RomanShevchuk0/JobPilot.git && cd JobPilot
