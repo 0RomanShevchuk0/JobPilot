@@ -3,7 +3,7 @@
 Finds jobs on Djinni and DOU, scores them against your profile and CV with an LLM, and fills in
 applications for you to review and send.
 
-https://github.com/user-attachments/assets/398b6d31-5c2e-4a5b-aaf4-2e83c86d9fd0
+https://github.com/user-attachments/assets/1646f34f-7da3-4c24-9d31-3d705bb6a888
 
 ## Usage
 
