@@ -10,6 +10,8 @@ const listQuerySchema = z.object({
    status: z.enum(["new", "applied", "hidden"]).default("new"),
    /** new vacancies only: "skipped" adds AI skips, prefilter rejections and the ones waiting for a score */
    include: z.literal("skipped").optional(),
+   /** the nextCursor of the previous page; absent = the first page */
+   after: z.uuid().optional(),
 });
 
 const statusBodySchema = z.object({
@@ -24,7 +26,7 @@ export class MatchesController {
       private readonly user: CurrentUser,
    ) {}
 
-   /** Vacancies evaluated for my current profile, best first. */
+   /** Vacancies evaluated for my current profile, best first, a page at a time. */
    @Get()
    async list(
       @Query(new ZodValidationPipe(listQuerySchema)) query: z.infer<typeof listQuerySchema>,
@@ -33,6 +35,7 @@ export class MatchesController {
       return this.matches.list(userId, {
          status: query.status === "new" ? null : query.status,
          includeSkipped: query.include === "skipped",
+         after: query.after,
       });
    }
 
