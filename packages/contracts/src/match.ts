@@ -77,7 +77,7 @@ export type ApplyCheck = { canApply: true } | { canApply: false; reason: string 
 /**
  * How the job's salary range compares with the expectations in the user's profile on the job site.
  * The site says so even when it hides the range, which is most of the time. fits includes a range above
- * the expectations: the site words it differently but marks it the same way.
+ * the expectations.
  */
 export type SalaryFit = "fits" | "below_expectations";
 
