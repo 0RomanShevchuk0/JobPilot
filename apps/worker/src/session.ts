@@ -1,7 +1,8 @@
 import { SessionExpiredError, type SiteSession } from "@jobpilot/contracts";
 import type { DatabaseClient } from "@jobpilot/db";
-import { decryptSession, readSessionFile } from "@jobpilot/sources";
-import { config, SESSION_PUBLIC_KEY, sessionPath } from "./config.js";
+import { decryptSession, SESSION_PUBLIC_KEY } from "@jobpilot/session-crypto";
+import { readSessionFile } from "@jobpilot/sources";
+import { config, sessionPath } from "./config.js";
 import type { SourceEntry } from "./sources.js";
 
 let localUserId: string | undefined;
