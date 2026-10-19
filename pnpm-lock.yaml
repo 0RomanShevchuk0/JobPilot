@@ -321,6 +321,9 @@ importers:
       '@jobpilot/matching':
         specifier: workspace:*
         version: link:../../packages/matching
+      '@jobpilot/session-crypto':
+        specifier: workspace:*
+        version: link:../../packages/session-crypto
       '@jobpilot/sources':
         specifier: workspace:*
         version: link:../../packages/sources
@@ -436,6 +439,25 @@ importers:
         specifier: ^5.0.2
         version: 5.0.2(@types/node@24.13.6)(vite@8.3.1(@types/node@24.13.6)(esbuild@0.28.2)(tsx@4.23.15))
 
+  packages/session-crypto:
+    dependencies:
+      libsodium-wrappers:
+        specifier: ^0.8.4
+        version: 0.8.4
+    devDependencies:
+      '@types/libsodium-wrappers':
+        specifier: ^0.8.2
+        version: 0.8.2
+      '@types/node':
+        specifier: ^24.13.6
+        version: 24.13.6
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^5.0.2
+        version: 5.0.2(@types/node@24.13.6)(vite@8.3.1(@types/node@24.13.6)(esbuild@0.28.2)(tsx@4.23.15))
+
   packages/sources:
     dependencies:
       '@jobpilot/contracts':
@@ -450,9 +472,6 @@ importers:
       fast-xml-parser:
         specifier: ^5.11.1
         version: 5.11.1
-      libsodium-wrappers:
-        specifier: ^0.8.4
-        version: 0.8.4
       playwright:
         specifier: ^1.63.0
         version: 1.63.0
@@ -460,9 +479,6 @@ importers:
         specifier: ^7.2.4
         version: 7.2.4
     devDependencies:
-      '@types/libsodium-wrappers':
-        specifier: ^0.8.2
-        version: 0.8.2
       '@types/node':
         specifier: ^24.13.6
         version: 24.13.6

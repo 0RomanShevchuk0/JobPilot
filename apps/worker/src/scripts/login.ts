@@ -4,9 +4,9 @@
 // Usage: pnpm login:<source>, e.g. pnpm login:djinni. Run it again whenever the source logs you out.
 // Not `pnpm login`: that is pnpm's own command, logging in to the npm registry.
 import { createDatabase } from "@jobpilot/db";
-import { encryptSession } from "@jobpilot/sources";
+import { encryptSession, SESSION_PUBLIC_KEY } from "@jobpilot/session-crypto";
 import { readFile } from "node:fs/promises";
-import { config, SESSION_PUBLIC_KEY, sessionPath } from "../config.js";
+import { config, sessionPath } from "../config.js";
 import { findSource, sources } from "../sources.js";
 import { scriptUserId } from "./script-user.js";
 
@@ -18,7 +18,7 @@ if (!entry) {
 }
 if (!SESSION_PUBLIC_KEY) {
    throw new Error(
-      "SESSION_PUBLIC_KEY in config.ts is empty: run pnpm session-keys:generate first",
+      "SESSION_PUBLIC_KEY in @jobpilot/session-crypto is empty: run pnpm session-keys:generate first",
    );
 }
 
