@@ -193,6 +193,9 @@ importers:
       '@jobpilot/matching':
         specifier: workspace:*
         version: link:../../packages/matching
+      '@jobpilot/session-crypto':
+        specifier: workspace:*
+        version: link:../../packages/session-crypto
       '@jobpilot/storage':
         specifier: workspace:*
         version: link:../../packages/storage
