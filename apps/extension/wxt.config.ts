@@ -6,6 +6,9 @@ export default defineConfig({
    // with the other packages' builds: gitignored, prettier skips it, turbo caches it.
    // `pnpm dev` writes dist/chrome-mv3-dev: load that folder in chrome://extensions
    outDir: "dist",
+   // the dev build's CSP lets in scripts from this port only: a second `pnpm dev` fails instead of
+   // moving to the next port, where the loaded extension couldn't run its scripts
+   dev: { server: { port: 3399, strictPort: true } },
    manifest: {
       name: "JobPilot",
       // the public half of an RSA key (not a secret; the private half isn't kept, nothing needs it):

@@ -1,4 +1,5 @@
 import { browser } from "wxt/browser";
+import { fetchExpiredSessions } from "../../utils/api.js";
 import { SITES } from "../../utils/sites.js";
 import {
    type LastSync,
@@ -41,12 +42,24 @@ function describe(lastSync: LastSync | undefined): string {
    }
 }
 
-/** Each site's last sending, by the button or by itself (a login, a retry). */
+/**
+ * Each site's last sending, by the button or by itself (a login, a retry), and whether the session works:
+ * the login cookie being there doesn't say, the site can log you out on its side. Only the server's
+ * worker finds that out, using it; nothing is shown about it while the API isn't running.
+ */
 async function render(): Promise<void> {
-   const lastSyncs = await readLastSyncs();
+   const [lastSyncs, expired] = await Promise.all([readLastSyncs(), fetchExpiredSessions()]);
    const items = SITES.map((site, i) => {
       const item = document.createElement("li");
       item.textContent = `${site.name}: ${describe(lastSyncs[i])}`;
+      const loggedOut = expired?.find((e) => e.source === site.source);
+      if (loggedOut) {
+         const warning = document.createElement("div");
+         warning.style.color = "#b45309";
+         const since = formatTime(Date.parse(loggedOut.expiredAt));
+         warning.textContent = `the site logged you out (found ${since}): log in there again`;
+         item.append(warning);
+      }
       return item;
    });
    list.replaceChildren(...items);

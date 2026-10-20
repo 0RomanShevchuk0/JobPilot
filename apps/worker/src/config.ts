@@ -49,5 +49,7 @@ export function sessionPath(userId: string, source: string): string {
 
 /** How the user logs in to a source again, for messages about a missing or expired session. */
 export function loginHint(source: string): string {
+   // the server's worker gets the session the extension sends; a local one reads the file login saves
+   if (config.role === "server") return "log in to the site in Chrome with the JobPilot extension";
    return `run \`pnpm login:${source}\` in apps/worker`;
 }
