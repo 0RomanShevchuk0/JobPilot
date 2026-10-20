@@ -12,16 +12,10 @@ import type { Page } from "playwright";
 import { fieldKind } from "../form-field-kind.js";
 import { getText } from "../http.js";
 import { sessionCookieHeader } from "../saved-session.js";
-import {
-   APPLY_BUTTON_SELECTOR,
-   applyCheckOnPage,
-   readApplyCheck,
-   SIGN_IN_LINK_SELECTOR,
-} from "./account-page.js";
+import { applyCheckOnPage, readApplyCheck } from "./account-page.js";
+import { APPLY_BUTTON_SELECTOR, APPLY_FORM_SELECTOR, SIGN_IN_LINK_SELECTOR } from "./selectors.js";
 import { DJINNI_BASE_URL, DJINNI_NAME } from "./site.js";
 
-// Djinni's application form: in the page from the start, hidden until "Apply for the job" is pressed
-const APPLY_FORM_SELECTOR = "#apply_form";
 // Djinni names the recruiter's questions after their id: "answer_167872"
 const QUESTION_NAME = /^answer_\d+$/;
 // what holds a group of radios or checkboxes with its title

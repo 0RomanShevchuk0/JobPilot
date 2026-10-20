@@ -8,12 +8,9 @@ import {
 import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
 import { sessionCookieHeader } from "../saved-session.js";
+import { APPLY_BUTTON_SELECTOR, SIGN_IN_LINK_SELECTOR } from "./selectors.js";
 import { DJINNI_BASE_URL, DJINNI_NAME } from "./site.js";
 
-// "Apply for the job": in the page's HTML from the start, no waiting for it
-export const APPLY_BUTTON_SELECTOR = "button.js-inbox-toggle-reply-form";
-// a page loaded without a valid session offers to sign in
-export const SIGN_IN_LINK_SELECTOR = "a.sign-in-link";
 // on a job applied to already, a card with a link to that dialog replaces the button
 const ALREADY_APPLIED_SELECTOR = '.card-body a[href^="/my/inbox/"]';
 // on a closed job, an alert after the empty apply block: "The job ad is no longer active"

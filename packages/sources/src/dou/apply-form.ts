@@ -11,10 +11,8 @@ import { fieldKind } from "../form-field-kind.js";
 import { getText } from "../http.js";
 import { sessionCookieHeader } from "../saved-session.js";
 import { readJobPage } from "./account-page.js";
-import { EXTERNAL_APPLY_SELECTOR } from "./job-page.js";
+import { APPLY_FORM_SELECTOR, EXTERNAL_APPLY_SELECTOR } from "./selectors.js";
 
-// DOU's application form: in the page from the start, hidden until "Відгукнутися" is pressed
-export const APPLY_FORM_SELECTOR = "form#replied-id";
 // "Напишіть трохи про себе і про те, чому вакансія вам підходить": the message to the recruiter
 const MESSAGE_NAME = "descr";
 // "Прикріпіть резюме": DOU won't send the form without a CV, unless the message has a link

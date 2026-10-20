@@ -10,6 +10,10 @@
       "./catalog": {
          "types": "./dist/catalog.d.ts",
          "default": "./dist/catalog.js"
+      },
+      "./page": {
+         "types": "./dist/page.d.ts",
+         "default": "./dist/page.js"
       }
    },
    "scripts": {
