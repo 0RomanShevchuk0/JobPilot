@@ -24,11 +24,12 @@ Google каждый раз заново), а форму отклика запо�
 
 1. [ ] Синхронизация сессии вместо `pnpm login` (~1–2 дня)
    - `chrome.cookies.getAll` по домену площадки → `SiteSession` (куки уже почти в этом формате)
-   - шифрует тем же sealed box (`libsodium-wrappers` работает в браузере), `SESSION_PUBLIC_KEY`
-   - `POST /sources/:source/session` → `source_sessions`, снимает пометку «expired»
-   - `chrome.cookies.onChanged` → отправить заново: сессия обновляется сама, вход через Google
-     в своём Chrome перестаёт быть проблемой
-   - пока API локальный — шлёт на `localhost`
+   - `PUT /sources/:source/session` → шифрует API (`@jobpilot/session-crypto`), расширение шлёт
+     открытую сессию на `localhost` → `source_sessions`, снимает пометку «expired»
+   - `chrome.cookies.onChanged` по куке входа → отправить заново: сессия обновляется сама, вход
+     через Google в своём Chrome перестаёт быть проблемой
+   - локальный воркер (отклик в окне) читает файл в `.data/sessions`: до шага 4 локальный API пишет
+     его вместе с базой, как `pnpm login:<source>` (`saveLocalSessionFile` в `sources.service.ts`)
 2. [ ] Djinni: форма отклика по HTTP, как у DOU (~1 день)
    - `readDjinniApplyForm` открывает Chromium, а в образе воркера браузеров нет
      (`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`): готовить отклики может только локальный воркер
@@ -43,8 +44,8 @@ Google каждый раз заново), а форму отклика запо�
      `cancelled`, вакансия → Applied, как сейчас
    - Djinni и DOU — у каждой своя логика открытия формы и признак отправки
 4. [ ] Убрать локальный режим воркера
-   - `WORKER_ROLE=local`, файлы сессий в `.data/sessions`, `pnpm login:<source>`, `loginInChrome`,
-     Playwright и `CHROME_PATHS` из воркера, раздел про вход в README
+   - `WORKER_ROLE=local`, файлы сессий в `.data/sessions` (и их запись в API), `pnpm login:<source>`,
+     `loginInChrome`, Playwright и `CHROME_PATHS` из воркера, раздел про вход в README
 5. [ ] (потом, накладно, ~неделя) API и веб на сервере — пользоваться с любого устройства без
        локального запуска
    - вместе с ним авторизация вместо `USER_EMAIL`: до сервера у знакомых и так полный доступ к базе
