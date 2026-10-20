@@ -247,6 +247,10 @@ importers:
         version: 6.0.3
 
   apps/extension:
+    dependencies:
+      '@jobpilot/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
     devDependencies:
       typescript:
         specifier: ~6.0.3
