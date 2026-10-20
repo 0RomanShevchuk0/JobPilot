@@ -1,12 +1,18 @@
 import { browser } from "wxt/browser";
 import { defineBackground } from "wxt/utils/define-background";
 import { isSiteCookie, SITES } from "../utils/sites.js";
-import { RESEND_ALARM, resendUnsent, syncSession } from "../utils/sync-session.js";
+import {
+   RESEND_ALARM,
+   resendUnsent,
+   SYNC_ALL_MESSAGE,
+   syncAllSessions,
+   syncSession,
+} from "../utils/sync-session.js";
 
 export default defineBackground(() => {
    // installed, updated or reloaded: a user logged in long before has a session that won't change soon
    browser.runtime.onInstalled.addListener(async () => {
-      await Promise.all(SITES.map(syncSession));
+      await syncAllSessions();
    });
 
    // logged in again, or the site renewed the login: the server's worker gets the new one.
@@ -24,4 +30,12 @@ export default defineBackground(() => {
 
    // Chrome may drop alarms when it restarts, the unsent marks in storage stay: picked up again here
    browser.runtime.onStartup.addListener(resendUnsent);
+
+   // the popup's button. Sent from here, not the popup: closing the popup would cut the requests off.
+   // `true` keeps the channel open for the answer that comes after the requests
+   browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      if (message !== SYNC_ALL_MESSAGE) return;
+      syncAllSessions().then(sendResponse);
+      return true;
+   });
 });

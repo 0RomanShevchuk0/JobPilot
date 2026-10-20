@@ -25,6 +25,14 @@ export async function syncSession(site: Site): Promise<SendResult> {
    return result;
 }
 
+/** What the popup asks the background for: send every site's session now. */
+export const SYNC_ALL_MESSAGE = "sync-all-sessions";
+
+/** Every site's session sent, each with how it went, in SITES order. */
+export function syncAllSessions(): Promise<SendResult[]> {
+   return Promise.all(SITES.map(syncSession));
+}
+
 /** The sessions that didn't go through, sent again; the alarm stops once none are left. */
 export async function resendUnsent(): Promise<void> {
    const marks = await browser.storage.local.get(SITES.map(unsentKey));
