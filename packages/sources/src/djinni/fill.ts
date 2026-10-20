@@ -5,10 +5,9 @@ import { fillFields, SLOW_MO_MS, waitForUser } from "../form-filling.js";
 import { openSessionContext } from "../saved-session.js";
 import { readApplyCheck } from "./account-page.js";
 import { openApplyForm } from "./apply-form.js";
+import { djinniPage } from "./page.js";
+import { APPLY_FORM_SELECTOR, SEND_BUTTON_SELECTOR } from "./selectors.js";
 import { DJINNI_NAME } from "./site.js";
-
-// "https://djinni.co/jobs/850626-full-stack-…/" → "850626"
-const JOB_ID_IN_URL = /\/jobs\/(\d+)-/;
 
 /**
  * Opens a job's application form in a visible browser with the user's session, fills in the values and
@@ -37,8 +36,8 @@ async function fillForm(
    const page = await context.newPage();
    try {
       await openApplyForm(page, jobUrl);
-      await fillFields(page.locator("#apply_form"), values);
-      await page.locator("#job_apply").scrollIntoViewIfNeeded();
+      await fillFields(page.locator(APPLY_FORM_SELECTOR), values);
+      await page.locator(SEND_BUTTON_SELECTOR).scrollIntoViewIfNeeded();
    } catch (err) {
       // the user closed the window before the form was filled in: nothing was sent, as after filling
       if (page.isClosed()) return { status: "cancelled" };
@@ -46,11 +45,9 @@ async function fillForm(
       throw err;
    }
 
-   const jobId = JOB_ID_IN_URL.exec(jobUrl)?.[1];
-   if (!jobId) throw new Error(`not a Djinni job URL: ${jobUrl}`);
-   // pressing "Send application" posts the form to the job's own page
-   const isSending = (request: Request) => request.url().includes(`/jobs/${jobId}`);
-   return waitForUser(page, isSending, DJINNI_NAME, isApplied);
+   const isFormSubmission = (request: Request) =>
+      djinniPage.isFormSubmission(request.url(), jobUrl);
+   return waitForUser(page, isFormSubmission, DJINNI_NAME, isApplied);
 }
 
 /**

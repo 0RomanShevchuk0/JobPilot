@@ -63,17 +63,17 @@ async function fillField(form: Locator, { name, kind, value }: FillValue): Promi
 }
 
 /**
- * Waits for the user with the filled-in form: a POST that isSending tells apart is them sending it
+ * Waits for the user with the filled-in form: a POST that isFormSubmission tells apart is them sending it
  * (any status below 400: sites answer a form post with a redirect); the page closing is them giving up,
  * and so is the window sitting too long. A site that answers a rejected form with the same form and its
- * errors (status 200 all the same) gets isAccepted: the page it answered with is checked, and while it
+ * errors (status 200 all the same) gets isFormAccepted: the page it answered with is checked, and while it
  * shows the form back, the user is waited for again, to fix it and send once more.
  */
 export function waitForUser(
    page: Page,
-   isSending: (request: Request) => boolean,
+   isFormSubmission: (request: Request) => boolean,
    siteName: string,
-   isAccepted?: (page: Page) => Promise<boolean>,
+   isFormAccepted?: (page: Page) => Promise<boolean>,
 ): Promise<FillOutcome> {
    return new Promise((resolve, reject) => {
       let done = false;
@@ -90,14 +90,14 @@ export function waitForUser(
       page.on("close", () => finish(() => resolve({ status: "cancelled" })));
       page.on("response", (response) => {
          const request = response.request();
-         if (request.method() !== "POST" || !isSending(request)) return;
+         if (request.method() !== "POST" || !isFormSubmission(request)) return;
          if (response.status() >= 400) {
             finish(() =>
                reject(new Error(`${siteName} answered ${response.status()} to the application`)),
             );
             return;
          }
-         void wasAccepted(page, isAccepted).then((accepted) => {
+         void wasAccepted(page, isFormAccepted).then((accepted) => {
             // rejected: the form is back on screen with the site's errors, for the user to fix
             if (!accepted) return;
             // sent: from here on it counts as submitted, whatever happens to the page
@@ -108,17 +108,17 @@ export function waitForUser(
 }
 
 /**
- * Whether the site took the form: by the page it answered with, once loaded. Without isAccepted, or
+ * Whether the site took the form: by the page it answered with, once loaded. Without isFormAccepted, or
  * with the page closed before it loaded, the post going through is all there is to go by.
  */
 async function wasAccepted(
    page: Page,
-   isAccepted: ((page: Page) => Promise<boolean>) | undefined,
+   isFormAccepted: ((page: Page) => Promise<boolean>) | undefined,
 ): Promise<boolean> {
-   if (!isAccepted) return true;
+   if (!isFormAccepted) return true;
    try {
       await page.waitForEvent("load");
-      return await isAccepted(page);
+      return await isFormAccepted(page);
    } catch {
       return true;
    }

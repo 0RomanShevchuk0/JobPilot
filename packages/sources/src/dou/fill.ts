@@ -3,12 +3,15 @@ import type { BrowserContext, Page, Request } from "playwright";
 import { launchBrowser } from "../browser.js";
 import { fillFields, SLOW_MO_MS, waitForUser } from "../form-filling.js";
 import { openSessionContext } from "../saved-session.js";
-import { APPLY_BUTTON_SELECTOR } from "./account-page.js";
-import { APPLY_FORM_SELECTOR, checkFormToFill } from "./apply-form.js";
+import { checkFormToFill } from "./apply-form.js";
+import { douPage } from "./page.js";
+import {
+   ALREADY_APPLIED_SELECTOR,
+   APPLY_BUTTON_SELECTOR,
+   APPLY_FORM_SELECTOR,
+   SEND_BUTTON_SELECTOR,
+} from "./selectors.js";
 import { DOU_NAME } from "./site.js";
-
-// "Відправити": the user presses it themselves
-const SEND_BUTTON_SELECTOR = ".replied-btn.send";
 
 /**
  * Opens a job's application form in a visible browser with the user's session, fills in the values
@@ -48,10 +51,14 @@ async function fillForm(
       throw err;
    }
 
-   // the form has no action: "Відправити" posts it to the job's own page
-   const jobPath = new URL(page.url()).pathname;
-   const isSending = (request: Request) => new URL(request.url()).pathname === jobPath;
-   return waitForUser(page, isSending, DOU_NAME);
+   const isFormSubmission = (request: Request) =>
+      douPage.isFormSubmission(request.url(), page.url());
+   return waitForUser(page, isFormSubmission, DOU_NAME, isApplied);
+}
+
+/** Whether the page DOU answered the post with has the application through: the form there is marked sent. */
+async function isApplied(page: Page): Promise<boolean> {
+   return (await page.locator(ALREADY_APPLIED_SELECTOR).count()) > 0;
 }
 
 /** Opens a job page with the user's session and presses "Відгукнутися": the form is then on screen. */

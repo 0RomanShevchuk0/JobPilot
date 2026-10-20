@@ -7,6 +7,7 @@ import {
 import * as cheerio from "cheerio";
 import TurndownService from "turndown";
 import { kyivTimeToIso } from "../kyiv-time.js";
+import { EXTERNAL_APPLY_SELECTOR } from "./selectors.js";
 import { DOU_ID } from "./site.js";
 
 // DOU has no JobPosting JSON-LD: everything comes from the markup. Pages are always in Ukrainian,
@@ -26,8 +27,6 @@ const PLACES_SELECTOR = ".l-vacancy .sh-info .place";
 const SALARY_SELECTOR = ".l-vacancy .sh-info .salary";
 // "Всі вакансії / Node.js / Львів": the category link has ?category= and nothing else
 const BREADCRUMB_LINKS_SELECTOR = "li.breadcrumbs a";
-// applying goes through DOU's redirect to the employer's site or ATS
-export const EXTERNAL_APPLY_SELECTOR = ".reply a.replied-external";
 // applying on DOU; without a session the link only offers to sign in
 const ON_SITE_APPLY_SELECTOR = ".reply #relogin-link";
 
