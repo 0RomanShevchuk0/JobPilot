@@ -5,7 +5,8 @@ import type { Site } from "./sites.js";
 const API_URL = "http://localhost:4000";
 
 export type SendResult =
-   | { status: "sent" }
+   /** loginExpires: when the site's login cookie runs out, in seconds; -1 = when the browser closes */
+   | { status: "sent"; loginExpires: number }
    /** no login cookie on the site: nothing was sent */
    | { status: "logged out" }
    /** the API is down or refused it */
@@ -24,7 +25,8 @@ export async function sendSession(site: Site): Promise<SendResult> {
          body: JSON.stringify(session),
       });
       if (!response.ok) return { status: "failed", error: `API answered ${response.status}` };
-      return { status: "sent" };
+      const loginCookie = session.cookies.find((c) => c.name === site.loginCookie)!;
+      return { status: "sent", loginExpires: loginCookie.expires };
    } catch {
       return { status: "failed", error: "API is not running" };
    }
