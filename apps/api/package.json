@@ -14,6 +14,7 @@
       "@jobpilot/db": "workspace:*",
       "@jobpilot/llm": "workspace:*",
       "@jobpilot/matching": "workspace:*",
+      "@jobpilot/session-crypto": "workspace:*",
       "@jobpilot/storage": "workspace:*",
       "@nestjs/common": "^12.1.0",
       "@nestjs/config": "^12.0.1",

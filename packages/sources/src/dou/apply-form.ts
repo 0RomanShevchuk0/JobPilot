@@ -7,6 +7,7 @@ import {
 import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
 import type { Element } from "domhandler";
+import { fieldKind } from "../form-field-kind.js";
 import { getText } from "../http.js";
 import { sessionCookieHeader } from "../saved-session.js";
 import { readJobPage } from "./account-page.js";
@@ -84,7 +85,7 @@ function fieldOf($: CheerioAPI, el: Element): ApplyFormField | undefined {
    return {
       name,
       label: label.replace(/\s+/g, " ").trim(), // runs of whitespace → one space
-      kind: kindOf(type),
+      kind: fieldKind(type),
       required: input.attr("required") !== undefined,
       options:
          type === "select"
@@ -94,18 +95,4 @@ function fieldOf($: CheerioAPI, el: Element): ApplyFormField | undefined {
                  .map((o) => $(o).text().trim())
             : undefined,
    };
-}
-
-function kindOf(type: string): ApplyFormField["kind"] {
-   switch (type) {
-      case "textarea":
-      case "select":
-      case "file":
-      case "number":
-      case "radio":
-      case "checkbox":
-         return type;
-      default:
-         return "text"; // text, email, tel, url: typed in alike
-   }
 }

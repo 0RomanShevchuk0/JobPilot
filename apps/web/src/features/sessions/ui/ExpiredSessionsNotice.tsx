@@ -23,10 +23,9 @@ export function ExpiredSessionsNotice() {
                   </p>
                   <p className="mt-1">
                      Until you log in again, vacancies there are scored without checking whether you
-                     can apply, and applications can't be prepared. Run{" "}
-                     <code className="rounded bg-amber-100 px-1">pnpm login:{source}</code> in
-                     apps/worker and copy the session file it saves to the server, where it says.
-                     The warning goes away once the worker gets in with it.
+                     can apply, and applications can't be prepared. Log in to {name} in Chrome with
+                     the JobPilot extension: it sends the new session by itself (or press “Send
+                     sessions now” in its popup). The warning goes away once it does.
                   </p>
                </div>
             );

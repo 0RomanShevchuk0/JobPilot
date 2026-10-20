@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { ApplyForm, FillOutcome, FillValue } from "./application.js";
 import type { JobPageResult } from "./match.js";
 import type { NormalizedPosting, RawContentType } from "./posting.js";
@@ -53,20 +54,28 @@ export interface DiscoverParams {
 }
 
 /** A user's session on a job site: the site's cookies, as Playwright saves a browser's state. */
-export interface SiteSession {
-   cookies: {
-      name: string;
-      value: string;
-      domain: string;
-      path: string;
-      /** in seconds; -1 for a cookie that lives as long as the browser session */
-      expires: number;
-      httpOnly: boolean;
-      secure: boolean;
-      sameSite: "Strict" | "Lax" | "None";
-   }[];
-   origins: { origin: string; localStorage: { name: string; value: string }[] }[];
-}
+export const siteSessionSchema = z.object({
+   cookies: z.array(
+      z.object({
+         name: z.string(),
+         value: z.string(),
+         domain: z.string(),
+         path: z.string(),
+         /** in seconds; -1 for a cookie that lives as long as the browser session */
+         expires: z.number(),
+         httpOnly: z.boolean(),
+         secure: z.boolean(),
+         sameSite: z.enum(["Strict", "Lax", "None"]),
+      }),
+   ),
+   origins: z.array(
+      z.object({
+         origin: z.string(),
+         localStorage: z.array(z.object({ name: z.string(), value: z.string() })),
+      }),
+   ),
+});
+export type SiteSession = z.infer<typeof siteSessionSchema>;
 
 /** What the platform does under the user's own account on the source. */
 export interface SourceAccount {

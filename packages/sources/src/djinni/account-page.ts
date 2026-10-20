@@ -26,8 +26,13 @@ const FAILED_ICON = /#x-circle$/;
 const SIDEBAR_REQUIREMENTS_SELECTOR = "aside .job-matching-info > li";
 // the salary one is the only one quoting the profile's expectations: "Your expectations: $3000"
 const EXPECTATIONS = /\$\s?\d/;
-// its icon when the range covers the expectations or is above them: "…#check2-circle"
-const MET_ICON = /#check2-circle$/;
+// its icon is Djinni's verdict: the range covers the expectations, is above them ("Your salary
+// expectations are lower than the range"), or below them; "#dash-circle" when it gives none
+const SALARY_FIT_BY_ICON: Record<string, SalaryFit> = {
+   "check2-circle": "fits",
+   "question-circle": "fits",
+   "x-circle": "below_expectations",
+};
 
 // an ordinary desktop Chrome: the page is loaded as the user's own browser would
 const USER_AGENT =
@@ -43,7 +48,7 @@ export function readApplyCheck(html: string): ApplyCheck {
    return applyCheckOnPage($);
 }
 
-function applyCheckOnPage($: CheerioAPI): ApplyCheck {
+export function applyCheckOnPage($: CheerioAPI): ApplyCheck {
    if ($(APPLY_BUTTON_SELECTOR).length > 0) return { canApply: true };
    return { canApply: false, reason: whyNoApplyButton($) };
 }
@@ -90,12 +95,16 @@ export async function checkDjinniJobPage(
    return { status: "ok", check };
 }
 
-/** The salary against the profile's expectations, by the icon of its item; undefined when not shown. */
+/**
+ * The salary against the profile's expectations, by the icon of its item; undefined when not shown or
+ * Djinni gives no verdict.
+ */
 function salaryFitOnPage($: CheerioAPI): SalaryFit | undefined {
    const item = $(SIDEBAR_REQUIREMENTS_SELECTOR)
       .toArray()
       .find((li) => EXPECTATIONS.test($(li).text()));
    if (!item) return undefined;
    const icon = $(item).find("use").attr("href") ?? "";
-   return MET_ICON.test(icon) ? "fits" : "below_expectations";
+   const iconName = icon.split("#").pop() ?? ""; // "/static/icons/bootstrap-icons.svg#x-circle" → "x-circle"
+   return SALARY_FIT_BY_ICON[iconName];
 }
