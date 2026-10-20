@@ -1,7 +1,14 @@
 import { readFileSync } from "node:fs";
-import { normalizedPostingSchema, type RawPosting } from "@jobpilot/contracts";
+import * as cheerio from "cheerio";
+import {
+   CannotApplyError,
+   normalizedPostingSchema,
+   SessionExpiredError,
+   type RawPosting,
+} from "@jobpilot/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDjinniAdapter } from "./adapter.js";
+import { readApplyFormOnPage } from "./apply-form.js";
 import { kyivTimeToIso } from "../kyiv-time.js";
 import { isClosedPage, parseJobPage } from "./job-page.js";
 import { countryCode } from "./mappings.js";
@@ -243,5 +250,46 @@ describe("adapter.fetch", () => {
       const result = await createDjinniAdapter().fetch(ref);
       expect(result.status).toBe("ok");
       expect(result.status === "ok" && result.raw.contentType).toBe("html");
+   });
+});
+
+describe("apply form", () => {
+   // a logged-in job page saved on 2026-10-20, the user's own data taken out
+   const html = fixture("job-apply-form.html");
+
+   it("is read from the page as it comes, the recruiter's questions first", () => {
+      const form = readApplyFormOnPage(html);
+      expect(form.questions).toHaveLength(6);
+      for (const question of form.questions) {
+         expect(question.name).toMatch(/^answer_\d+$/);
+         expect(question).toMatchObject({ kind: "textarea", required: true });
+         expect(question.label).not.toBe("");
+      }
+      expect(form.message).toMatchObject({ name: "message", kind: "textarea" });
+      expect(form.html).toContain('id="apply_form"');
+   });
+
+   it("keeps the other inputs, without the hidden ones", () => {
+      const other = readApplyFormOnPage(html).other;
+      const byName = new Map(other.map((f) => [f.name, f]));
+      expect(byName.get("cv_file_upload_id")).toMatchObject({ kind: "select" });
+      expect(byName.get("cv_file_upload_id")?.options?.length).toBeGreaterThan(0);
+      expect(byName.get("salary_changed")).toMatchObject({ kind: "number" });
+      expect(byName.get("save_msg_template")).toMatchObject({ kind: "checkbox" });
+      expect(byName.get("msg_template_name")).toMatchObject({ kind: "text" });
+      for (const hidden of ["apply", "quiz_id", "csrfmiddlewaretoken"]) {
+         expect(byName.has(hidden)).toBe(false);
+      }
+   });
+
+   it("is refused on a closed job", () => {
+      // the saved closed page is a logged-out one: as the user sees it, without the sign-in link
+      const $ = cheerio.load(fixture("job-closed.html"));
+      $("a.sign-in-link").remove();
+      expect(() => readApplyFormOnPage($.html())).toThrow(CannotApplyError);
+   });
+
+   it("needs the session: a page offering to sign in is a logged-out one", () => {
+      expect(() => readApplyFormOnPage(fixture("job-remote.html"))).toThrow(SessionExpiredError);
    });
 });
