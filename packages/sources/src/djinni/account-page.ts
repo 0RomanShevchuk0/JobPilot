@@ -48,7 +48,7 @@ export function readApplyCheck(html: string): ApplyCheck {
    return applyCheckOnPage($);
 }
 
-function applyCheckOnPage($: CheerioAPI): ApplyCheck {
+export function applyCheckOnPage($: CheerioAPI): ApplyCheck {
    if ($(APPLY_BUTTON_SELECTOR).length > 0) return { canApply: true };
    return { canApply: false, reason: whyNoApplyButton($) };
 }
