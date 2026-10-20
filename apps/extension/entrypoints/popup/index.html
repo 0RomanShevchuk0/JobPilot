@@ -3,11 +3,15 @@
    <head>
       <meta charset="UTF-8" />
       <title>JobPilot</title>
+      <link rel="stylesheet" href="./style.css" />
    </head>
-   <body style="width: 280px; font: 13px system-ui">
-      <p>Your sessions go to JobPilot by themselves when you log in to a job site.</p>
+   <body>
+      <header>
+         <h1>JobPilot</h1>
+         <p class="hint">Your sessions are sent by themselves when you log in to a job site.</p>
+      </header>
+      <ul id="results" class="sites"></ul>
       <button id="send" type="button">Send sessions now</button>
-      <ul id="results" style="padding-left: 18px"></ul>
       <script type="module" src="./main.ts"></script>
    </body>
 </html>
