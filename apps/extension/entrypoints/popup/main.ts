@@ -29,17 +29,40 @@ function loginValidity(expires: number): string {
    return `until ${date}`;
 }
 
-function describe(lastSync: LastSync | undefined): string {
-   if (!lastSync) return "nothing sent yet";
+/** A site's card: a short status by its name, the details under it. */
+interface SiteView {
+   /** picks the status dot's color in style.css */
+   status: LastSync["status"] | "never";
+   label: string;
+   detail?: string;
+}
+
+function describe(lastSync: LastSync | undefined): SiteView {
+   if (!lastSync) return { status: "never", label: "Nothing sent yet" };
    const at = formatTime(lastSync.at);
    switch (lastSync.status) {
       case "sent":
-         return `sent ${at}, login valid ${loginValidity(lastSync.loginExpires)}`;
+         return {
+            status: "sent",
+            label: `Sent ${at}`,
+            detail: `Login valid ${loginValidity(lastSync.loginExpires)}`,
+         };
       case "logged out":
-         return `not logged in (${at}), nothing sent`;
+         return { status: "logged out", label: "Not logged in", detail: `Checked ${at}` };
       case "failed":
-         return `not sent ${at}: ${lastSync.error}; retrying every ${RESEND_EVERY_MINUTES} min`;
+         return {
+            status: "failed",
+            label: "Not sent",
+            detail: `${lastSync.error} (${at}); retrying every ${RESEND_EVERY_MINUTES} min`,
+         };
    }
+}
+
+function element(tag: string, className: string, text: string): HTMLElement {
+   const node = document.createElement(tag);
+   node.className = className;
+   node.textContent = text;
+   return node;
 }
 
 /**
@@ -50,15 +73,22 @@ function describe(lastSync: LastSync | undefined): string {
 async function render(): Promise<void> {
    const [lastSyncs, expired] = await Promise.all([readLastSyncs(), fetchExpiredSessions()]);
    const items = SITES.map((site, i) => {
+      const view = describe(lastSyncs[i]);
       const item = document.createElement("li");
-      item.textContent = `${site.name}: ${describe(lastSyncs[i])}`;
+      item.className = "site";
+      item.dataset.status = view.status;
+
+      const head = element("div", "site-head", site.name);
+      head.append(element("span", "site-status", view.label));
+      item.append(head);
+      if (view.detail) item.append(element("div", "site-detail", view.detail));
+
       const loggedOut = expired?.find((e) => e.source === site.source);
       if (loggedOut) {
-         const warning = document.createElement("div");
-         warning.style.color = "#b45309";
+         item.dataset.loggedOut = "";
          const since = formatTime(Date.parse(loggedOut.expiredAt));
-         warning.textContent = `the site logged you out (found ${since}): log in there again`;
-         item.append(warning);
+         const text = `The site logged you out (found ${since}): log in there again.`;
+         item.append(element("div", "warning", text));
       }
       return item;
    });
@@ -66,11 +96,14 @@ async function render(): Promise<void> {
 }
 
 button.addEventListener("click", async () => {
+   const label = button.textContent;
    button.disabled = true;
+   button.textContent = "Sending…";
    try {
       await browser.runtime.sendMessage(SYNC_ALL_MESSAGE);
    } finally {
       button.disabled = false;
+      button.textContent = label;
    }
 });
 
