@@ -32,10 +32,11 @@ export default defineBackground(() => {
    browser.runtime.onStartup.addListener(resendUnsent);
 
    // the popup's button. Sent from here, not the popup: closing the popup would cut the requests off.
-   // `true` keeps the channel open for the answer that comes after the requests
+   // The answer only says it's done, the popup reads the results from storage; `true` keeps the
+   // channel open for it, it comes after the requests
    browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       if (message !== SYNC_ALL_MESSAGE) return;
-      syncAllSessions().then(sendResponse);
+      syncAllSessions().then(() => sendResponse());
       return true;
    });
 });
