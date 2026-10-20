@@ -18,7 +18,8 @@ export const config = {
    databaseUrl: required("DATABASE_URL"),
    redisUrl: required("REDIS_URL"),
    discoverEveryMs: Number(process.env.DISCOVER_EVERY_MINUTES ?? 180) * 60_000,
-   // one folder per user, saved by `pnpm login:<source>` (.data/ is gitignored): read by a local worker
+   // one folder per user, saved by `pnpm login:<source>` and by the API on this machine from the extension
+   // (.data/ is gitignored): read by a local worker
    sessionsDir: "../../.data/sessions",
    // the server's only: decrypts the users' sessions in the database (see SESSION_PUBLIC_KEY in @jobpilot/session-crypto)
    sessionPrivateKey: role === "server" ? required("SESSION_PRIVATE_KEY") : undefined,
@@ -49,7 +50,7 @@ export function sessionPath(userId: string, source: string): string {
 
 /** How the user logs in to a source again, for messages about a missing or expired session. */
 export function loginHint(source: string): string {
-   // the server's worker gets the session the extension sends; a local one reads the file login saves
-   if (config.role === "server") return "log in to the site in Chrome with the JobPilot extension";
-   return `run \`pnpm login:${source}\` in apps/worker`;
+   // the extension's session reaches both: the database for the server's worker, the file the API on
+   // this machine writes for a local one
+   return `log in to the site in Chrome with the JobPilot extension, or run \`pnpm login:${source}\` in apps/worker`;
 }
