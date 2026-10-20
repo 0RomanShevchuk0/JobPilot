@@ -1,0 +1,160 @@
+/* the web app's look: grays, a dark primary button, amber for warnings */
+:root {
+   --bg: #ffffff;
+   --card: #f9fafb;
+   --border: #e5e7eb;
+   --text: #111827;
+   --muted: #6b7280;
+   --button: #111827;
+   --button-hover: #374151;
+   --button-text: #ffffff;
+   --ok: #16a34a;
+   --off: #9ca3af;
+   --error: #dc2626;
+   --warning-bg: #fffbeb;
+   --warning-border: #fcd34d;
+   --warning-text: #92400e;
+   --warning-dot: #f59e0b;
+   color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+   :root {
+      --bg: #111827;
+      --card: #1f2937;
+      --border: #374151;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --button: #f9fafb;
+      --button-hover: #d1d5db;
+      --button-text: #111827;
+      --warning-bg: #451a03;
+      --warning-border: #b45309;
+      --warning-text: #fde68a;
+   }
+}
+
+* {
+   box-sizing: border-box;
+}
+
+body {
+   width: 320px;
+   margin: 0;
+   padding: 16px;
+   background: var(--bg);
+   color: var(--text);
+   font:
+      13px/1.4 system-ui,
+      sans-serif;
+}
+
+header {
+   margin-bottom: 12px;
+}
+
+h1 {
+   margin: 0;
+   font-size: 15px;
+   font-weight: 600;
+}
+
+.hint {
+   margin: 2px 0 0;
+   color: var(--muted);
+   font-size: 12px;
+}
+
+.sites {
+   display: grid;
+   gap: 8px;
+   margin: 0 0 12px;
+   padding: 0;
+   list-style: none;
+}
+
+.site {
+   padding: 10px 12px;
+   border: 1px solid var(--border);
+   border-radius: 8px;
+   background: var(--card);
+}
+
+.site-head {
+   display: flex;
+   align-items: center;
+   gap: 8px;
+   font-weight: 600;
+}
+
+/* the status dot before the site's name */
+.site-head::before {
+   content: "";
+   flex: none;
+   width: 8px;
+   height: 8px;
+   border-radius: 50%;
+   background: var(--off);
+}
+
+.site[data-status="sent"] .site-head::before {
+   background: var(--ok);
+}
+
+.site[data-status="failed"] .site-head::before {
+   background: var(--error);
+}
+
+/* sent, but the worker found the site no longer takes it: the warning's color, not "all good" */
+.site[data-logged-out] .site-head::before {
+   background: var(--warning-dot);
+}
+
+.site-status {
+   margin-left: auto;
+   color: var(--muted);
+   font-weight: 400;
+   font-size: 12px;
+}
+
+.site[data-status="failed"] .site-status {
+   color: var(--error);
+}
+
+.site-detail {
+   margin-top: 2px;
+   padding-left: 16px;
+   color: var(--muted);
+   font-size: 12px;
+}
+
+.warning {
+   margin-top: 8px;
+   padding: 6px 8px;
+   border: 1px solid var(--warning-border);
+   border-radius: 6px;
+   background: var(--warning-bg);
+   color: var(--warning-text);
+   font-size: 12px;
+}
+
+button {
+   width: 100%;
+   padding: 8px 12px;
+   border: 0;
+   border-radius: 6px;
+   background: var(--button);
+   color: var(--button-text);
+   font: inherit;
+   font-weight: 500;
+   cursor: pointer;
+}
+
+button:hover {
+   background: var(--button-hover);
+}
+
+button:disabled {
+   opacity: 0.5;
+   cursor: default;
+}

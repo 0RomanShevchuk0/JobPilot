@@ -51,9 +51,14 @@ const checkCanApplyQueue = new Queue<CheckCanApplyJobData>(QueueNames.checkCanAp
 const scoreVacancyQueue = new Queue<ScoreVacancyJobData>(QueueNames.scoreVacancy, { connection });
 const workers: Worker[] = [];
 
+// collecting vacancies is the server's: a local worker doing it too would hit the sites twice and
+// score the same vacancies twice. A local one takes only what its API and its own jobs queue
+const collectsVacancies = config.role === "server";
+
 for (const entry of sources) {
    const { source, name, baseUrl, fetchIntervalMs } = entry.adapter;
    await database.sources.register({ id: source, name, baseUrl });
+   if (!collectsVacancies) continue;
 
    // a new scheduler runs right away; an existing one keeps its interval, so restarts don't re-trigger it
    await discoverQueue.upsertJobScheduler(
@@ -76,12 +81,18 @@ for (const entry of sources) {
    );
 }
 
+if (collectsVacancies) {
+   workers.push(
+      new Worker<DiscoverJobData>(
+         QueueNames.discover,
+         (job) => handleDiscover(job, database, fetchQueues),
+         { connection, concurrency: 1 },
+      ),
+   );
+}
+
 workers.push(
-   new Worker<DiscoverJobData>(
-      QueueNames.discover,
-      (job) => handleDiscover(job, database, fetchQueues),
-      { connection, concurrency: 1 },
-   ),
+   // check-can-apply queues it too, for a page found gone: a local worker needs it as well
    new Worker<BuildVacancyJobData>(
       QueueNames.buildVacancy,
       (job) => handleBuildVacancy(job, database, matchVacancyQueue),
@@ -159,10 +170,13 @@ for (const worker of workers) {
    });
 }
 
+const collecting = collectsVacancies
+   ? `discover every ${config.discoverEveryMs / 60_000} min`
+   : "not collecting (the server does)";
 log(
    "worker",
-   `started: ${sources.map((s) => s.adapter.source).join(", ")}; ` +
-      `discover every ${config.discoverEveryMs / 60_000} min; scoring with ${scoring.llm.model}`,
+   `started (${config.role}): ${sources.map((s) => s.adapter.source).join(", ")}; ` +
+      `${collecting}; scoring with ${scoring.llm.model}`,
 );
 
 async function shutdown(signal: string) {

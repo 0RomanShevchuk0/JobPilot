@@ -1,0 +1,44 @@
+import { browser } from "wxt/browser";
+import { defineBackground } from "wxt/utils/define-background";
+import { isSiteCookie, SITES } from "../utils/sites.js";
+import {
+   RESEND_ALARM,
+   resendUnsent,
+   SYNC_ALL_MESSAGE,
+   syncAllSessions,
+   syncSession,
+} from "../utils/sync-session.js";
+
+export default defineBackground(() => {
+   // installed, updated or reloaded: a user logged in long before has a session that won't change soon
+   browser.runtime.onInstalled.addListener(async () => {
+      await syncAllSessions();
+   });
+
+   // logged in again, or the site renewed the login: the server's worker gets the new one.
+   // A removed login cookie (logged out, expired) is not sent: the worker finds that out by itself, and
+   // saving a session clears its "expired" mark. An overwrite comes as a removal, then the new cookie
+   browser.cookies.onChanged.addListener(async ({ cookie, removed }) => {
+      if (removed) return;
+      const site = SITES.find(
+         (s) => s.loginCookie === cookie.name && isSiteCookie(s, cookie.domain),
+      );
+      if (site) await syncSession(site);
+   });
+
+   browser.alarms.onAlarm.addListener(async (alarm) => {
+      if (alarm.name === RESEND_ALARM) await resendUnsent();
+   });
+
+   // Chrome may drop alarms when it restarts, the unsent marks in storage stay: picked up again here
+   browser.runtime.onStartup.addListener(resendUnsent);
+
+   // the popup's button. Sent from here, not the popup: closing the popup would cut the requests off.
+   // The answer only says it's done, the popup reads the results from storage; `true` keeps the
+   // channel open for it, it comes after the requests
+   browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      if (message !== SYNC_ALL_MESSAGE) return;
+      syncAllSessions().then(() => sendResponse());
+      return true;
+   });
+});
