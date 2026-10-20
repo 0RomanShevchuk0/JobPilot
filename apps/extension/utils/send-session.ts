@@ -1,8 +1,6 @@
+import { API_URL } from "./api.js";
 import { readSiteSession } from "./site-session.js";
 import type { Site } from "./sites.js";
-
-/** The API runs on the user's machine for now (API_PORT in the monorepo's .env). */
-const API_URL = "http://localhost:4000";
 
 export type SendResult =
    /** loginExpires: when the site's login cookie runs out, in seconds; -1 = when the browser closes */

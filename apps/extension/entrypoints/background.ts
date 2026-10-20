@@ -20,7 +20,9 @@ export default defineBackground(() => {
    // saving a session clears its "expired" mark. An overwrite comes as a removal, then the new cookie
    browser.cookies.onChanged.addListener(async ({ cookie, removed }) => {
       if (removed) return;
-      const site = SITES.find((s) => s.loginCookie === cookie.name && isSiteCookie(s, cookie.domain));
+      const site = SITES.find(
+         (s) => s.loginCookie === cookie.name && isSiteCookie(s, cookie.domain),
+      );
       if (site) await syncSession(site);
    });
 
