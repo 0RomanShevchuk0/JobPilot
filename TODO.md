@@ -30,7 +30,7 @@ Google каждый раз заново), а форму отклика запо�
      через Google в своём Chrome перестаёт быть проблемой
    - локальный воркер (отклик в окне) читает файл в `.data/sessions`: до шага 4 локальный API пишет
      его вместе с базой, как `pnpm login:<source>` (`saveLocalSessionFile` в `sources.service.ts`)
-2. [ ] Djinni: форма отклика по HTTP, как у DOU (~1 день)
+2. [x] Djinni: форма отклика по HTTP, как у DOU (~1 день)
    - `readDjinniApplyForm` открывает Chromium, а в образе воркера браузеров нет
      (`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`): готовить отклики может только локальный воркер
    - форма за переключателем `js-inbox-toggle-reply-form`, скорее всего уже есть в HTML: проверить
