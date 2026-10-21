@@ -1,5 +1,5 @@
-import { browserSites } from "@jobpilot/sources/page";
 import { defineConfig } from "wxt";
+import { jobSitePages } from "./utils/job-sites.js";
 
 // the monorepo's .env: the API and the web app listen on the ports there, the extension talks to them.
 // Built into the extension: after changing a port, build it again
@@ -13,9 +13,6 @@ function required(name: string): string {
 
 const apiUrl = `http://localhost:${required("API_PORT")}`;
 const webOrigin = `http://localhost:${required("WEB_PORT")}`;
-
-// every page of the job sites, as the manifest matches them: "https://djinni.co" → "https://djinni.co/*"
-const jobSitePages = browserSites.flatMap((site) => site.origins.map((origin) => `${origin}/*`));
 
 export default defineConfig({
    // no auto-imports: imported by hand from their own modules (wxt/browser…), like everything else
@@ -37,8 +34,9 @@ export default defineConfig({
       // cookies: the job sites' cookies, httpOnly ones too, the user's session there;
       // storage and alarms: a session the API didn't get is kept and sent again later;
       // scripting: the form is filled in on the job page, in the tab opened for the application only;
-      // webNavigation: told when a job site's page has loaded, to fill the form in
-      permissions: ["cookies", "storage", "alarms", "scripting", "webNavigation"],
+      // webNavigation: told when a job site's page has loaded, to fill the form in;
+      // webRequest: sees (only sees, changes nothing) the site's answer when the user sends the form
+      permissions: ["cookies", "storage", "alarms", "scripting", "webNavigation", "webRequest"],
       // the job sites' pages: their cookies, the job pages with the form (from @jobpilot/sources)
       host_permissions: jobSitePages,
       // the web app may talk to the extension: whether it is there, and which application to fill in

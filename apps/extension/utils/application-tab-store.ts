@@ -5,8 +5,11 @@ import { browser } from "wxt/browser";
 export interface ApplicationTab {
    applicationId: string;
    form: FormToFill;
-   /** opening: the job page is loading, nothing filled in yet; waiting: filled in, the user sends it */
-   phase: "opening" | "waiting";
+   /**
+    * opening: the job page is loading, nothing filled in yet; waiting: filled in, the user sends it;
+    * sent: the site got the form, its answer page is loading, to tell whether it took it
+    */
+   phase: "opening" | "waiting" | "sent";
 }
 
 // in storage.session: the background is stopped when idle and forgets everything else, and the tabs
