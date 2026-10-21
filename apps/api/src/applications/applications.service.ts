@@ -2,7 +2,10 @@ import {
    choiceFieldKinds,
    type ApplicationListItem,
    type ApplicationView,
+   type FillAnswer,
+   type FillReport,
    type FormField,
+   type FormToFill,
 } from "@jobpilot/contracts";
 import {
    BadRequestException,
@@ -11,6 +14,7 @@ import {
    NotFoundException,
 } from "@nestjs/common";
 import { Database } from "../infra/database.js";
+import { RedisService } from "../infra/redis.service.js";
 import { ApplicationQueue } from "./application-queue.service.js";
 
 @Injectable()
@@ -18,6 +22,7 @@ export class ApplicationsService {
    constructor(
       private readonly db: Database,
       private readonly queue: ApplicationQueue,
+      private readonly redis: RedisService,
    ) {}
 
    /**
@@ -46,17 +51,86 @@ export class ApplicationsService {
    async fill(userId: string, applicationId: string): Promise<boolean> {
       const application = await this.db.applications.get(userId, applicationId);
       if (!application) return false;
-      if (application.status !== "ready_for_review") {
-         // a failed one says why, so the user knows whether preparing again can help
-         const reason = application.failureReason ? `: ${application.failureReason}` : "";
-         throw new ConflictException(
-            `The application is ${application.status}, not ready_for_review${reason}`,
-         );
-      }
+      assertReadyToFill(application);
       // the last filling's problem is out of date; a new one records its own
       await this.db.applications.clearFillProblem(applicationId);
       await this.queue.fill(applicationId);
       return true;
+   }
+
+   /**
+    * The extension starts filling the form on the job page in the user's browser: what to put in it.
+    * The application counts as open in a browser until the extension reports how it ended, or for as
+    * long as a form waits for the user. Returns undefined when there is no such application.
+    */
+   async startFilling(userId: string, applicationId: string): Promise<FormToFill | undefined> {
+      const application = await this.db.applications.get(userId, applicationId);
+      if (!application) return undefined;
+      assertReadyToFill(application);
+      const toFill = await this.db.applications.getToFill(applicationId);
+      if (!toFill) return undefined;
+      const answers = await this.answersToFill(userId, toFill.fields);
+
+      // the last filling's problem is out of date; a new one records its own
+      await this.db.applications.clearFillProblem(applicationId);
+      await this.redis.client.set(fillingKey(applicationId), "1", "EX", FILLING_TTL_SECONDS);
+      return { source: toFill.source, jobUrl: toFill.postingUrl, answers };
+   }
+
+   /**
+    * How filling in the browser ended, as the extension reports it: sent (the vacancy moves to Applied,
+    * as if marked there), the tab closed, or a problem shown with the answers. Returns false when there
+    * is no such application.
+    */
+   async reportFilling(
+      userId: string,
+      applicationId: string,
+      report: FillReport,
+   ): Promise<boolean> {
+      const application = await this.db.applications.get(userId, applicationId);
+      if (!application) return false;
+      await this.redis.client.del(fillingKey(applicationId));
+      switch (report.status) {
+         case "submitted":
+            await this.db.applications.setSubmitted(applicationId);
+            if (application.vacancyId) {
+               await this.db.matches.setStatus(userId, application.vacancyId, "applied");
+            }
+            return true;
+         case "cancelled":
+            return true;
+         case "failed":
+            await this.db.applications.setFillProblem(applicationId, report.reason);
+            return true;
+      }
+   }
+
+   /** The answers to put into the form; the CV field gets the base CV, for the extension to download. */
+   private async answersToFill(userId: string, fields: FormField[]): Promise<FillAnswer[]> {
+      const needsCv = fields.some((f) => f.valueSource === "document");
+      const cv = needsCv ? await this.db.documents.getBaseCvFileInfo(userId) : undefined;
+      return fields.map((f): FillAnswer => {
+         // the CV field, the only file a form gets: the base CV as it is now, not as when prepared
+         if (f.valueSource === "document") {
+            if (!cv) {
+               throw new ConflictException(
+                  "No CV to attach: upload yours in Documents, then fill again",
+               );
+            }
+            return { name: f.name, kind: "file", document: { id: cv.id, fileName: cv.fileName } };
+         }
+         if (f.kind === "file") throw new ConflictException(`No file to attach for "${f.label}"`);
+         return { name: f.name, kind: f.kind, value: f.finalValue ?? f.proposedValue ?? "" };
+      });
+   }
+
+   /** The form is open: in the extension's tab, or in a worker's browser window on this machine. */
+   private async isFilling(applicationId: string): Promise<boolean> {
+      const [inTab, inWindow] = await Promise.all([
+         this.redis.client.exists(fillingKey(applicationId)),
+         this.queue.isFilling(applicationId),
+      ]);
+      return inTab > 0 || inWindow;
    }
 
    /**
@@ -76,7 +150,7 @@ export class ApplicationsService {
             `The application is ${application.status}: its answers can't be changed`,
          );
       }
-      if (await this.queue.isFilling(applicationId)) {
+      if (await this.isFilling(applicationId)) {
          throw new ConflictException(
             "The form is open in a browser window: close it, then change the answers",
          );
@@ -106,11 +180,25 @@ export class ApplicationsService {
       const application = await this.db.applications.get(userId, applicationId);
       if (!application) return undefined;
       const [filling, preparationRunning] = await Promise.all([
-         this.queue.isFilling(applicationId),
+         this.isFilling(applicationId),
          this.queue.isPreparing(applicationId),
       ]);
       return { ...application, filling, preparationRunning };
    }
+}
+
+/** How long an application counts as open in the extension's tab without a word from it: as long as a form waits for the user. */
+const FILLING_TTL_SECONDS = 30 * 60;
+
+const fillingKey = (applicationId: string) => `application-filling:${applicationId}`;
+
+/** Only answers up for review are filled in; a failed application says why, so the user knows whether preparing again can help. */
+function assertReadyToFill(application: ApplicationListItem): void {
+   if (application.status === "ready_for_review") return;
+   const reason = application.failureReason ? `: ${application.failureReason}` : "";
+   throw new ConflictException(
+      `The application is ${application.status}, not ready_for_review${reason}`,
+   );
 }
 
 /** The field with my answer: a choice one takes one of its options; the proposed value undoes the edit. */

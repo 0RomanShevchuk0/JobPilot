@@ -1,3 +1,4 @@
+import { fillReportSchema, type FillReport } from "@jobpilot/contracts";
 import {
    Body,
    Controller,
@@ -51,6 +52,32 @@ export class ApplicationsController {
    async fill(@Param("id", new ZodValidationPipe(z.uuid())) id: string) {
       const userId = await this.user.id();
       if (!(await this.applications.fill(userId, id))) {
+         throw new NotFoundException("No such application");
+      }
+   }
+
+   /**
+    * The extension starts filling the form on the job page in my browser: what to put in it. The
+    * application shows as open there until the extension reports how it ended.
+    */
+   @Post(":id/filling")
+   @HttpCode(200)
+   async startFilling(@Param("id", new ZodValidationPipe(z.uuid())) id: string) {
+      const userId = await this.user.id();
+      const form = await this.applications.startFilling(userId, id);
+      if (!form) throw new NotFoundException("No such application");
+      return form;
+   }
+
+   /** How filling the form in my browser ended, as the extension saw it: sent, closed, or a problem. */
+   @Post(":id/fill-outcome")
+   @HttpCode(204)
+   async reportFilling(
+      @Param("id", new ZodValidationPipe(z.uuid())) id: string,
+      @Body(new ZodValidationPipe(fillReportSchema)) report: FillReport,
+   ) {
+      const userId = await this.user.id();
+      if (!(await this.applications.reportFilling(userId, id, report))) {
          throw new NotFoundException("No such application");
       }
    }
