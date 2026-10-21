@@ -13,7 +13,15 @@ export const PAGE_FUNCTIONS = {
    fill: "jobpilotFillApplication",
    /** (source) → whether the page the site answered the sent form with shows it taken */
    isFormAccepted: "jobpilotIsFormAccepted",
+   /** (PageNotice) → shows it over the page, in place of the one before */
+   showNotice: "jobpilotShowNotice",
 } as const;
+
+/** A note to the user over the job page: how the application is going. */
+export interface PageNotice {
+   tone: "info" | "success" | "warning" | "error";
+   text: string;
+}
 
 /** A file to attach, as the API gave it. */
 export interface FileToAttach {
