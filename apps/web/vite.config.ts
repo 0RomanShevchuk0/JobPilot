@@ -6,8 +6,11 @@ export default defineConfig(({ mode }) => {
    // API_PORT and WEB_PORT live in the monorepo root .env, next to the API's other settings
    const env = loadEnv(mode, "../..", "");
    if (!env.WEB_PORT) throw new Error("Missing environment variable WEB_PORT");
+   if (!env.EXTENSION_ID) throw new Error("Missing environment variable EXTENSION_ID");
    return {
       plugins: [react(), tailwindcss()],
+      // the extension the app talks to, in the code: import.meta.env.EXTENSION_ID
+      define: { "import.meta.env.EXTENSION_ID": JSON.stringify(env.EXTENSION_ID) },
       server: {
          // the extension takes messages from this origin only (externally_connectable): no moving to
          // the next free port when this one is taken

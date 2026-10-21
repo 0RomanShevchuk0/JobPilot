@@ -38,8 +38,8 @@ export function ApplicationStatusNotice({ app }: { app: ApplicationView }) {
          )}
          {app.status === "ready_for_review" && app.filling && (
             <p className="text-gray-600">
-               The form is open in a browser window on this machine: check it there and send it, or
-               close the window.
+               The form is open in your browser, filled in: check it there and send it, or close it.
+               Can't find the tab? “Show in browser” brings it back.
             </p>
          )}
          {/* a problem with the last filling: the answers are still here to try again */}

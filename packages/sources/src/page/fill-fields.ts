@@ -80,3 +80,19 @@ function setValue(input: HTMLInputElement | HTMLTextAreaElement, value: string):
 
 // runs of whitespace → one space: "\n   Так  " → "Так"
 const cleanText = (text: string | null | undefined) => (text ?? "").replace(/\s+/g, " ").trim();
+
+// room for a site's header fixed over the top of the page
+const HEADER_ROOM_PX = 80;
+
+/**
+ * Brings the filled-in form into view for the user to check it: the whole form centered when it fits
+ * the screen, its start at the top when it doesn't, to read it down to the send button.
+ */
+export function scrollFormIntoView(form: HTMLFormElement): void {
+   const { top, height } = form.getBoundingClientRect();
+   if (height <= window.innerHeight - HEADER_ROOM_PX) {
+      form.scrollIntoView({ block: "center" });
+      return;
+   }
+   window.scrollBy({ top: top - HEADER_ROOM_PX });
+}

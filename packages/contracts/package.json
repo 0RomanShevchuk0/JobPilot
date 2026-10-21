@@ -2,6 +2,7 @@
    "name": "@jobpilot/contracts",
    "private": true,
    "type": "module",
+   "sideEffects": false,
    "exports": {
       ".": {
          "types": "./dist/index.d.ts",

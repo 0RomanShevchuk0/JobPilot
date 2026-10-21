@@ -1,3 +1,4 @@
+import { EXTENSION_PING, isExtensionFillCommand } from "@jobpilot/contracts";
 import { browserSites } from "@jobpilot/sources/page";
 import { browser } from "wxt/browser";
 import { defineBackground } from "wxt/utils/define-background";
@@ -16,7 +17,6 @@ import {
    syncAllSessions,
    syncSession,
 } from "../utils/sync-session.js";
-import { isFillCommand, PING_MESSAGE } from "../utils/web-messages.js";
 
 export default defineBackground(() => {
    // installed, updated or reloaded: a user logged in long before has a session that won't change soon
@@ -54,11 +54,11 @@ export default defineBackground(() => {
    // the web app: "ping" says the extension is there; a fill command opens the application's job page,
    // and the answer says whether it did. `true`: the answer comes after the API is asked
    browser.runtime.onMessageExternal.addListener((message, _sender, sendResponse) => {
-      if (message === PING_MESSAGE) {
+      if (message === EXTENSION_PING) {
          sendResponse({ ok: true });
          return;
       }
-      if (!isFillCommand(message)) return;
+      if (!isExtensionFillCommand(message)) return;
       openApplicationTab(message.fill).then(sendResponse);
       return true;
    });

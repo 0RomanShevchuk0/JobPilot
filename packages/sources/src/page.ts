@@ -17,7 +17,7 @@ import type { SitePage } from "./page/site-page.js";
  * here as well as into the worker's sources.
  */
 
-export { fillFields, type PageFillValue } from "./page/fill-fields.js";
+export { fillFields, scrollFormIntoView, type PageFillValue } from "./page/fill-fields.js";
 export type { SitePage } from "./page/site-page.js";
 
 /** A job site in the user's browser. */

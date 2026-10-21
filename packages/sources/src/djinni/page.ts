@@ -1,10 +1,5 @@
 import { waitForVisibleForm, type SitePage } from "../page/site-page.js";
-import {
-   APPLY_BUTTON_SELECTOR,
-   APPLY_FORM_SELECTOR,
-   SEND_BUTTON_SELECTOR,
-   SIGN_IN_LINK_SELECTOR,
-} from "./selectors.js";
+import { APPLY_BUTTON_SELECTOR, APPLY_FORM_SELECTOR, SIGN_IN_LINK_SELECTOR } from "./selectors.js";
 
 // "https://djinni.co/jobs/850626-full-stack-…/" → "850626"
 const JOB_ID_IN_URL = /\/jobs\/(\d+)-/;
@@ -24,8 +19,6 @@ export const djinniPage: SitePage = {
       button.click();
       return waitForVisibleForm(document, APPLY_FORM_SELECTOR);
    },
-
-   sendButton: (form) => form.querySelector<HTMLElement>(SEND_BUTTON_SELECTOR),
 
    // pressing "Send application" posts the form to the job's own page
    isFormSubmission(requestUrl, jobUrl) {
