@@ -40,11 +40,6 @@ const TIMEOUT_MS = 30_000;
  * Whether a job page, loaded with the user's session, lets them apply: it shows the "Apply" button, or
  * why not. The page is in the account's language, so only the markup is read, never the wording.
  */
-export function readApplyCheck(html: string): ApplyCheck {
-   const $ = cheerio.load(html);
-   return applyCheckOnPage($);
-}
-
 export function applyCheckOnPage($: CheerioAPI): ApplyCheck {
    if ($(APPLY_BUTTON_SELECTOR).length > 0) return { canApply: true };
    return { canApply: false, reason: whyNoApplyButton($) };

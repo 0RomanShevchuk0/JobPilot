@@ -21,7 +21,7 @@ export async function canUseSessionOf(database: DatabaseClient, userId: string):
 /**
  * The user's session on the source, to act under their account. The server's worker takes it from the
  * database and decrypts it in memory: only it has the private key. A worker on the user's machine reads
- * the file `pnpm login:<source>` saved there. Throws SessionExpiredError without one: the user logs in.
+ * the file the API saved there from the extension. Throws SessionExpiredError without one: the user logs in.
  */
 export async function loadSession(
    database: DatabaseClient,

@@ -45,20 +45,6 @@ export class ApplicationsService {
    }
 
    /**
-    * Opens the prepared application in a visible browser on this machine, filled in: the user reviews it
-    * there and sends it themselves. Returns false when there is no such application.
-    */
-   async fill(userId: string, applicationId: string): Promise<boolean> {
-      const application = await this.db.applications.get(userId, applicationId);
-      if (!application) return false;
-      assertReadyToFill(application);
-      // the last filling's problem is out of date; a new one records its own
-      await this.db.applications.clearFillProblem(applicationId);
-      await this.queue.fill(applicationId);
-      return true;
-   }
-
-   /**
     * The extension starts filling the form on the job page in the user's browser: what to put in it.
     * The application counts as open in a browser until the extension reports how it ended, or for as
     * long as a form waits for the user. Returns undefined when there is no such application.
@@ -129,18 +115,14 @@ export class ApplicationsService {
       });
    }
 
-   /** The form is open: in the extension's tab, or in a worker's browser window on this machine. */
+   /** The form is open in the extension's tab, as far as the API knows (see FILLING_TTL_SECONDS). */
    private async isFilling(applicationId: string): Promise<boolean> {
-      const [inTab, inWindow] = await Promise.all([
-         this.redis.client.exists(fillingKey(applicationId)),
-         this.queue.isFilling(applicationId),
-      ]);
-      return inTab > 0 || inWindow;
+      return (await this.redis.client.exists(fillingKey(applicationId))) > 0;
    }
 
    /**
     * Saves my own answers in place of the proposed ones, by field name: only while the answers are up
-    * for review and not open in a browser window. A value equal to the proposed one undoes the edit.
+    * for review and not open in the browser. A value equal to the proposed one undoes the edit.
     * Returns false when there is no such application.
     */
    async saveAnswers(
@@ -157,7 +139,7 @@ export class ApplicationsService {
       }
       if (await this.isFilling(applicationId)) {
          throw new ConflictException(
-            "The form is open in a browser window: close it, then change the answers",
+            "The form is open in your browser: close its tab, then change the answers",
          );
       }
 

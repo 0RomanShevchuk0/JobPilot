@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ApplyForm, FillOutcome, FillValue } from "./application.js";
+import type { ApplyForm } from "./application.js";
 import type { JobPageResult } from "./match.js";
 import type { NormalizedPosting, RawContentType } from "./posting.js";
 
@@ -53,7 +53,7 @@ export interface DiscoverParams {
    keywords?: string[];
 }
 
-/** A user's session on a job site: the site's cookies, as Playwright saves a browser's state. */
+/** A user's session on a job site: the site's cookies, as the extension reads them from the browser. */
 export const siteSessionSchema = z.object({
    cookies: z.array(
       z.object({
@@ -79,8 +79,6 @@ export type SiteSession = z.infer<typeof siteSessionSchema>;
 
 /** What the platform does under the user's own account on the source. */
 export interface SourceAccount {
-   /** Interactive: the user logs in, the session is saved to sessionPath for later runs. */
-   login(sessionPath: string): Promise<void>;
    /**
     * What the job page shows the logged-in user: whether they can apply, the salary against their
     * expectations there; gone when the job is closed or removed. Throws SessionExpiredError when the
@@ -93,16 +91,6 @@ export interface SourceAccount {
     * the job is closed, the profile doesn't meet its requirements).
     */
    readApplyForm(url: string, session: SiteSession): Promise<ApplyForm>;
-   /**
-    * Opens the job's application form in a visible browser on this machine, fills in the answers and
-    * hands over to the user, who sends it or closes the window: never sends anything itself. Resolves
-    * once the form was sent or the window closed. Throws SessionExpiredError or CannotApplyError.
-    */
-   fillApplicationForm(
-      url: string,
-      session: SiteSession,
-      answers: FillValue[],
-   ): Promise<FillOutcome>;
    /** Pause between automated form opens, ms, picked at random: one account shouldn't look like a bot. */
    readonly formOpenGapMs: { min: number; max: number };
 }

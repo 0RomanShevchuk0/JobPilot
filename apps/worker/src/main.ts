@@ -9,10 +9,8 @@ import {
    type MatchUserJobData,
    type ScoreVacancyJobData,
    type PrepareApplicationJobData,
-   type FillApplicationJobData,
 } from "@jobpilot/contracts";
 import { createDatabase } from "@jobpilot/db";
-import { S3FileStorage } from "@jobpilot/storage";
 import { Queue, UnrecoverableError, Worker } from "bullmq";
 import { Redis } from "ioredis";
 import { config } from "./config.js";
@@ -24,7 +22,6 @@ import { handleMatchVacancy } from "./jobs/match-vacancy.js";
 import { handleCheckCanApply } from "./jobs/check-can-apply.js";
 import { handleScoreVacancy } from "./jobs/score-vacancy.js";
 import { handlePrepareApplication } from "./jobs/prepare-application.js";
-import { handleFillApplication } from "./jobs/fill-application.js";
 import { createScoringLlm } from "./llm.js";
 import { log } from "./log.js";
 import { discoverJobOptions } from "./queues.js";
@@ -33,7 +30,6 @@ import { sources } from "./sources.js";
 // BullMQ workers need maxRetriesPerRequest: null so blocking commands survive Redis reconnects
 const connection = new Redis(config.redisUrl, { maxRetriesPerRequest: null });
 const database = createDatabase(config.databaseUrl);
-const storage = new S3FileStorage(config.storage);
 const scoring = createScoringLlm();
 
 const discoverQueue = new Queue<DiscoverJobData>(QueueNames.discover, { connection });
@@ -125,13 +121,7 @@ workers.push(
    new Worker<PrepareApplicationJobData>(
       QueueNames.prepareApplication,
       (job) => handlePrepareApplication(job, database, scoring.llm),
-      // one browser at a time: a person applies to one job at a time too
-      { connection, concurrency: 1 },
-   ),
-   new Worker<FillApplicationJobData>(
-      QueueNames.fillApplication,
-      (job) => handleFillApplication(job, database, storage),
-      // one visible window at a time; a job can wait up to 30 min for the user, the lock is renewed meanwhile
+      // one form at a time: a person applies to one job at a time too
       { connection, concurrency: 1 },
    ),
 );
