@@ -15,11 +15,13 @@
    --warning-border: #fcd34d;
    --warning-text: #92400e;
    --warning-dot: #f59e0b;
+   --info: #2563eb;
    color-scheme: light dark;
 }
 
 @media (prefers-color-scheme: dark) {
    :root {
+      --info: #60a5fa;
       --bg: #111827;
       --card: #1f2937;
       --border: #374151;
@@ -50,7 +52,21 @@ body {
 }
 
 header {
+   display: flex;
+   align-items: baseline;
+   justify-content: space-between;
    margin-bottom: 12px;
+}
+
+header a {
+   color: var(--muted);
+   font-size: 12px;
+   text-decoration: none;
+}
+
+header a:hover {
+   color: var(--text);
+   text-decoration: underline;
 }
 
 h1 {
@@ -60,13 +76,15 @@ h1 {
 }
 
 .hint {
-   margin: 2px 0 0;
+   margin: -4px 0 8px;
    color: var(--muted);
    font-size: 12px;
 }
 
 .sites {
    display: grid;
+   /* one column the popup's width: a long title gets cut, not the card stretched past the edge */
+   grid-template-columns: minmax(0, 1fr);
    gap: 8px;
    margin: 0 0 12px;
    padding: 0;
@@ -112,6 +130,8 @@ h1 {
 
 .site-status {
    margin-left: auto;
+   flex: none;
+   white-space: nowrap;
    color: var(--muted);
    font-weight: 400;
    font-size: 12px;
@@ -157,4 +177,61 @@ button:hover {
 button:disabled {
    opacity: 0.5;
    cursor: default;
+}
+
+h2 {
+   margin: 0 0 8px;
+   color: var(--muted);
+   font-size: 11px;
+   font-weight: 600;
+   letter-spacing: 0.04em;
+   text-transform: uppercase;
+}
+
+section + section {
+   margin-top: 16px;
+}
+
+/* an application's tab: its title may be long, the status stays on the line */
+.site-title {
+   overflow: hidden;
+   min-width: 0;
+   text-overflow: ellipsis;
+   white-space: nowrap;
+}
+
+/* filled in: up to the user, the one that needs doing */
+.site[data-phase="waiting"] .site-head::before {
+   background: var(--info);
+}
+
+/* sent: the site's answer still to come */
+.site[data-phase="sent"] .site-head::before {
+   background: var(--warning-dot);
+}
+
+/* a card's buttons, under its text */
+.card-actions {
+   display: flex;
+   gap: 8px;
+   margin: 8px 0 0 16px;
+}
+
+.card-actions button,
+.card-actions a {
+   width: auto;
+   padding: 4px 10px;
+   border-radius: 6px;
+   font-size: 12px;
+}
+
+.secondary {
+   border: 1px solid var(--border);
+   background: transparent;
+   color: var(--text);
+   text-decoration: none;
+}
+
+.secondary:hover {
+   background: var(--border);
 }

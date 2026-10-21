@@ -8,12 +8,9 @@ import {
 import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
 import { sessionCookieHeader } from "../saved-session.js";
+import { APPLY_BUTTON_SELECTOR, SIGN_IN_LINK_SELECTOR } from "./selectors.js";
 import { DJINNI_BASE_URL, DJINNI_NAME } from "./site.js";
 
-// "Apply for the job": in the page's HTML from the start, no waiting for it
-export const APPLY_BUTTON_SELECTOR = "button.js-inbox-toggle-reply-form";
-// a page loaded without a valid session offers to sign in
-export const SIGN_IN_LINK_SELECTOR = "a.sign-in-link";
 // on a job applied to already, a card with a link to that dialog replaces the button
 const ALREADY_APPLIED_SELECTOR = '.card-body a[href^="/my/inbox/"]';
 // on a closed job, an alert after the empty apply block: "The job ad is no longer active"
@@ -43,11 +40,6 @@ const TIMEOUT_MS = 30_000;
  * Whether a job page, loaded with the user's session, lets them apply: it shows the "Apply" button, or
  * why not. The page is in the account's language, so only the markup is read, never the wording.
  */
-export function readApplyCheck(html: string): ApplyCheck {
-   const $ = cheerio.load(html);
-   return applyCheckOnPage($);
-}
-
 export function applyCheckOnPage($: CheerioAPI): ApplyCheck {
    if ($(APPLY_BUTTON_SELECTOR).length > 0) return { canApply: true };
    return { canApply: false, reason: whyNoApplyButton($) };

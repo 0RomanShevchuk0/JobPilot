@@ -1,3 +1,4 @@
+import { fillReportSchema, type FillReport } from "@jobpilot/contracts";
 import {
    Body,
    Controller,
@@ -45,12 +46,28 @@ export class ApplicationsController {
       return this.applications.prepare(userId, body.postingId, body.refreshForm);
    }
 
-   /** Fills the prepared answers into the form in a visible browser; you send it (or close the window). */
-   @Post(":id/fill")
-   @HttpCode(202)
-   async fill(@Param("id", new ZodValidationPipe(z.uuid())) id: string) {
+   /**
+    * The extension starts filling the form on the job page in my browser: what to put in it. The
+    * application shows as open there until the extension reports how it ended.
+    */
+   @Post(":id/filling")
+   @HttpCode(200)
+   async claimForFilling(@Param("id", new ZodValidationPipe(z.uuid())) id: string) {
       const userId = await this.user.id();
-      if (!(await this.applications.fill(userId, id))) {
+      const form = await this.applications.claimForFilling(userId, id);
+      if (!form) throw new NotFoundException("No such application");
+      return form;
+   }
+
+   /** How filling the form in my browser ended, as the extension saw it: sent, closed, or a problem. */
+   @Post(":id/fill-outcome")
+   @HttpCode(204)
+   async recordFillOutcome(
+      @Param("id", new ZodValidationPipe(z.uuid())) id: string,
+      @Body(new ZodValidationPipe(fillReportSchema)) report: FillReport,
+   ) {
+      const userId = await this.user.id();
+      if (!(await this.applications.recordFillOutcome(userId, id, report))) {
          throw new NotFoundException("No such application");
       }
    }

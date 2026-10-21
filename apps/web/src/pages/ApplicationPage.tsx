@@ -95,14 +95,16 @@ function Application({ app }: { app: ApplicationView }) {
                   Save changes
                </Button>
             )}
-            {/* what I changed goes into the form too: it is saved first */}
+            {/* what I changed goes into the form too: it is saved first. While the form is open it
+                brings its tab forward, or opens it again when the tab is lost (the browser or the
+                extension restarted) */}
             {app.status === "ready_for_review" && (
                <Button
                   variant="primary"
                   onClick={() => fill.mutate(changes, { onSuccess: clearDrafts })}
-                  disabled={busy || app.filling}
+                  disabled={busy}
                >
-                  Open in browser
+                  {app.filling ? "Show in browser" : "Open in browser"}
                </Button>
             )}
             {(app.status === "ready_for_review" || app.status === "failed" || preparingStopped) && (

@@ -16,7 +16,6 @@ const names = [
    QueueNames.checkCanApply,
    QueueNames.scoreVacancy,
    QueueNames.prepareApplication,
-   QueueNames.fillApplication,
 ];
 
 const rows: Record<string, Record<string, number>> = {};

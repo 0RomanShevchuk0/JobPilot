@@ -8,14 +8,14 @@ import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
 import { getText } from "../http.js";
 import { sessionCookieHeader } from "../saved-session.js";
-import { CLOSED_JOB_SELECTOR, EXTERNAL_APPLY_SELECTOR } from "./job-page.js";
-import { LOGIN_BUTTON_SELECTOR } from "./session.js";
+import { CLOSED_JOB_SELECTOR } from "./job-page.js";
+import {
+   ALREADY_APPLIED_SELECTOR,
+   APPLY_BUTTON_SELECTOR,
+   EXTERNAL_APPLY_SELECTOR,
+   LOGIN_BUTTON_SELECTOR,
+} from "./selectors.js";
 import { DOU_NAME } from "./site.js";
-
-// "Відгукнутися" opening DOU's own form: shown to a logged-in user who hasn't applied yet
-export const APPLY_BUTTON_SELECTOR = ".reply #reply-btn-id";
-// on a job applied to already, the form says so instead: "Ви відгукнулись на цю вакансію"
-const ALREADY_APPLIED_SELECTOR = "form#replied-id.sent";
 
 /**
  * What DOU shows the user on a job page: whether they can apply, or that the job is gone (closed or

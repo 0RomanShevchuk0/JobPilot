@@ -28,32 +28,40 @@ Google каждый раз заново), а форму отклика запо�
      открытую сессию на `localhost` → `source_sessions`, снимает пометку «expired»
    - `chrome.cookies.onChanged` по куке входа → отправить заново: сессия обновляется сама, вход
      через Google в своём Chrome перестаёт быть проблемой
-   - локальный воркер (отклик в окне) читает файл в `.data/sessions`: до шага 4 локальный API пишет
-     его вместе с базой, как `pnpm login:<source>` (`saveLocalSessionFile` в `sources.service.ts`)
+   - локальный воркер читает файл в `.data/sessions`: до шага 6 локальный API пишет его вместе с базой
+     (`saveLocalSessionFile` в `sources.service.ts`)
 2. [x] Djinni: форма отклика по HTTP, как у DOU (~1 день)
    - `readDjinniApplyForm` открывает Chromium, а в образе воркера браузеров нет
      (`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`): готовить отклики может только локальный воркер
    - форма за переключателем `js-inbox-toggle-reply-form`, скорее всего уже есть в HTML: проверить
      на фикстуре, читать её из ответа с куками
-3. [ ] Отклик в расширении вместо `fill-application` (~3–5 дней, основное)
-   - «Apply» в вебе открывает вакансию с id отклика (параметр в URL или `externally_connectable`)
-   - content script на странице вакансии: берёт ответы с API, жмёт Apply, заполняет поля
-   - `fillField` с Playwright на DOM: `value` + события `input`/`change`; радио — по label; резюме —
-     `File` с API через `DataTransfer` в `input[type=file]`
-   - отправка: `submit` / загрузка следующей страницы → `readApplyCheck`; в API `submitted` или
-     `cancelled`, вакансия → Applied, как сейчас
-   - Djinni и DOU — у каждой своя логика открытия формы и признак отправки
-4. [ ] Убрать локальный режим воркера
-   - `WORKER_ROLE=local`, файлы сессий в `.data/sessions` (и их запись в API), `pnpm login:<source>`,
-     `loginInChrome`, Playwright и `CHROME_PATHS` из воркера, раздел про вход в README
+3. [x] Отклик в расширении вместо `fill-application` (~3–5 дней, основное)
+   - «Open in browser» в вебе: `chrome.runtime.sendMessage` в расширение (`externally_connectable`,
+     id из `EXTENSION_ID` в `.env`), нет ответа — «установи расширение»
+   - расширение: `POST /applications/:id/filling` (ответы, флаг «заполняется» в Redis на 10 мин) →
+     вкладка с вакансией → скрипт страницы заполняет форму (`@jobpilot/sources/page`)
+   - отправку видит `webRequest` (`isFormSubmission`), принята ли — страница ответа
+     (`isFormAccepted`); итог в `POST /applications/:id/fill-outcome`, вакансия → Applied
+   - уведомления на странице вакансии, вкладки откликов в popup; старый путь через воркер уходит в шаге 4
+4. [x] Убрать то, что расширение заменило: Playwright из проекта
+   - заполнение в окне: задача `fill-application`, `POST /applications/:id/fill`, `fill.ts` площадок,
+     `form-filling.ts`, Playwright-версия `openApplyForm`
+   - `pnpm login:<source>`, `loginInChrome`, `CHROME_PATHS`, скачивание браузеров при `pnpm install`,
+     раздел «Without the extension» в README; сессию даёт только расширение
 5. [ ] (потом, накладно, ~неделя) API и веб на сервере — пользоваться с любого устройства без
-       локального запуска
-   - вместе с ним авторизация вместо `USER_EMAIL`: до сервера у знакомых и так полный доступ к базе
+       локального запуска; код тот же, что локально, разница только в `.env`
+   - авторизация вместо `USER_EMAIL`: до сервера у знакомых и так полный доступ к базе
      (прод `DATABASE_URL`), вход ничего не защищает; с публичным API без входа любой положит сессию
      за любого
    - вход только по приглашению (Google OAuth или ссылка на почту); `CurrentUser` берёт id из сессии
      запроса, `shared/api/client.ts` в вебе — единственное место для куки; расширение ходит с той же
      авторизацией
+   - API в `docker-compose.prod.yml` рядом с воркером и Redis, веб — статикой за reverse proxy с `/api`
+   - адреса в `.env` полными URL вместо `localhost:<порт>`: веб, API, расширение (собирается под них)
+6. [ ] После шага 5: убрать `WORKER_ROLE=local` — локальный запуск тот же, что прод
+   - нужен, пока знакомые запускают всё у себя против общей прод-базы без ключа к сессиям: воркер
+     берёт сессию из файла. С API на сервере это не нужно, для разработки — свои ключи в `.env`
+   - уходят `WORKER_ROLE`, файлы `.data/sessions`, `saveLocalSessionFile` в API, `canUseSessionOf`
 
 Риски:
 

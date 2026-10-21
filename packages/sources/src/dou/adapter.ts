@@ -3,10 +3,8 @@ import { getText } from "../http.js";
 import { checkDouJobPage } from "./account-page.js";
 import { DOU_CATEGORIES } from "./categories.js";
 import { readDouApplyForm } from "./apply-form.js";
-import { fillDouApplication } from "./fill.js";
 import { isClosedPage, parseJobPage } from "./job-page.js";
 import { parseRss, rssUrl } from "./rss.js";
-import { loginToDou } from "./session.js";
 import { DOU_BASE_URL, DOU_ID, DOU_NAME } from "./site.js";
 
 export function createDouAdapter(): SourceAdapter {
@@ -51,10 +49,8 @@ export function createDouAdapter(): SourceAdapter {
       parse: parseJobPage,
 
       account: {
-         login: loginToDou,
          checkJobPage: checkDouJobPage,
          readApplyForm: readDouApplyForm,
-         fillApplicationForm: fillDouApplication,
          // not measured on DOU yet: Djinni's pace
          formOpenGapMs: { min: 60_000, max: 150_000 },
       },

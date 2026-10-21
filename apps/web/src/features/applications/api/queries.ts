@@ -2,6 +2,7 @@ import type { ApplicationListItem, ApplicationView } from "@jobpilot/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPatch, apiPost } from "../../../shared/api/client";
 import { queryKeys } from "../../../shared/api/queryKeys";
+import { fillInExtension, isExtensionInstalled } from "../../../shared/extension/client";
 
 // how often to check on the worker: answering takes seconds, sending is up to the user
 const PREPARING_POLL_MS = 3000;
@@ -71,13 +72,23 @@ export function useSaveAnswers(id: string) {
    });
 }
 
-/** Opens the form in a browser on this machine, filled in; my unsaved changes are saved first. */
+/**
+ * Opens the job page in a tab of this browser, the form filled in there by the extension, for me to
+ * send; my unsaved changes are saved first.
+ */
 export function useFillApplication(id: string) {
    const refresh = useRefreshApplications();
    return useMutation({
       mutationFn: async (changes: AnswerChange[]) => {
+         if (!(await isExtensionInstalled())) {
+            throw new Error(
+               "Install the JobPilot extension (README, Extension) to fill the form in in this browser",
+            );
+         }
          if (changes.length > 0) await apiPatch(`/applications/${id}/fields`, { values: changes });
-         await apiPost(`/applications/${id}/fill`);
+         const answer = await fillInExtension(id);
+         if (!answer) throw new Error("The JobPilot extension didn't answer: is it on?");
+         if (!answer.ok) throw new Error(answer.reason);
       },
       onSuccess: refresh,
    });

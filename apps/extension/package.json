@@ -10,7 +10,8 @@
       "postinstall": "wxt prepare"
    },
    "dependencies": {
-      "@jobpilot/contracts": "workspace:*"
+      "@jobpilot/contracts": "workspace:*",
+      "@jobpilot/sources": "workspace:*"
    },
    "devDependencies": {
       "typescript": "~6.0.3",

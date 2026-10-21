@@ -26,8 +26,8 @@ export class SourcesService {
    }
 
    /**
-    * Temporary, goes with the local worker (TODO, the extension's step 4): the session saved for the
-    * worker on this machine too, as `pnpm login:<source>` saves it, where sessionPath in
+    * Temporary, goes with the local worker (TODO, the extension's step 6): the session saved for the
+    * worker on this machine too, where sessionPath in
     * apps/worker/src/config.ts reads it (the API runs with apps/api as cwd).
     */
    private async saveLocalSessionFile(userId: string, source: string, session: string) {
