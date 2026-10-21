@@ -35,7 +35,7 @@ Google каждый раз заново), а форму отклика запо�
      (`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`): готовить отклики может только локальный воркер
    - форма за переключателем `js-inbox-toggle-reply-form`, скорее всего уже есть в HTML: проверить
      на фикстуре, читать её из ответа с куками
-3. [ ] Отклик в расширении вместо `fill-application` (~3–5 дней, основное)
+3. [x] Отклик в расширении вместо `fill-application` (~3–5 дней, основное)
    - «Open in browser» в вебе: `chrome.runtime.sendMessage` в расширение (`externally_connectable`,
      id из `EXTENSION_ID` в `.env`), нет ответа — «установи расширение»
    - расширение: `POST /applications/:id/filling` (ответы, флаг «заполняется» в Redis на 10 мин) →
