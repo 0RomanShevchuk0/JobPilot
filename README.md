@@ -19,7 +19,7 @@ Requirements:
 
 - **Node 24+** and **pnpm 12.6.0** (`corepack enable pnpm`).
 - **Docker**: local Postgres (pgvector) and Redis, `pnpm infra:up`.
-- **Google Chrome**: you log in to the job sites in it. Playwright's Chromium for headless runs comes with `pnpm install`.
+- **Google Chrome** with the JobPilot extension (below): you log in to the job sites and send the forms in it.
 - **An LLM**, one of:
    - `LLM_PROVIDER=claude-cli`: [Claude Code](https://docs.claude.com/en/docs/claude-code/setup) on your `PATH`, logged in to a Claude subscription (run `claude` once).
    - `LLM_PROVIDER=gemini`: a Gemini API key in `GEMINI_API_KEY`, the free tier is enough ([get one](https://aistudio.google.com/apikey)).
@@ -27,7 +27,7 @@ Requirements:
 
 ```sh
 git clone https://github.com/0RomanShevchuk0/JobPilot.git && cd JobPilot
-pnpm install          # also downloads Playwright's browsers
+pnpm install
 cp .env.example .env  # then fill it in
 pnpm infra:up         # Postgres and Redis
 pnpm db:migrate       # local database only; never against the shared one
@@ -47,16 +47,6 @@ pnpm --filter @jobpilot/extension build
 Already logged in? Press **Send sessions now** in its popup. The popup also shows the forms open in
 tabs and how each session went. `pnpm dev` builds `dist/chrome-mv3-dev` instead; restart it after
 changing `wxt.config.ts` or the ports in `.env`.
-
-### Without the extension
-
-Log in to a job site from the terminal instead (repeat when it logs you out). Sessions only: filling
-the form in needs the extension.
-
-```sh
-cd apps/worker
-pnpm login:djinni     # or login:dou; log in in the Chrome window, then quit Chrome
-```
 
 ## Windows
 

@@ -9,7 +9,7 @@ const SAME_SITE: Record<Cookie["sameSite"], SameSite> = {
    strict: "Strict",
    lax: "Lax",
    no_restriction: "None",
-   // set without the attribute: Chrome treats it as Lax, and so does Playwright's saved state
+   // set without the attribute: Chrome treats it as Lax
    unspecified: "Lax",
 };
 

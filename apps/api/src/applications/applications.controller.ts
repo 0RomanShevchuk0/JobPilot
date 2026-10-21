@@ -46,16 +46,6 @@ export class ApplicationsController {
       return this.applications.prepare(userId, body.postingId, body.refreshForm);
    }
 
-   /** Fills the prepared answers into the form in a visible browser; you send it (or close the window). */
-   @Post(":id/fill")
-   @HttpCode(202)
-   async fill(@Param("id", new ZodValidationPipe(z.uuid())) id: string) {
-      const userId = await this.user.id();
-      if (!(await this.applications.fill(userId, id))) {
-         throw new NotFoundException("No such application");
-      }
-   }
-
    /**
     * The extension starts filling the form on the job page in my browser: what to put in it. The
     * application shows as open there until the extension reports how it ended.

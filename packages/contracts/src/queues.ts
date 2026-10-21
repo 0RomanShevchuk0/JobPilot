@@ -27,8 +27,6 @@ export const QueueNames = {
    scoreVacancy: "score-vacancy",
    /** Opens an application form on the job site and answers it with an LLM. Added by the API. */
    prepareApplication: "prepare-application",
-   /** Fills a prepared application into the form in a visible browser; the user sends it. Added by the API. */
-   fillApplication: "fill-application",
    /** Re-evaluates every open vacancy for a user, e.g. after their profile changed. Added by the API. */
    matchUser: "match-user",
 } as const;
@@ -70,10 +68,6 @@ export interface PrepareApplicationJobData {
    applicationId: string;
    /** read the form on the job site again instead of reusing the questions read before */
    refreshForm?: boolean;
-}
-
-export interface FillApplicationJobData {
-   applicationId: string;
 }
 
 export interface MatchUserJobData {

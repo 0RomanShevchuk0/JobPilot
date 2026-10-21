@@ -10,7 +10,7 @@ import {
 import type { DatabaseClient } from "@jobpilot/db";
 import { SCORING_PROMPT_VERSION } from "@jobpilot/matching";
 import type { Job, Queue } from "bullmq";
-import { loginHint } from "../config.js";
+import { LOGIN_HINT } from "../config.js";
 import { log } from "../log.js";
 import { buildVacancyJobOptions, scoreVacancyJobOptions } from "../queues.js";
 import { canUseSessionOf, loadSession } from "../session.js";
@@ -129,10 +129,7 @@ async function checkJobPage(
       if (!(err instanceof SessionExpiredError)) throw err;
       // for the web to tell: the checks are skipped until the user logs in again
       await database.sourceSessions.markExpired(userId, posting.source);
-      log(
-         "check-can-apply",
-         `${err.message} (${loginHint(posting.source)}); scoring without the check`,
-      );
+      log("check-can-apply", `${err.message} (${LOGIN_HINT}); scoring without the check`);
       return undefined;
    }
 }

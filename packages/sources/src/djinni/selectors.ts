@@ -7,5 +7,3 @@ export const APPLY_BUTTON_SELECTOR = "button.js-inbox-toggle-reply-form";
 export const SIGN_IN_LINK_SELECTOR = "a.sign-in-link";
 // Djinni's application form: in the page from the start, hidden until "Apply for the job" is pressed
 export const APPLY_FORM_SELECTOR = "#apply_form";
-// "Send application": the user presses it themselves
-export const SEND_BUTTON_SELECTOR = "#job_apply";

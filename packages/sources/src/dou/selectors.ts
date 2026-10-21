@@ -9,8 +9,6 @@ export const APPLY_BUTTON_SELECTOR = ".reply #reply-btn-id";
 export const EXTERNAL_APPLY_SELECTOR = ".reply a.replied-external";
 // DOU's application form: in the page from the start, hidden until "Відгукнутися" is pressed
 export const APPLY_FORM_SELECTOR = "form#replied-id";
-// "Відправити": the user presses it themselves
-export const SEND_BUTTON_SELECTOR = ".replied-btn.send";
 // on a job applied to already, and on the page DOU answers a sent form with, the form says so instead:
 // "Ви відгукнулись на цю вакансію"
 export const ALREADY_APPLIED_SELECTOR = "form#replied-id.sent";

@@ -18,7 +18,7 @@ import {
    tidyAnswer,
 } from "@jobpilot/matching";
 import { type Job, UnrecoverableError } from "bullmq";
-import { loginHint } from "../config.js";
+import { LOGIN_HINT } from "../config.js";
 import { log } from "../log.js";
 import { loadSession } from "../session.js";
 import { findSource, type SourceEntry } from "../sources.js";
@@ -43,7 +43,7 @@ export async function handlePrepareApplication(
       const lastAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
       const reason =
          err instanceof SessionExpiredError
-            ? `${err.message}: ${loginHint(application.source)}, then prepare again`
+            ? `${err.message}: ${LOGIN_HINT}, then prepare again`
             : (err as Error).message;
       if (err instanceof SessionExpiredError) {
          await database.sourceSessions.markExpired(application.userId, application.source);

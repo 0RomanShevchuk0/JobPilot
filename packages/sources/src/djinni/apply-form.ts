@@ -8,12 +8,11 @@ import {
 import * as cheerio from "cheerio";
 import type { Cheerio, CheerioAPI } from "cheerio";
 import type { Element } from "domhandler";
-import type { Page } from "playwright";
 import { fieldKind } from "../form-field-kind.js";
 import { getText } from "../http.js";
 import { sessionCookieHeader } from "../saved-session.js";
-import { applyCheckOnPage, readApplyCheck } from "./account-page.js";
-import { APPLY_BUTTON_SELECTOR, APPLY_FORM_SELECTOR, SIGN_IN_LINK_SELECTOR } from "./selectors.js";
+import { applyCheckOnPage } from "./account-page.js";
+import { APPLY_FORM_SELECTOR, SIGN_IN_LINK_SELECTOR } from "./selectors.js";
 import { DJINNI_BASE_URL, DJINNI_NAME } from "./site.js";
 
 // Djinni names the recruiter's questions after their id: "answer_167872"
@@ -21,18 +20,6 @@ const QUESTION_NAME = /^answer_\d+$/;
 // what holds a group of radios or checkboxes with its title
 const CHOICE_GROUP_SELECTOR = "fieldset, .mb-2, .mb-3, .form-group";
 const CHOICE_GROUP_TITLE_SELECTOR = "legend, .form-label, h3, h4, p";
-
-/** Opens a job page with the user's session and presses "Apply for the job": the form is then on screen. */
-export async function openApplyForm(page: Page, jobUrl: string): Promise<void> {
-   await page.goto(jobUrl);
-   if ((await page.locator(SIGN_IN_LINK_SELECTOR).count()) > 0)
-      throw new SessionExpiredError(DJINNI_NAME);
-   const html = await page.content();
-   const applyCheck = readApplyCheck(html);
-   if (!applyCheck.canApply) throw new CannotApplyError(applyCheck.reason);
-   await page.locator(APPLY_BUTTON_SELECTOR).first().click();
-   await page.locator(APPLY_FORM_SELECTOR).waitFor({ state: "visible" });
-}
 
 /**
  * Reads the job's application form, loading the page with the user's session over plain HTTP: the form

@@ -57,21 +57,6 @@ export interface ApplyForm {
    html: string;
 }
 
-/** One answer to put into the form, by the input's name. */
-export interface FillValue {
-   /** the input's name in the form */
-   name: string;
-   kind: FormFieldKind;
-   /** for a choice field, the label of the option to pick; for a file field, the path of a local file */
-   value: string;
-}
-
-/** How filling the form in ended: the user sent it, or nothing was sent. */
-export type FillOutcome =
-   | { status: "submitted" }
-   /** the user closed the window or let it sit too long: nothing was sent */
-   | { status: "cancelled" };
-
 /** One answer to put into the form on the job page in the user's browser, by the input's name. */
 export type FillAnswer =
    | {
@@ -151,7 +136,7 @@ export interface ApplicationListItem {
 export interface ApplicationView extends ApplicationListItem {
    /** the form's questions and the message, with the proposed answers */
    fields: FormField[];
-   /** the form is open in a browser window right now, for the user to send or close */
+   /** the form is open in a tab of the user's browser right now (the extension), for them to send or close */
    filling: boolean;
    /**
     * a worker on this machine is on it: its prepare job is queued or running. "preparing" without it is
