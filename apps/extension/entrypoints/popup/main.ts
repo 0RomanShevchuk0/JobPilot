@@ -20,6 +20,9 @@ const list = document.querySelector<HTMLUListElement>(RESULTS_SELECTOR)!;
 const inProgress = document.querySelector<HTMLElement>(IN_PROGRESS_SELECTOR)!;
 const inProgressList = document.querySelector<HTMLUListElement>(IN_PROGRESS_LIST_SELECTOR)!;
 
+const OPEN_WEB_SELECTOR = "#open-web";
+document.querySelector<HTMLAnchorElement>(OPEN_WEB_SELECTOR)!.href = import.meta.env.WEB_URL;
+
 const formatTime = (ms: number) =>
    new Date(ms).toLocaleString([], {
       day: "numeric",
@@ -128,14 +131,21 @@ async function renderInProgress(): Promise<void> {
       const detail = siteName ? `${siteName} · ${phase.detail}` : phase.detail;
       item.append(element("div", "site-detail", detail));
 
-      const show = element("button", "secondary", "Show tab") as HTMLButtonElement;
-      show.type = "button";
+      const show = actionButton("Show tab", "secondary");
       // a tab closed meanwhile is forgotten by this: the list redraws without it
       show.addEventListener("click", () => void focusApplicationTab(tab.applicationId));
-      item.append(show);
+      const actions = element("div", "card-actions", "");
+      actions.append(show);
+      item.append(actions);
       return item;
    });
    inProgressList.replaceChildren(...items);
+}
+
+function actionButton(label: string, className = ""): HTMLButtonElement {
+   const action = element("button", className, label) as HTMLButtonElement;
+   action.type = "button";
+   return action;
 }
 
 button.addEventListener("click", async () => {

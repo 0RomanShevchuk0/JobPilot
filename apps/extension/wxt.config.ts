@@ -40,8 +40,13 @@ export default defineConfig({
    // the dev build's CSP lets in scripts from this port only: a second `pnpm dev` fails instead of
    // moving to the next port, where the loaded extension couldn't run its scripts
    dev: { server: { port: 3399, strictPort: true } },
-   // the API's address in the code: import.meta.env.API_URL
-   vite: () => ({ define: { "import.meta.env.API_URL": JSON.stringify(apiUrl) } }),
+   // in the code: import.meta.env.API_URL, the API; import.meta.env.WEB_URL, the web app
+   vite: () => ({
+      define: {
+         "import.meta.env.API_URL": JSON.stringify(apiUrl),
+         "import.meta.env.WEB_URL": JSON.stringify(webOrigin),
+      },
+   }),
    manifest: {
       name: "JobPilot",
       key: EXTENSION_KEY,

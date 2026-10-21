@@ -52,7 +52,21 @@ body {
 }
 
 header {
+   display: flex;
+   align-items: baseline;
+   justify-content: space-between;
    margin-bottom: 12px;
+}
+
+header a {
+   color: var(--muted);
+   font-size: 12px;
+   text-decoration: none;
+}
+
+header a:hover {
+   color: var(--text);
+   text-decoration: underline;
 }
 
 h1 {
@@ -196,16 +210,28 @@ section + section {
    background: var(--warning-dot);
 }
 
-button.secondary {
-   width: auto;
+/* a card's buttons, under its text */
+.card-actions {
+   display: flex;
+   gap: 8px;
    margin: 8px 0 0 16px;
+}
+
+.card-actions button,
+.card-actions a {
+   width: auto;
    padding: 4px 10px;
-   border: 1px solid var(--border);
-   background: transparent;
-   color: var(--text);
+   border-radius: 6px;
    font-size: 12px;
 }
 
-button.secondary:hover {
+.secondary {
+   border: 1px solid var(--border);
+   background: transparent;
+   color: var(--text);
+   text-decoration: none;
+}
+
+.secondary:hover {
    background: var(--border);
 }
