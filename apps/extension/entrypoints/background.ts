@@ -1,7 +1,13 @@
 import { browserSites } from "@jobpilot/sources/page";
 import { browser } from "wxt/browser";
 import { defineBackground } from "wxt/utils/define-background";
-import { fillApplicationTab, openApplicationTab } from "../utils/application-filling.js";
+import {
+   fillOrConfirmApplicationTab,
+   openApplicationTab,
+   reportClosedApplicationTab,
+   trackFormSubmission,
+} from "../utils/application-filling.js";
+import { jobSiteHosts, jobSitePages } from "../utils/job-sites.js";
 import { isSiteCookie } from "../utils/site-session.js";
 import {
    RESEND_ALARM,
@@ -11,11 +17,6 @@ import {
    syncSession,
 } from "../utils/sync-session.js";
 import { isFillCommand, PING_MESSAGE } from "../utils/web-messages.js";
-
-// the job sites' hosts: "https://jobs.dou.ua" → "jobs.dou.ua"
-const jobSiteHosts = browserSites.flatMap((site) =>
-   site.origins.map((origin) => new URL(origin).hostname),
-);
 
 export default defineBackground(() => {
    // installed, updated or reloaded: a user logged in long before has a session that won't change soon
@@ -62,12 +63,25 @@ export default defineBackground(() => {
       return true;
    });
 
-   // a job site's page has loaded: in a tab opened for an application, its form gets filled in. Only
-   // the job sites' pages wake the extension up, not every page the browser loads
+   // a job site's page has loaded: in a tab opened for an application, its form gets filled in, or the
+   // site's answer to the sent form is checked. Only the job sites' pages wake the extension up, not
+   // every page the browser loads
    browser.webNavigation.onCompleted.addListener(
       ({ tabId, frameId }) => {
-         if (frameId === 0) void fillApplicationTab(tabId); // the page itself, not one of its frames
+         if (frameId === 0) void fillOrConfirmApplicationTab(tabId); // the page, not one of its frames
       },
       { url: jobSiteHosts.map((hostEquals) => ({ hostEquals })) },
    );
+
+   // a job site answered a request of a page or its scripts: in an application's tab, it may be the form
+   // being sent. Headers, not completion: a post the site answers with a redirect never completes itself
+   browser.webRequest.onHeadersReceived.addListener(
+      ({ tabId, method, url, statusCode }) => {
+         void trackFormSubmission({ tabId, method, url, statusCode });
+      },
+      { urls: jobSitePages, types: ["main_frame", "xmlhttprequest"] },
+   );
+
+   // a tab closed: an application's, before the form was sent, ends with nothing sent
+   browser.tabs.onRemoved.addListener((tabId) => void reportClosedApplicationTab(tabId));
 });
