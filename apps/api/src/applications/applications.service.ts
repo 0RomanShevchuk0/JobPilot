@@ -74,7 +74,12 @@ export class ApplicationsService {
       // the last filling's problem is out of date; a new one records its own
       await this.db.applications.clearFillProblem(applicationId);
       await this.redis.client.set(fillingKey(applicationId), "1", "EX", FILLING_TTL_SECONDS);
-      return { source: toFill.source, jobUrl: toFill.postingUrl, answers };
+      return {
+         title: application.title,
+         source: toFill.source,
+         jobUrl: toFill.postingUrl,
+         answers,
+      };
    }
 
    /**

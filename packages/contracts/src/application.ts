@@ -85,6 +85,8 @@ export type FillAnswer =
 
 /** What the extension fills in on the job page, as POST /applications/:id/filling gives it. */
 export interface FormToFill {
+   /** the vacancy's title, to show; null when the vacancy is gone */
+   title: string | null;
    /** the job site's id, e.g. "djinni": how its page is filled in */
    source: string;
    /** the job page with the form */

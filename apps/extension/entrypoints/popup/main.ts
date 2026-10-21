@@ -1,6 +1,8 @@
 import { browserSites } from "@jobpilot/sources/page";
 import { browser } from "wxt/browser";
 import { fetchExpiredSessions } from "../../utils/api.js";
+import { focusApplicationTab } from "../../utils/application-filling.js";
+import { listApplicationTabs, type ApplicationTab } from "../../utils/application-tab-store.js";
 import {
    type LastSync,
    readLastSyncs,
@@ -10,9 +12,13 @@ import {
 
 const SEND_BUTTON_SELECTOR = "#send";
 const RESULTS_SELECTOR = "#results";
+const IN_PROGRESS_SELECTOR = "#in-progress";
+const IN_PROGRESS_LIST_SELECTOR = "#in-progress-list";
 
 const button = document.querySelector<HTMLButtonElement>(SEND_BUTTON_SELECTOR)!;
 const list = document.querySelector<HTMLUListElement>(RESULTS_SELECTOR)!;
+const inProgress = document.querySelector<HTMLElement>(IN_PROGRESS_SELECTOR)!;
+const inProgressList = document.querySelector<HTMLUListElement>(IN_PROGRESS_LIST_SELECTOR)!;
 
 const formatTime = (ms: number) =>
    new Date(ms).toLocaleString([], {
@@ -95,6 +101,43 @@ async function render(): Promise<void> {
    list.replaceChildren(...items);
 }
 
+/** What an application's tab is at, for the user: what is happening and whose move it is. */
+const PHASES: Record<ApplicationTab["phase"], { label: string; detail: string }> = {
+   opening: { label: "Opening", detail: "Opening the job page to fill the form in" },
+   waiting: { label: "Ready to send", detail: "Filled in: check it in the tab and send it" },
+   sent: { label: "Sending", detail: "Sent: waiting for the site's answer" },
+};
+
+/** The applications open in tabs: each with where it stands and a way back to its tab. */
+async function renderInProgress(): Promise<void> {
+   const tabs = await listApplicationTabs();
+   inProgress.hidden = tabs.length === 0;
+   const items = tabs.map(({ tab }) => {
+      const phase = PHASES[tab.phase];
+      const item = document.createElement("li");
+      item.className = "site";
+      item.dataset.phase = tab.phase;
+
+      const head = element("div", "site-head", "");
+      const title = element("span", "site-title", tab.form.title ?? tab.form.jobUrl);
+      title.title = title.textContent ?? ""; // the whole of a title cut short, on hover
+      head.append(title);
+      head.append(element("span", "site-status", phase.label));
+      item.append(head);
+      const siteName = browserSites.find((s) => s.source === tab.form.source)?.name;
+      const detail = siteName ? `${siteName} · ${phase.detail}` : phase.detail;
+      item.append(element("div", "site-detail", detail));
+
+      const show = element("button", "secondary", "Show tab") as HTMLButtonElement;
+      show.type = "button";
+      // a tab closed meanwhile is forgotten by this: the list redraws without it
+      show.addEventListener("click", () => void focusApplicationTab(tab.applicationId));
+      item.append(show);
+      return item;
+   });
+   inProgressList.replaceChildren(...items);
+}
+
 button.addEventListener("click", async () => {
    const label = button.textContent;
    button.disabled = true;
@@ -107,6 +150,8 @@ button.addEventListener("click", async () => {
    }
 });
 
-// the background writes each result down: shown as it comes, the button's and the automatic ones alike
-browser.storage.onChanged.addListener(render);
-await render();
+// the background writes everything down: sessions sent (storage.local), applications' tabs
+// (storage.session). Shown as it comes, whatever started it
+const renderAll = () => Promise.all([render(), renderInProgress()]);
+browser.storage.onChanged.addListener(() => void renderAll());
+await renderAll();

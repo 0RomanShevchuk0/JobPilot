@@ -30,13 +30,19 @@ export async function forgetApplicationTab(tabId: number): Promise<void> {
    await browser.storage.session.remove(tabKey(tabId));
 }
 
+/** Every tab open for an application, with its id. */
+export async function listApplicationTabs(): Promise<{ tabId: number; tab: ApplicationTab }[]> {
+   const stored = await browser.storage.session.get(null);
+   return Object.entries(stored)
+      .filter(([key]) => key.startsWith(KEY_PREFIX))
+      .map(([key, tab]) => ({
+         tabId: Number(key.slice(KEY_PREFIX.length)),
+         tab: tab as ApplicationTab,
+      }));
+}
+
 /** The tab an application is being filled in, if one is open for it. */
 export async function findApplicationTabId(applicationId: string): Promise<number | undefined> {
-   const stored = await browser.storage.session.get(null);
-   for (const [key, tab] of Object.entries(stored)) {
-      if (key.startsWith(KEY_PREFIX) && (tab as ApplicationTab).applicationId === applicationId) {
-         return Number(key.slice(KEY_PREFIX.length));
-      }
-   }
-   return undefined;
+   const tabs = await listApplicationTabs();
+   return tabs.find(({ tab }) => tab.applicationId === applicationId)?.tabId;
 }
