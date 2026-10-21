@@ -1,6 +1,6 @@
+import type { BrowserSite } from "@jobpilot/sources/page";
 import { API_URL } from "./api.js";
 import { readSiteSession } from "./site-session.js";
-import type { Site } from "./sites.js";
 
 export type SendResult =
    /** loginExpires: when the site's login cookie runs out, in seconds; -1 = when the browser closes */
@@ -11,7 +11,7 @@ export type SendResult =
    | { status: "failed"; error: string };
 
 /** Sends the user's session on the site to the API, which encrypts it for the server's worker. */
-export async function sendSession(site: Site): Promise<SendResult> {
+export async function sendSession(site: BrowserSite): Promise<SendResult> {
    const session = await readSiteSession(site);
    if (!session) return { status: "logged out" };
 

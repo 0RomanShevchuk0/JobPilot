@@ -62,9 +62,9 @@ export class ApplicationsController {
     */
    @Post(":id/filling")
    @HttpCode(200)
-   async startFilling(@Param("id", new ZodValidationPipe(z.uuid())) id: string) {
+   async claimForFilling(@Param("id", new ZodValidationPipe(z.uuid())) id: string) {
       const userId = await this.user.id();
-      const form = await this.applications.startFilling(userId, id);
+      const form = await this.applications.claimForFilling(userId, id);
       if (!form) throw new NotFoundException("No such application");
       return form;
    }
@@ -72,12 +72,12 @@ export class ApplicationsController {
    /** How filling the form in my browser ended, as the extension saw it: sent, closed, or a problem. */
    @Post(":id/fill-outcome")
    @HttpCode(204)
-   async reportFilling(
+   async recordFillOutcome(
       @Param("id", new ZodValidationPipe(z.uuid())) id: string,
       @Body(new ZodValidationPipe(fillReportSchema)) report: FillReport,
    ) {
       const userId = await this.user.id();
-      if (!(await this.applications.reportFilling(userId, id, report))) {
+      if (!(await this.applications.recordFillOutcome(userId, id, report))) {
          throw new NotFoundException("No such application");
       }
    }

@@ -63,7 +63,7 @@ export class ApplicationsService {
     * The application counts as open in a browser until the extension reports how it ended, or for as
     * long as a form waits for the user. Returns undefined when there is no such application.
     */
-   async startFilling(userId: string, applicationId: string): Promise<FormToFill | undefined> {
+   async claimForFilling(userId: string, applicationId: string): Promise<FormToFill | undefined> {
       const application = await this.db.applications.get(userId, applicationId);
       if (!application) return undefined;
       assertReadyToFill(application);
@@ -82,7 +82,7 @@ export class ApplicationsService {
     * as if marked there), the tab closed, or a problem shown with the answers. Returns false when there
     * is no such application.
     */
-   async reportFilling(
+   async recordFillOutcome(
       userId: string,
       applicationId: string,
       report: FillReport,

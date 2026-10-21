@@ -1,4 +1,4 @@
-import { visibleForm, type SitePage } from "../page/site-page.js";
+import { waitForVisibleForm, type SitePage } from "../page/site-page.js";
 import {
    APPLY_BUTTON_SELECTOR,
    APPLY_FORM_SELECTOR,
@@ -22,7 +22,7 @@ export const djinniPage: SitePage = {
          );
       }
       button.click();
-      return visibleForm(document, APPLY_FORM_SELECTOR);
+      return waitForVisibleForm(document, APPLY_FORM_SELECTOR);
    },
 
    sendButton: (form) => form.querySelector<HTMLElement>(SEND_BUTTON_SELECTOR),
