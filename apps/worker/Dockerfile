@@ -3,8 +3,6 @@
 FROM node:24-bookworm-slim AS build
 WORKDIR /app
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-# no browsers for @jobpilot/sources' postinstall: the server worker gets no jobs that open one
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 RUN corepack enable
 
 # Dependencies first, from the lockfile alone: the layer stays cached until the lockfile changes.

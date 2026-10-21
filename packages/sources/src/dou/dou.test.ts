@@ -10,6 +10,7 @@ import { readJobPage } from "./account-page.js";
 import { createDouAdapter } from "./adapter.js";
 import { readApplyFormOnPage } from "./apply-form.js";
 import { isClosedPage, parseJobPage, parseSalary, publishedAt } from "./job-page.js";
+import { douPage } from "./page.js";
 import { parseRss, rssUrl } from "./rss.js";
 import { DOU_ID } from "./site.js";
 
@@ -314,5 +315,18 @@ describe("adapter.fetch", () => {
       const result = await createDouAdapter().fetch(ref);
       expect(result.status).toBe("ok");
       expect(result.status === "ok" && result.raw.contentType).toBe("html");
+   });
+});
+
+describe("page: sending the form", () => {
+   const jobUrl = "https://jobs.dou.ua/companies/acme/vacancies/123456/";
+
+   it("is a post to the job's own page", () => {
+      expect(douPage.isFormSubmission(jobUrl, jobUrl)).toBe(true);
+      expect(douPage.isFormSubmission(`${jobUrl}?from=list`, jobUrl)).toBe(true);
+   });
+
+   it("is not a post anywhere else", () => {
+      expect(douPage.isFormSubmission("https://jobs.dou.ua/vacancies/", jobUrl)).toBe(false);
    });
 });

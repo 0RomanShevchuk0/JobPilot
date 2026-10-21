@@ -57,20 +57,38 @@ export interface ApplyForm {
    html: string;
 }
 
-/** One answer to put into the form, by the input's name. */
-export interface FillValue {
-   /** the input's name in the form */
-   name: string;
-   kind: FormFieldKind;
-   /** for a choice field, the label of the option to pick; for a file field, the path of a local file */
-   value: string;
+/** One answer to put into the form on the job page in the user's browser, by the input's name. */
+export type FillAnswer =
+   | {
+        name: string;
+        kind: Exclude<FormFieldKind, "file">;
+        /** for a choice field, the label of the option to pick */
+        value: string;
+     }
+   /** the CV to attach: the file comes from GET /documents/:id/file, under its own name */
+   | { name: string; kind: "file"; document: { id: string; fileName: string } };
+
+/** What the extension fills in on the job page, as POST /applications/:id/filling gives it. */
+export interface FormToFill {
+   /** the vacancy's title, to show; null when the vacancy is gone */
+   title: string | null;
+   /** the job site's id, e.g. "djinni": how its page is filled in */
+   source: string;
+   /** the job page with the form */
+   jobUrl: string;
+   answers: FillAnswer[];
 }
 
-/** How filling the form in ended: the user sent it, or nothing was sent. */
-export type FillOutcome =
-   | { status: "submitted" }
-   /** the user closed the window or let it sit too long: nothing was sent */
-   | { status: "cancelled" };
+/** How filling the form in the user's browser ended, as the extension reports it. */
+export const fillReportSchema = z.discriminatedUnion("status", [
+   /** the user sent the form and the site took it */
+   z.object({ status: z.literal("submitted") }),
+   /** the tab was closed before the form was sent: nothing was sent */
+   z.object({ status: z.literal("cancelled") }),
+   /** the form couldn't be filled in or the site refused it: the reason is shown with the answers */
+   z.object({ status: z.literal("failed"), reason: z.string().min(1) }),
+]);
+export type FillReport = z.infer<typeof fillReportSchema>;
 
 /** One field of an application form, as found by the browser agent. Array order = order in the form. */
 export const formFieldSchema = z.object({
@@ -118,7 +136,7 @@ export interface ApplicationListItem {
 export interface ApplicationView extends ApplicationListItem {
    /** the form's questions and the message, with the proposed answers */
    fields: FormField[];
-   /** the form is open in a browser window right now, for the user to send or close */
+   /** the form is open in a tab of the user's browser right now (the extension), for them to send or close */
    filling: boolean;
    /**
     * a worker on this machine is on it: its prepare job is queued or running. "preparing" without it is

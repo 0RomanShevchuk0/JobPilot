@@ -3,10 +3,8 @@ import { getText } from "../http.js";
 import { checkDjinniJobPage } from "./account-page.js";
 import { DJINNI_CATEGORIES } from "./categories.js";
 import { readDjinniApplyForm } from "./apply-form.js";
-import { fillDjinniApplication } from "./fill.js";
 import { isClosedPage, parseJobPage } from "./job-page.js";
 import { parseRss, rssUrl } from "./rss.js";
-import { loginToDjinni } from "./session.js";
 import { DJINNI_BASE_URL, DJINNI_ID, DJINNI_NAME } from "./site.js";
 
 export function createDjinniAdapter(): SourceAdapter {
@@ -50,10 +48,8 @@ export function createDjinniAdapter(): SourceAdapter {
       parse: parseJobPage,
 
       account: {
-         login: loginToDjinni,
          checkJobPage: checkDjinniJobPage,
          readApplyForm: readDjinniApplyForm,
-         fillApplicationForm: fillDjinniApplication,
          // like a person going through jobs: a minute or two between forms
          formOpenGapMs: { min: 60_000, max: 150_000 },
       },

@@ -18,21 +18,13 @@ export const config = {
    databaseUrl: required("DATABASE_URL"),
    redisUrl: required("REDIS_URL"),
    discoverEveryMs: Number(process.env.DISCOVER_EVERY_MINUTES ?? 180) * 60_000,
-   // one folder per user, saved by `pnpm login:<source>` and by the API on this machine from the extension
+   // one folder per user, saved by the API on this machine as the extension sends the sessions
    // (.data/ is gitignored): read by a local worker
    sessionsDir: "../../.data/sessions",
    // the server's only: decrypts the users' sessions in the database (see SESSION_PUBLIC_KEY in @jobpilot/session-crypto)
    sessionPrivateKey: role === "server" ? required("SESSION_PRIVATE_KEY") : undefined,
    // a local worker's only: the user whose sessions are on this machine, as for the API
    userEmail: role === "local" ? required("USER_EMAIL") : undefined,
-   // where document files live (the CV attached to applications): the same storage as the API's
-   storage: {
-      endpoint: required("S3_ENDPOINT"),
-      region: required("S3_REGION"),
-      bucket: required("S3_BUCKET"),
-      accessKeyId: required("S3_ACCESS_KEY_ID"),
-      secretAccessKey: required("S3_SECRET_ACCESS_KEY"),
-   },
    llm: {
       provider: required("LLM_PROVIDER"),
       model: process.env.LLM_MODEL || undefined, // the provider's default when empty
@@ -48,9 +40,9 @@ export function sessionPath(userId: string, source: string): string {
    return `${config.sessionsDir}/${userId}/${source}.json`;
 }
 
-/** How the user logs in to a source again, for messages about a missing or expired session. */
-export function loginHint(source: string): string {
-   // the extension's session reaches both: the database for the server's worker, the file the API on
-   // this machine writes for a local one
-   return `log in to the site in Chrome with the JobPilot extension, or run \`pnpm login:${source}\` in apps/worker`;
-}
+/**
+ * How the user logs in to a source again, for messages about a missing or expired session. The
+ * extension's session reaches both workers: the database for the server's, the file the API on this
+ * machine writes for a local one.
+ */
+export const LOGIN_HINT = "log in to the site in Chrome with the JobPilot extension";

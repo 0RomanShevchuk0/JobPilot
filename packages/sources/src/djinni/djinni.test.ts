@@ -9,6 +9,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDjinniAdapter } from "./adapter.js";
 import { readApplyFormOnPage } from "./apply-form.js";
+import { djinniPage } from "./page.js";
 import { kyivTimeToIso } from "../kyiv-time.js";
 import { isClosedPage, parseJobPage } from "./job-page.js";
 import { countryCode } from "./mappings.js";
@@ -291,5 +292,21 @@ describe("apply form", () => {
 
    it("needs the session: a page offering to sign in is a logged-out one", () => {
       expect(() => readApplyFormOnPage(fixture("job-remote.html"))).toThrow(SessionExpiredError);
+   });
+});
+
+describe("page: sending the form", () => {
+   const jobUrl = "https://djinni.co/jobs/850626-full-stack-developer-node-js-angular/";
+
+   it("is a post to the job's own page", () => {
+      expect(djinniPage.isFormSubmission(jobUrl, jobUrl)).toBe(true);
+      expect(djinniPage.isFormSubmission("https://djinni.co/jobs/850626/apply", jobUrl)).toBe(true);
+   });
+
+   it("is not a post anywhere else", () => {
+      expect(djinniPage.isFormSubmission("https://djinni.co/api/analytics", jobUrl)).toBe(false);
+      expect(djinniPage.isFormSubmission("https://djinni.co/jobs/111111-other/", jobUrl)).toBe(
+         false,
+      );
    });
 });
