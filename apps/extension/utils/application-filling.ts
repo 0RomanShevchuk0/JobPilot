@@ -1,4 +1,4 @@
-import type { FillAnswer, FillReport, FormToFill } from "@jobpilot/contracts";
+import type { ExtensionAnswer, FillAnswer, FillReport, FormToFill } from "@jobpilot/contracts";
 import { browser } from "wxt/browser";
 import { claimFormToFill, downloadDocument, reportFillOutcome } from "./api.js";
 import {
@@ -21,9 +21,6 @@ import {
  * filled in there, the user sending it, the site taking it. Nothing is ever sent but by the user.
  */
 
-/** How the web's command went: the tab is open with the form coming, or why not. */
-export type OpenTabResult = { ok: true } | { ok: false; reason: string };
-
 /** A response the browser got for a page, as webRequest tells of it. */
 export interface PageResponse {
    tabId: number;
@@ -36,7 +33,7 @@ export interface PageResponse {
  * The web's "fill application X": its job page opens in a new tab, where the form is filled in once
  * the page has loaded. A tab already open for it is brought forward instead of a second one.
  */
-export async function openApplicationTab(applicationId: string): Promise<OpenTabResult> {
+export async function openApplicationTab(applicationId: string): Promise<ExtensionAnswer> {
    if (await focusApplicationTab(applicationId)) return { ok: true };
    let form: FormToFill;
    try {

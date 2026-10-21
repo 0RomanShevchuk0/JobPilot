@@ -5,7 +5,6 @@ import {
    APPLY_FORM_SELECTOR,
    EXTERNAL_APPLY_SELECTOR,
    LOGIN_BUTTON_SELECTOR,
-   SEND_BUTTON_SELECTOR,
 } from "./selectors.js";
 
 /** DOU's application form, filled in on the job page in the user's browser. */
@@ -25,8 +24,6 @@ export const douPage: SitePage = {
       button.click();
       return waitForVisibleForm(document, APPLY_FORM_SELECTOR);
    },
-
-   sendButton: (form) => form.querySelector<HTMLElement>(SEND_BUTTON_SELECTOR),
 
    // the form has no action: "Відправити" posts it to the job's own page
    isFormSubmission: (requestUrl, jobUrl) =>

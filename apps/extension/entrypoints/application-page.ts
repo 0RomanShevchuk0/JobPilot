@@ -1,4 +1,4 @@
-import { fillFields, type PageFillValue } from "@jobpilot/sources/page";
+import { fillFields, scrollFormIntoView, type PageFillValue } from "@jobpilot/sources/page";
 import { defineUnlistedScript } from "wxt/utils/define-unlisted-script";
 import {
    findSitePage,
@@ -28,7 +28,7 @@ async function fillOnPage({ source, answers }: FillOnPage): Promise<FillOnPageRe
    try {
       const form = await page.openForm(document);
       await fillFields(form, answers.map(toPageValue));
-      page.sendButton(form)?.scrollIntoView({ block: "center" });
+      scrollFormIntoView(form);
       return { ok: true };
    } catch (err) {
       return { ok: false, reason: (err as Error).message };

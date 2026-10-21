@@ -9,8 +9,6 @@ export interface SitePage {
     * applied to already, applied to on the employer's site.
     */
    openForm(document: Document): Promise<HTMLFormElement>;
-   /** The button the user sends the form with, to bring into view once it is filled in. */
-   sendButton(form: HTMLFormElement): HTMLElement | null;
    /** Whether a POST the tab made is the form being sent, by its URL and the job page's. */
    isFormSubmission(requestUrl: string, jobUrl: string): boolean;
    /**
