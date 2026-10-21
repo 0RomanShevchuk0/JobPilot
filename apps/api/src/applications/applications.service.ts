@@ -192,8 +192,12 @@ export class ApplicationsService {
    }
 }
 
-/** How long an application counts as open in the extension's tab without a word from it: as long as a form waits for the user. */
-const FILLING_TTL_SECONDS = 30 * 60;
+/**
+ * How long an application counts as open in the extension's tab without a word from it. Short: a tab
+ * the extension lost (it or the browser restarted) keeps the answers locked only this long. The
+ * extension still watches the tab past it, a form sent later still counts as sent.
+ */
+const FILLING_TTL_SECONDS = 10 * 60;
 
 const fillingKey = (applicationId: string) => `application-filling:${applicationId}`;
 
