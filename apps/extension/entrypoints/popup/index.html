@@ -8,10 +8,17 @@
    <body>
       <header>
          <h1>JobPilot</h1>
-         <p class="hint">Your sessions are sent by themselves when you log in to a job site.</p>
       </header>
-      <ul id="results" class="sites"></ul>
-      <button id="send" type="button">Send sessions now</button>
+      <section id="in-progress" hidden>
+         <h2>In progress</h2>
+         <ul id="in-progress-list" class="sites"></ul>
+      </section>
+      <section>
+         <h2>Sessions</h2>
+         <p class="hint">Sent by themselves when you log in to a job site.</p>
+         <ul id="results" class="sites"></ul>
+         <button id="send" type="button">Send sessions now</button>
+      </section>
       <script type="module" src="./main.ts"></script>
    </body>
 </html>

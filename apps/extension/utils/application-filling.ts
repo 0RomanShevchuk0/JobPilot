@@ -175,7 +175,7 @@ async function showNoticeInTab(tabId: number, notice: PageNotice): Promise<void>
 }
 
 /** Brings an application's open tab forward; false when there is none (it was closed). */
-async function focusApplicationTab(applicationId: string): Promise<boolean> {
+export async function focusApplicationTab(applicationId: string): Promise<boolean> {
    const tabId = await findApplicationTabId(applicationId);
    if (tabId === undefined) return false;
    const tab = await browser.tabs.get(tabId).catch(() => undefined);
