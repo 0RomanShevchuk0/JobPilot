@@ -36,13 +36,13 @@ Google каждый раз заново), а форму отклика запо�
    - форма за переключателем `js-inbox-toggle-reply-form`, скорее всего уже есть в HTML: проверить
      на фикстуре, читать её из ответа с куками
 3. [ ] Отклик в расширении вместо `fill-application` (~3–5 дней, основное)
-   - «Apply» в вебе открывает вакансию с id отклика (параметр в URL или `externally_connectable`)
-   - content script на странице вакансии: берёт ответы с API, жмёт Apply, заполняет поля
-   - `fillField` с Playwright на DOM: `value` + события `input`/`change`; радио — по label; резюме —
-     `File` с API через `DataTransfer` в `input[type=file]`
-   - отправка: `submit` / загрузка следующей страницы → `readApplyCheck`; в API `submitted` или
-     `cancelled`, вакансия → Applied, как сейчас
-   - Djinni и DOU — у каждой своя логика открытия формы и признак отправки
+   - «Open in browser» в вебе: `chrome.runtime.sendMessage` в расширение (`externally_connectable`,
+     id из `EXTENSION_ID` в `.env`), нет ответа — «установи расширение»
+   - расширение: `POST /applications/:id/filling` (ответы, флаг «заполняется» в Redis на 10 мин) →
+     вкладка с вакансией → скрипт страницы заполняет форму (`@jobpilot/sources/page`)
+   - отправку видит `webRequest` (`isFormSubmission`), принята ли — страница ответа
+     (`isFormAccepted`); итог в `POST /applications/:id/fill-outcome`, вакансия → Applied
+   - уведомления на странице вакансии, вкладки откликов в popup; старый путь через воркер уходит в шаге 4
 4. [ ] Убрать локальный режим воркера
    - `WORKER_ROLE=local`, файлы сессий в `.data/sessions` (и их запись в API), `pnpm login:<source>`,
      `loginInChrome`, Playwright и `CHROME_PATHS` из воркера, раздел про вход в README

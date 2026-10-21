@@ -10,7 +10,8 @@ https://github.com/user-attachments/assets/6f1eb4ac-5665-4fd8-b6a6-03cb5711b83b
 1. Fill in your profile and upload a CV in the web app.
 2. Install the extension and log in to the job sites in Chrome (see below): without a session, jobs
    are scored but you can't apply.
-3. Open a match, press **Apply**, review the answers, and send the form in the browser window that opens.
+3. Open a match, press **Apply**, review the answers, then **Open in browser**: the extension opens the
+   job page in a tab and fills the form in. Check it and send it yourself.
 
 ## Setup
 
@@ -35,18 +36,22 @@ pnpm dev              # web on http://localhost:5173
 
 ### Extension
 
-Sends your job site sessions to the API (it must be running) whenever you log in to a site in Chrome.
+Sends your job site sessions to the API (it must be running) whenever you log in to a site in Chrome,
+and fills application forms in on the job pages.
 
 ```sh
 pnpm --filter @jobpilot/extension build
 ```
 
 `chrome://extensions` → Developer mode → **Load unpacked** → `apps/extension/dist/chrome-mv3`.
-Already logged in? Press **Send sessions now** in its popup; the popup also shows how each went.
+Already logged in? Press **Send sessions now** in its popup. The popup also shows the forms open in
+tabs and how each session went. `pnpm dev` builds `dist/chrome-mv3-dev` instead; restart it after
+changing `wxt.config.ts` or the ports in `.env`.
 
 ### Without the extension
 
-Log in to a job site from the terminal instead (repeat when it logs you out):
+Log in to a job site from the terminal instead (repeat when it logs you out). Sessions only: filling
+the form in needs the extension.
 
 ```sh
 cd apps/worker
