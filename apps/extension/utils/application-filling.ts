@@ -7,6 +7,7 @@ import {
    type FillOnPage,
    type FillOnPageResult,
    type PageAnswer,
+   type PageNotice,
 } from "./application-page-calls.js";
 import {
    findApplicationTabId,
@@ -100,13 +101,25 @@ export async function reportClosedApplicationTab(tabId: number): Promise<void> {
    await endApplicationTab(tabId, tab, report);
 }
 
-/** The job page has loaded: the form gets filled in; a problem ends the filling with its reason. */
+/**
+ * The job page has loaded: the form gets filled in; a problem ends the filling with its reason. The
+ * user is told on the page either way.
+ */
 async function fillApplicationTab(tabId: number, tab: ApplicationTab): Promise<void> {
    // marked before filling, so a reload meanwhile doesn't fill it twice
    await saveApplicationTab(tabId, { ...tab, phase: "waiting" });
    const result = await fillFormInTab(tabId, tab.form);
-   // a problem: the tab stays as it is, for the user to see; the reason shows with the answers in the web
-   if (!result.ok) await endApplicationTab(tabId, tab, { status: "failed", reason: result.reason });
+   if (result.ok) {
+      const text = "Filled in the form: check the answers and send it yourself.";
+      await showNoticeInTab(tabId, { tone: "info", text });
+      return;
+   }
+   // the tab stays as it is, for the user to see; the reason shows with the answers in the web too
+   await endApplicationTab(tabId, tab, { status: "failed", reason: result.reason });
+   await showNoticeInTab(tabId, {
+      tone: "error",
+      text: `Couldn't fill the form in: ${result.reason}`,
+   });
 }
 
 /**
@@ -121,21 +134,44 @@ async function confirmSubmission(tabId: number, tab: ApplicationTab): Promise<vo
    ).catch(() => true); // the page can't be read: the post going through is all there is to go by
    if (accepted === false) {
       await saveApplicationTab(tabId, { ...tab, phase: "waiting" });
+      const text = "The site didn't take the form: fix what it marks and send it again.";
+      await showNoticeInTab(tabId, { tone: "warning", text });
       return;
    }
-   await endApplicationTab(tabId, tab, { status: "submitted" });
+   const recorded = await endApplicationTab(tabId, tab, { status: "submitted" });
+   const notice: PageNotice = recorded
+      ? {
+           tone: "success",
+           text: "Sent, and recorded in JobPilot: the vacancy is in Applied. You can close this tab.",
+        }
+      : {
+           tone: "warning",
+           text: "Sent, but JobPilot didn't get it (is the API running?): mark the vacancy as applied there.",
+        };
+   await showNoticeInTab(tabId, notice);
 }
 
-/** The tab is no longer an application's; the API learns how the filling ended. */
+/**
+ * The tab is no longer an application's; the API learns how the filling ended. False when it didn't:
+ * the API is down, and the application stops showing as open by itself.
+ */
 async function endApplicationTab(
    tabId: number,
    tab: ApplicationTab,
    report: FillReport,
-): Promise<void> {
+): Promise<boolean> {
    await forgetApplicationTab(tabId);
-   await reportFillOutcome(tab.applicationId, report).catch(
-      () => undefined, // the API is down: the application stops showing as open by itself
-   );
+   try {
+      await reportFillOutcome(tab.applicationId, report);
+      return true;
+   } catch {
+      return false;
+   }
+}
+
+/** A note to the user over the tab's page; a page that can't take one (an error page) goes without. */
+async function showNoticeInTab(tabId: number, notice: PageNotice): Promise<void> {
+   await callOnPage(tabId, PAGE_FUNCTIONS.showNotice, notice).catch(() => undefined);
 }
 
 /** Brings an application's open tab forward; false when there is none (it was closed). */
