@@ -1,6 +1,6 @@
+import { browserSites } from "@jobpilot/sources/page";
 import { browser } from "wxt/browser";
 import { fetchExpiredSessions } from "../../utils/api.js";
-import { SITES } from "../../utils/sites.js";
 import {
    type LastSync,
    readLastSyncs,
@@ -72,7 +72,7 @@ function element(tag: string, className: string, text: string): HTMLElement {
  */
 async function render(): Promise<void> {
    const [lastSyncs, expired] = await Promise.all([readLastSyncs(), fetchExpiredSessions()]);
-   const items = SITES.map((site, i) => {
+   const items = browserSites.map((site, i) => {
       const view = describe(lastSyncs[i]);
       const item = document.createElement("li");
       item.className = "site";

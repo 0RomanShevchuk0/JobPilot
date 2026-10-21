@@ -251,6 +251,9 @@ importers:
       '@jobpilot/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@jobpilot/sources':
+        specifier: workspace:*
+        version: link:../../packages/sources
     devDependencies:
       typescript:
         specifier: ~6.0.3

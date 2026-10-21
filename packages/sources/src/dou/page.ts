@@ -1,4 +1,4 @@
-import { visibleForm, type SitePage } from "../page/site-page.js";
+import { waitForVisibleForm, type SitePage } from "../page/site-page.js";
 import {
    ALREADY_APPLIED_SELECTOR,
    APPLY_BUTTON_SELECTOR,
@@ -23,7 +23,7 @@ export const douPage: SitePage = {
          );
       }
       button.click();
-      return visibleForm(document, APPLY_FORM_SELECTOR);
+      return waitForVisibleForm(document, APPLY_FORM_SELECTOR);
    },
 
    sendButton: (form) => form.querySelector<HTMLElement>(SEND_BUTTON_SELECTOR),

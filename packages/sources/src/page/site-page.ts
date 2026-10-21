@@ -24,8 +24,11 @@ export interface SitePage {
 const FORM_TIMEOUT_MS = 10_000;
 const FORM_POLL_MS = 100;
 
-/** The form once the page shows it; the button pressing only reveals what is already in the page. */
-export async function visibleForm(document: Document, selector: string): Promise<HTMLFormElement> {
+/** Waits for the page to show the form: pressing the button only reveals what is already in the page. */
+export async function waitForVisibleForm(
+   document: Document,
+   selector: string,
+): Promise<HTMLFormElement> {
    const deadline = Date.now() + FORM_TIMEOUT_MS;
    while (Date.now() < deadline) {
       const form = document.querySelector<HTMLFormElement>(selector);
