@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { defineConfig } from "wxt";
-import { jobSitePages } from "./utils/job-sites.js";
+import { jobSitePages } from "./shared/job-sites.js";
 
 // the monorepo's .env: the API and the web app listen on the ports there, the extension talks to them.
 // Built into the extension: after changing a port, build it again

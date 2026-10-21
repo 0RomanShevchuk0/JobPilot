@@ -1,6 +1,6 @@
 import type { BrowserSite } from "@jobpilot/sources/page";
-import { API_URL } from "./api.js";
-import { readSiteSession } from "./site-session.js";
+import { sessionsApi } from "./api.js";
+import { readSiteSession } from "./read-session.js";
 
 export type SendResult =
    /** loginExpires: when the site's login cookie runs out, in seconds; -1 = when the browser closes */
@@ -14,18 +14,11 @@ export type SendResult =
 export async function sendSession(site: BrowserSite): Promise<SendResult> {
    const session = await readSiteSession(site);
    if (!session) return { status: "logged out" };
-
-   const url = `${API_URL}/sources/${site.source}/session`;
    try {
-      const response = await fetch(url, {
-         method: "PUT",
-         headers: { "Content-Type": "application/json" },
-         body: JSON.stringify(session),
-      });
-      if (!response.ok) return { status: "failed", error: `API answered ${response.status}` };
-      const loginCookie = session.cookies.find((c) => c.name === site.loginCookie)!;
-      return { status: "sent", loginExpires: loginCookie.expires };
-   } catch {
-      return { status: "failed", error: "API is not running" };
+      await sessionsApi.upload(site.source, session);
+   } catch (err) {
+      return { status: "failed", error: (err as Error).message };
    }
+   const loginCookie = session.cookies.find((c) => c.name === site.loginCookie)!;
+   return { status: "sent", loginExpires: loginCookie.expires };
 }

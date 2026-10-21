@@ -2,9 +2,10 @@ import type { FillAnswer } from "@jobpilot/contracts";
 import { browserSites, type SitePage } from "@jobpilot/sources/page";
 
 /*
- * What the script injected into an application's job page (entrypoints/application-page.ts) does for
- * the background: fills the form in, then tells whether the site took it. What goes in and out passes
- * as JSON: a file goes as base64, the script makes a File of it there.
+ * What the script injected into an application's job page (features/applications/page, injected as
+ * entrypoints/application-page.ts) does for the background (in-tab.ts): fills the form in, tells
+ * whether the site took it, shows the user how it goes. What goes in and out passes as JSON: a file
+ * goes as base64, the script makes a File of it there.
  */
 
 /** The names the page script registers its functions under, in the extension's own world there. */
