@@ -1,7 +1,7 @@
 import { statsPeriods } from "@jobpilot/contracts";
 import { Controller, Get, Query } from "@nestjs/common";
 import { z } from "zod";
-import { CurrentUser } from "../auth/current-user.service.js";
+import { CurrentUserId } from "../auth/current-user-id.decorator.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { StatsService } from "./stats.service.js";
 
@@ -23,17 +23,14 @@ const statsQuerySchema = z.object({
 
 @Controller("stats")
 export class StatsController {
-   constructor(
-      private readonly stats: StatsService,
-      private readonly user: CurrentUser,
-   ) {}
+   constructor(private readonly stats: StatsService) {}
 
    /** How many vacancies were found over the period, how many suited me and what I did with them. */
    @Get()
    async get(
+      @CurrentUserId() userId: string,
       @Query(new ZodValidationPipe(statsQuerySchema)) query: z.infer<typeof statsQuerySchema>,
    ) {
-      const userId = await this.user.id();
       return this.stats.get(userId, query.period, query.timeZone);
    }
 }

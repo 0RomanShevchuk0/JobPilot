@@ -42,6 +42,11 @@ export class Database implements OnApplicationShutdown {
       return this.client.sourceSessions;
    }
 
+   /** For sign-in only (Better Auth): its users, sessions and accounts. */
+   get authDatabase() {
+      return this.client.authDatabase;
+   }
+
    ping() {
       return this.client.ping();
    }

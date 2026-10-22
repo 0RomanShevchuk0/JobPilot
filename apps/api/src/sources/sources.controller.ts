@@ -1,20 +1,16 @@
 import { siteSessionSchema, type SiteSession } from "@jobpilot/contracts";
 import { Body, Controller, Get, HttpCode, Param, Put } from "@nestjs/common";
-import { CurrentUser } from "../auth/current-user.service.js";
+import { CurrentUserId } from "../auth/current-user-id.decorator.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { SourcesService } from "./sources.service.js";
 
 @Controller("sources")
 export class SourcesController {
-   constructor(
-      private readonly sources: SourcesService,
-      private readonly user: CurrentUser,
-   ) {}
+   constructor(private readonly sources: SourcesService) {}
 
    /** The job sites where my session stopped working: the worker can't check them for me. */
    @Get("sessions")
-   async expiredSessions() {
-      const userId = await this.user.id();
+   async expiredSessions(@CurrentUserId() userId: string) {
       return this.sources.expiredSessions(userId);
    }
 
@@ -25,10 +21,10 @@ export class SourcesController {
    @Put(":source/session")
    @HttpCode(204)
    async saveSession(
+      @CurrentUserId() userId: string,
       @Param("source") source: string,
       @Body(new ZodValidationPipe(siteSessionSchema)) session: SiteSession,
    ) {
-      const userId = await this.user.id();
       await this.sources.saveSession(userId, source, session);
    }
 }
