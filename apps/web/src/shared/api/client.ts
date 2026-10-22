@@ -1,7 +1,9 @@
+import { authClient } from "../auth/client";
+
 /**
- * Every request to the API goes through here, so this is the one place to add auth (a session cookie
- * or a token header) once there are several users. Nothing in the app knows who the user is: the API
- * answers for the current one.
+ * Every request to the API goes through here. The session's cookie goes along by itself (the API is on
+ * this same origin, under /api): the API answers for the signed-in user, nothing else in the app has to
+ * know who it is.
  */
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
    // a file goes as multipart/form-data: the browser sets that content type with its boundary itself
@@ -11,6 +13,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       headers: body === undefined || isForm ? undefined : { "content-type": "application/json" },
       body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
    });
+   // the session is over (expired, or signed out in another tab): the session is looked up again, and
+   // without one the app gives way to the sign-in page (RequireSignIn)
+   if (response.status === 401) authClient.$store.notify("$sessionSignal");
    if (!response.ok) {
       const message = await errorMessage(response, `${method} ${path}`);
       throw new Error(message);
