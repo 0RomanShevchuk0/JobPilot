@@ -123,11 +123,82 @@ export const vacancies = pgTable(
 
 // ─── Per-user data ────────────────────────────────────────────────────────────
 
+/**
+ * The users, as Better Auth keeps them (its "user" model): the fields are named the way it reads them.
+ * A Google sign-in finds the user by email, so the users from before sign-in kept their data.
+ */
 export const users = pgTable("users", {
    id: id(),
    email: text("email").notNull().unique(),
+   // the name on the Google account; empty for the users from before sign-in until they sign in
+   name: text("name").notNull().default(""),
+   emailVerified: boolean("email_verified").notNull().default(false),
+   // the Google account's picture
+   image: text("image"),
    createdAt: tstz("created_at").notNull().defaultNow(),
+   updatedAt: tstz("updated_at").notNull().defaultNow(),
 });
+
+// ─── Sign-in (Better Auth): its "session", "account" and "verification" models ──
+
+/**
+ * A signed-in browser: the web's cookie, and the token the web hands the extension, are its token.
+ * auth_, not to be taken for source_sessions, the user's sessions on the job sites.
+ */
+export const authSessions = pgTable(
+   "auth_sessions",
+   {
+      id: id(),
+      userId: uuid("user_id")
+         .notNull()
+         .references(() => users.id, { onDelete: "cascade" }),
+      token: text("token").notNull().unique(),
+      expiresAt: tstz("expires_at").notNull(),
+      ipAddress: text("ip_address"),
+      userAgent: text("user_agent"),
+      createdAt: tstz("created_at").notNull().defaultNow(),
+      updatedAt: tstz("updated_at").notNull().defaultNow(),
+   },
+   (t) => [index("auth_sessions_user_idx").on(t.userId)],
+);
+
+/** How a user signs in: their Google account (providerId "google", accountId its user id there). */
+export const authAccounts = pgTable(
+   "auth_accounts",
+   {
+      id: id(),
+      userId: uuid("user_id")
+         .notNull()
+         .references(() => users.id, { onDelete: "cascade" }),
+      providerId: text("provider_id").notNull(),
+      accountId: text("account_id").notNull(),
+      accessToken: text("access_token"),
+      refreshToken: text("refresh_token"),
+      idToken: text("id_token"),
+      accessTokenExpiresAt: tstz("access_token_expires_at"),
+      refreshTokenExpiresAt: tstz("refresh_token_expires_at"),
+      scope: text("scope"),
+      // unused: sign-in is Google only, Better Auth's model has it for email and password
+      password: text("password"),
+      createdAt: tstz("created_at").notNull().defaultNow(),
+      updatedAt: tstz("updated_at").notNull().defaultNow(),
+   },
+   (t) => [index("auth_accounts_user_idx").on(t.userId)],
+);
+
+/** Short-lived values of a sign-in on its way, such as the OAuth state between the redirects. */
+export const authVerifications = pgTable(
+   "auth_verifications",
+   {
+      id: id(),
+      identifier: text("identifier").notNull(),
+      value: text("value").notNull(),
+      expiresAt: tstz("expires_at").notNull(),
+      createdAt: tstz("created_at").notNull().defaultNow(),
+      updatedAt: tstz("updated_at").notNull().defaultNow(),
+   },
+   (t) => [index("auth_verifications_identifier_idx").on(t.identifier)],
+);
 
 /**
  * The user's own session on a source: the session itself, for the server's worker, and how it last

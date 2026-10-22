@@ -1,3 +1,4 @@
+import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import {
@@ -33,6 +34,8 @@ export interface DatabaseClient {
    readonly documents: DocumentsRepository;
    readonly applications: ApplicationsRepository;
    readonly stats: StatsRepository;
+   /** Where sign-in (Better Auth) keeps its users, sessions and accounts: these tables, through Drizzle. */
+   readonly authDatabase: ReturnType<typeof drizzleAdapter>;
    ping(): Promise<void>;
    close(): Promise<void>;
 }
@@ -55,6 +58,16 @@ export function createDatabase(connectionString: string): DatabaseClient {
       documents: createDocumentsRepository(db),
       applications: createApplicationsRepository(db),
       stats: createStatsRepository(db),
+      authDatabase: drizzleAdapter(db, {
+         provider: "pg",
+         // Better Auth's models, by its names: user, session, account, verification
+         schema: {
+            user: schema.users,
+            session: schema.authSessions,
+            account: schema.authAccounts,
+            verification: schema.authVerifications,
+         },
+      }),
       async ping() {
          await pool.query("SELECT 1");
       },

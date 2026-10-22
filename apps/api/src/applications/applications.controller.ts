@@ -10,7 +10,7 @@ import {
    Post,
 } from "@nestjs/common";
 import { z } from "zod";
-import { CurrentUser } from "../auth/current-user.service.js";
+import { CurrentUserId } from "../auth/current-user-id.decorator.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { ApplicationsService } from "./applications.service.js";
 
@@ -28,10 +28,7 @@ const answersBodySchema = z.object({
 
 @Controller("applications")
 export class ApplicationsController {
-   constructor(
-      private readonly applications: ApplicationsService,
-      private readonly user: CurrentUser,
-   ) {}
+   constructor(private readonly applications: ApplicationsService) {}
 
    /**
     * Prepares an application: the worker opens the form, answers its questions and the message.
@@ -40,9 +37,9 @@ export class ApplicationsController {
    @Post()
    @HttpCode(202)
    async prepare(
+      @CurrentUserId() userId: string,
       @Body(new ZodValidationPipe(prepareBodySchema)) body: z.infer<typeof prepareBodySchema>,
    ) {
-      const userId = await this.user.id();
       return this.applications.prepare(userId, body.postingId, body.refreshForm);
    }
 
@@ -52,8 +49,10 @@ export class ApplicationsController {
     */
    @Post(":id/filling")
    @HttpCode(200)
-   async claimForFilling(@Param("id", new ZodValidationPipe(z.uuid())) id: string) {
-      const userId = await this.user.id();
+   async claimForFilling(
+      @CurrentUserId() userId: string,
+      @Param("id", new ZodValidationPipe(z.uuid())) id: string,
+   ) {
       const form = await this.applications.claimForFilling(userId, id);
       if (!form) throw new NotFoundException("No such application");
       return form;
@@ -63,10 +62,10 @@ export class ApplicationsController {
    @Post(":id/fill-outcome")
    @HttpCode(204)
    async recordFillOutcome(
+      @CurrentUserId() userId: string,
       @Param("id", new ZodValidationPipe(z.uuid())) id: string,
       @Body(new ZodValidationPipe(fillReportSchema)) report: FillReport,
    ) {
-      const userId = await this.user.id();
       if (!(await this.applications.recordFillOutcome(userId, id, report))) {
          throw new NotFoundException("No such application");
       }
@@ -74,8 +73,7 @@ export class ApplicationsController {
 
    /** My applications, the latest activity first. */
    @Get()
-   async list() {
-      const userId = await this.user.id();
+   async list(@CurrentUserId() userId: string) {
       return this.applications.list(userId);
    }
 
@@ -83,18 +81,20 @@ export class ApplicationsController {
    @Patch(":id/fields")
    @HttpCode(204)
    async saveAnswers(
+      @CurrentUserId() userId: string,
       @Param("id", new ZodValidationPipe(z.uuid())) id: string,
       @Body(new ZodValidationPipe(answersBodySchema)) body: z.infer<typeof answersBodySchema>,
    ) {
-      const userId = await this.user.id();
       if (!(await this.applications.saveAnswers(userId, id, body.values))) {
          throw new NotFoundException("No such application");
       }
    }
 
    @Get(":id")
-   async get(@Param("id", new ZodValidationPipe(z.uuid())) id: string) {
-      const userId = await this.user.id();
+   async get(
+      @CurrentUserId() userId: string,
+      @Param("id", new ZodValidationPipe(z.uuid())) id: string,
+   ) {
       const application = await this.applications.get(userId, id);
       if (!application) throw new NotFoundException("No such application");
       return application;
