@@ -1,4 +1,4 @@
-import type { NormalizedPosting, VacancyFields } from "@jobpilot/contracts";
+import type { Location, NormalizedPosting, VacancyFields } from "@jobpilot/contracts";
 import { normalizeCompanyName } from "./company.js";
 import { normalizeSkills } from "./skills.js";
 import { normalizeTitle, seniorityFromTitle } from "./title.js";
@@ -24,8 +24,11 @@ export function vacancyFingerprint(posting: Pick<PostingForMerge, "postingId" | 
 /**
  * Builds the vacancy from all of its postings. Recomputed from scratch every time, so the result
  * doesn't depend on the order postings arrived in: postings are sorted by when they were first
- * seen, and each field takes the first non-empty value. Skills are the exception: sources list
- * different ones, so they are united.
+ * seen, and each field takes the first non-empty value. The exceptions are united instead:
+ * - skills: sources list different ones;
+ * - work modes and locations: one source says "remote", another leaves it out, and the earliest one
+ *   would hide it. Only open postings count, so a closed one's remote doesn't outlive it; when all
+ *   are closed, all count.
  */
 export function mergeVacancy(postings: PostingForMerge[]): VacancyFields {
    if (postings.length === 0) throw new Error("mergeVacancy: a vacancy needs at least one posting");
@@ -38,18 +41,32 @@ export function mergeVacancy(postings: PostingForMerge[]): VacancyFields {
    const allGone = goneAt.every((d) => d !== null);
    const lastGoneAt = Math.max(...goneAt.map((d) => d?.getTime() ?? 0));
    const skills = all.flatMap((p) => p.skills ?? []);
+   const open = allGone ? all : ordered.filter((p) => p.goneAt === null).map((p) => p.parsed);
+   const workModes = [...new Set(open.flatMap((p) => p.workModes ?? []))];
+   const locations = uniqueLocations(open.flatMap((p) => p.locations ?? []));
 
    return {
       title: all[0].title,
       description: all[0].description,
       seniority: first((p) => p.seniority) ?? first((p) => seniorityFromTitle(p.title)),
       employmentTypes: first((p) => p.employmentTypes) ?? [],
-      workModes: first((p) => p.workModes) ?? [],
-      locations: first((p) => p.locations) ?? [],
+      workModes,
+      locations,
       languages: first((p) => p.languages) ?? [],
       salary: first((p) => p.salary),
       skills: normalizeSkills(skills),
       experienceYears: first((p) => p.experienceYears),
       closedAt: allGone ? new Date(lastGoneAt) : null,
    };
+}
+
+/** The same place listed by two sources is kept once. */
+function uniqueLocations(locations: Location[]): Location[] {
+   const seen = new Set<string>();
+   return locations.filter((l) => {
+      const key = `${l.kind}|${l.country ?? ""}|${l.city ?? ""}|${l.raw}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+   });
 }

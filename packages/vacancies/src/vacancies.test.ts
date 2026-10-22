@@ -138,13 +138,61 @@ describe("mergeVacancy", () => {
       ]) {
          const v = mergeVacancy(input);
          expect(v.description).toBe("description of old");
-         expect(v.workModes).toEqual(["remote"]); // the older posting has it
          expect(v.salary).toEqual({ min: 4000, max: 5000, currency: "USD", period: "month" }); // only the newer does
       }
    });
 
    it("unites normalized skills of all postings", () => {
       expect(mergeVacancy([older, newer]).skills).toEqual(["node.js", "typescript", "postgresql"]);
+   });
+
+   it("unites work modes and locations of open postings", () => {
+      const dou = posting(
+         "dou",
+         { workModes: ["onsite"], locations: [{ kind: "office", raw: "за кордоном" }] },
+         "2026-10-07",
+      );
+      const djinni = posting(
+         "djinni",
+         { workModes: ["remote"], locations: [{ kind: "candidate", raw: "Worldwide" }] },
+         "2026-10-22",
+      );
+      const v = mergeVacancy([dou, djinni]);
+      expect(v.workModes).toEqual(["onsite", "remote"]);
+      expect(v.locations).toEqual([
+         { kind: "office", raw: "за кордоном" },
+         { kind: "candidate", raw: "Worldwide" },
+      ]);
+   });
+
+   it("leaves out work modes and locations of closed postings while another is open", () => {
+      const closedRemote = posting(
+         "closed",
+         { workModes: ["remote"], locations: [{ kind: "candidate", raw: "Worldwide" }] },
+         "2026-10-01",
+         "2026-10-10",
+      );
+      const openOffice = posting(
+         "open",
+         { workModes: ["onsite"], locations: [{ kind: "office", raw: "Kyiv", city: "Kyiv" }] },
+         "2026-10-12",
+      );
+      const v = mergeVacancy([closedRemote, openOffice]);
+      expect(v.workModes).toEqual(["onsite"]);
+      expect(v.locations).toEqual([{ kind: "office", raw: "Kyiv", city: "Kyiv" }]);
+   });
+
+   it("unites work modes of all postings once every one is closed", () => {
+      const a = posting("a", { workModes: ["remote"] }, "2026-10-01", "2026-10-10");
+      const b = posting("b", { workModes: ["onsite"] }, "2026-10-02", "2026-10-11");
+      expect(mergeVacancy([a, b]).workModes).toEqual(["remote", "onsite"]);
+   });
+
+   it("keeps a place listed by two sources once", () => {
+      const kyiv = { kind: "office" as const, raw: "Kyiv", city: "Kyiv" };
+      const a = posting("a", { locations: [kyiv] }, "2026-10-01");
+      const b = posting("b", { locations: [kyiv] }, "2026-10-02");
+      expect(mergeVacancy([a, b]).locations).toEqual([kyiv]);
    });
 
    it("fills seniority from the title when no source states it", () => {
