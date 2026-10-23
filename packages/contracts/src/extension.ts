@@ -12,6 +12,14 @@ export interface ExtensionFillCommand {
    fill: string;
 }
 
+/**
+ * The web's sign-in, handed to the extension: its session's token, which the extension sends to the API
+ * as Authorization: Bearer. Sent on every load of the web, so a new sign-in replaces the old token.
+ */
+export interface ExtensionSignIn {
+   sessionToken: string;
+}
+
 /** The extension's answer: done (the tab is open, the form is coming), or why not. */
 export type ExtensionAnswer = { ok: true } | { ok: false; reason: string };
 
@@ -20,5 +28,13 @@ export function isExtensionFillCommand(message: unknown): message is ExtensionFi
       typeof message === "object" &&
       message !== null &&
       typeof (message as Partial<ExtensionFillCommand>).fill === "string"
+   );
+}
+
+export function isExtensionSignIn(message: unknown): message is ExtensionSignIn {
+   return (
+      typeof message === "object" &&
+      message !== null &&
+      typeof (message as Partial<ExtensionSignIn>).sessionToken === "string"
    );
 }

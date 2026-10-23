@@ -2,6 +2,7 @@ import {
    EXTENSION_PING,
    type ExtensionAnswer,
    type ExtensionFillCommand,
+   type ExtensionSignIn,
 } from "@jobpilot/contracts";
 
 /**
@@ -26,6 +27,15 @@ export async function isExtensionInstalled(): Promise<boolean> {
 export function fillInExtension(applicationId: string): Promise<ExtensionAnswer | undefined> {
    const command: ExtensionFillCommand = { fill: applicationId };
    return sendToExtension<ExtensionAnswer>(command);
+}
+
+/**
+ * Hands the extension this browser's sign-in: it sends the session's token to the API from then on.
+ * Nothing happens without the extension.
+ */
+export async function sendSignInToExtension(sessionToken: string): Promise<void> {
+   const signIn: ExtensionSignIn = { sessionToken };
+   await sendToExtension(signIn);
 }
 
 /** A message to the extension and its answer; undefined when there is no extension to answer. */
