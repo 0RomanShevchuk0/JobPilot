@@ -1,5 +1,6 @@
 import { browserSites } from "@jobpilot/sources/page";
 import { browser } from "wxt/browser";
+import { signInToken } from "../../shared/sign-in-token.js";
 import { isSiteCookie } from "./read-session.js";
 import {
    RESEND_ALARM,
@@ -33,6 +34,9 @@ export function registerSessionSync(): void {
 
    // Chrome may drop alarms when it restarts, the unsent marks in storage stay: picked up again here
    browser.runtime.onStartup.addListener(resendUnsent);
+
+   // signed in on the web: the sessions the API refused without it go now, not at the next alarm
+   signInToken.onSaved(() => void resendUnsent());
 
    // the popup's button. Sent from here, not the popup: closing the popup would cut the requests off.
    // The answer only says it's done, the popup reads the results from storage; `true` keeps the
