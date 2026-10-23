@@ -47,14 +47,19 @@ const checkCanApplyQueue = new Queue<CheckCanApplyJobData>(QueueNames.checkCanAp
 const scoreVacancyQueue = new Queue<ScoreVacancyJobData>(QueueNames.scoreVacancy, { connection });
 const workers: Worker[] = [];
 
-// collecting vacancies is the server's: a local worker doing it too would hit the sites twice and
-// score the same vacancies twice. A local one takes only what its API and its own jobs queue
-const collectsVacancies = config.role === "server";
+// DISCOVER_EVERY_MINUTES=0: this worker doesn't collect vacancies, only takes what its API and its own
+// jobs queue. For one on a dev machine sharing the server's database: collecting there too would hit
+// the sites twice and score the same vacancies twice
+const collectsVacancies = config.discoverEveryMs > 0;
 
 for (const entry of sources) {
    const { source, name, baseUrl, fetchIntervalMs } = entry.adapter;
    await database.sources.register({ id: source, name, baseUrl });
-   if (!collectsVacancies) continue;
+   if (!collectsVacancies) {
+      // one an earlier run left in this Redis would keep queueing discovers nobody takes
+      await discoverQueue.removeJobScheduler(`discover-${source}`);
+      continue;
+   }
 
    // a new scheduler runs right away; an existing one keeps its interval, so restarts don't re-trigger it
    await discoverQueue.upsertJobScheduler(
@@ -88,7 +93,7 @@ if (collectsVacancies) {
 }
 
 workers.push(
-   // check-can-apply queues it too, for a page found gone: a local worker needs it as well
+   // check-can-apply queues it too, for a page found gone: a worker not collecting needs it as well
    new Worker<BuildVacancyJobData>(
       QueueNames.buildVacancy,
       (job) => handleBuildVacancy(job, database, matchVacancyQueue),
@@ -162,10 +167,10 @@ for (const worker of workers) {
 
 const collecting = collectsVacancies
    ? `discover every ${config.discoverEveryMs / 60_000} min`
-   : "not collecting (the server does)";
+   : "not collecting (DISCOVER_EVERY_MINUTES=0)";
 log(
    "worker",
-   `started (${config.role}): ${sources.map((s) => s.adapter.source).join(", ")}; ` +
+   `started: ${sources.map((s) => s.adapter.source).join(", ")}; ` +
       `${collecting}; scoring with ${scoring.llm.model}`,
 );
 

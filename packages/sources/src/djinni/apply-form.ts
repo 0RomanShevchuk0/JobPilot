@@ -10,7 +10,7 @@ import type { Cheerio, CheerioAPI } from "cheerio";
 import type { Element } from "domhandler";
 import { fieldKind } from "../form-field-kind.js";
 import { getText } from "../http.js";
-import { sessionCookieHeader } from "../saved-session.js";
+import { sessionCookieHeader } from "../session-cookie.js";
 import { applyCheckOnPage } from "./account-page.js";
 import { APPLY_FORM_SELECTOR, SIGN_IN_LINK_SELECTOR } from "./selectors.js";
 import { DJINNI_BASE_URL, DJINNI_NAME } from "./site.js";

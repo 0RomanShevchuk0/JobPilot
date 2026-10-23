@@ -7,7 +7,7 @@ import {
 } from "@jobpilot/contracts";
 import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
-import { sessionCookieHeader } from "../saved-session.js";
+import { sessionCookieHeader } from "../session-cookie.js";
 import { APPLY_BUTTON_SELECTOR, SIGN_IN_LINK_SELECTOR } from "./selectors.js";
 import { DJINNI_BASE_URL, DJINNI_NAME } from "./site.js";
 

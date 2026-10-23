@@ -44,8 +44,6 @@ services:
       environment:
          # the Redis next to it, whatever .env says
          REDIS_URL: redis://redis:6379
-         # the users' sessions come from the database, decrypted with SESSION_PRIVATE_KEY from .env
-         WORKER_ROLE: server
       depends_on:
          redis:
             condition: service_healthy
@@ -62,8 +60,6 @@ services:
       env_file: .env
       environment:
          REDIS_URL: redis://redis:6379
-         # the worker here is the server's: no sessions saved to files for a local one
-         WORKER_ROLE: server
       depends_on:
          redis:
             condition: service_healthy

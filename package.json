@@ -15,6 +15,7 @@
       "db:generate": "pnpm --filter @jobpilot/db db:generate",
       "db:migrate": "pnpm --filter @jobpilot/db db:migrate",
       "db:studio": "pnpm --filter @jobpilot/db db:studio",
+      "session-keys:generate": "turbo run build --filter=@jobpilot/worker^... --output-logs=errors-only && pnpm --filter @jobpilot/worker session-keys:generate",
       "infra:up": "docker compose up -d --wait",
       "infra:down": "docker compose down"
    },

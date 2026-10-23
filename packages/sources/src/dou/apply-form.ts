@@ -9,7 +9,7 @@ import type { CheerioAPI } from "cheerio";
 import type { Element } from "domhandler";
 import { fieldKind } from "../form-field-kind.js";
 import { getText } from "../http.js";
-import { sessionCookieHeader } from "../saved-session.js";
+import { sessionCookieHeader } from "../session-cookie.js";
 import { readJobPage } from "./account-page.js";
 import { APPLY_FORM_SELECTOR, EXTERNAL_APPLY_SELECTOR } from "./selectors.js";
 

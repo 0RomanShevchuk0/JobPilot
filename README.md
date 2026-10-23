@@ -30,10 +30,11 @@ Requirements:
 ```sh
 git clone https://github.com/0RomanShevchuk0/JobPilot.git && cd JobPilot
 pnpm install
-cp .env.example .env  # then fill it in
-pnpm infra:up         # Postgres and Redis
-pnpm db:migrate       # local database only; never against the shared one
-pnpm dev              # web on http://localhost:5173
+cp .env.example .env        # then fill it in
+pnpm session-keys:generate  # once: SESSION_* for .env
+pnpm infra:up               # Postgres and Redis
+pnpm db:migrate             # local database only; never against the shared one
+pnpm dev                    # web on http://localhost:5173
 ```
 
 ### Extension
