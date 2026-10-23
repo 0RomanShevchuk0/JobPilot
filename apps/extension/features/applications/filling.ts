@@ -110,6 +110,8 @@ export async function reportClosedApplicationTab(tabId: number): Promise<void> {
 async function fillApplicationTab(tabId: number, tab: ApplicationTab): Promise<void> {
    // marked before filling, so a reload meanwhile doesn't fill it twice
    await applicationTabs.save(tabId, { ...tab, phase: "waiting" });
+   // the CV comes from the API first: on a slow server it takes a moment, the user sees it's under way
+   await pageInTab.showNotice(tabId, { tone: "progress", text: "Filling the form in…" });
    const result = await pageInTab.fill(tabId, tab.form);
    if (result.ok) {
       const text = "Filled in the form: check the answers and send it yourself.";
@@ -135,6 +137,7 @@ async function confirmSubmission(tabId: number, tab: ApplicationTab): Promise<vo
       await pageInTab.showNotice(tabId, { tone: "warning", text });
       return;
    }
+   await pageInTab.showNotice(tabId, { tone: "progress", text: "Sent: recording it in JobPilot…" });
    const recorded = await endApplicationTab(tabId, tab, { status: "submitted" });
    const notice: PageNotice = recorded
       ? {

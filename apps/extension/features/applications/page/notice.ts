@@ -5,6 +5,7 @@ import type { PageNotice } from "../page-calls.js";
 const NOTICE_HOST_ID = "jobpilot-notice";
 
 const NOTICE_COLORS: Record<PageNotice["tone"], { accent: string; background: string }> = {
+   progress: { accent: "#2563eb", background: "#eff6ff" },
    info: { accent: "#2563eb", background: "#eff6ff" },
    success: { accent: "#16a34a", background: "#f0fdf4" },
    warning: { accent: "#d97706", background: "#fffbeb" },
@@ -35,7 +36,16 @@ export function showNoticeOnPage({ tone, text }: PageNotice): void {
             box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
             font: 14px/1.4 system-ui, sans-serif;
          }
-         .title { margin: 0 0 2px; font-weight: 600; color: ${accent}; }
+         .title {
+            display: flex; align-items: center; gap: 8px;
+            margin: 0 0 2px; font-weight: 600; color: ${accent};
+         }
+         .spinner {
+            width: 12px; height: 12px; border: 2px solid currentColor; border-top-color: transparent;
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+         }
+         .spinner[hidden] { display: none; }
+         @keyframes spin { to { transform: rotate(360deg); } }
          .text { margin: 0; }
          button {
             flex: none; margin: -4px -6px 0 0; padding: 0 6px;
@@ -43,14 +53,19 @@ export function showNoticeOnPage({ tone, text }: PageNotice): void {
          }
       </style>
       <div class="notice" role="status">
-         <div><p class="title">JobPilot</p><p class="text"></p></div>
+         <div>
+            <p class="title"><span class="spinner" hidden></span>JobPilot</p>
+            <p class="text"></p>
+         </div>
          <button type="button" aria-label="Close">×</button>
       </div>`;
    // the text as text: a reason from the site or the API is never read as HTML
    root.querySelector(".text")!.textContent = text;
+   root.querySelector<HTMLElement>(".spinner")!.hidden = tone !== "progress";
    root.querySelector("button")!.addEventListener("click", () => host.remove());
    document.body.append(host);
-   // news goes by itself; a warning or an error says what to do, it stays until closed
+   // news goes by itself; a warning or an error says what to do, it stays until closed; progress
+   // stays until the note after it replaces it
    if (tone === "info" || tone === "success") hideLater(host);
 }
 

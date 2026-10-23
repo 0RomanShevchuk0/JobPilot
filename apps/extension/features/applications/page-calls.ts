@@ -18,9 +18,12 @@ export const PAGE_FUNCTIONS = {
    showNotice: "jobpilotShowNotice",
 } as const;
 
-/** A note to the user over the job page: how the application is going. */
+/**
+ * A note to the user over the job page: how the application is going. "progress": something under
+ * way, with a spinner, until the next note replaces it.
+ */
 export interface PageNotice {
-   tone: "info" | "success" | "warning" | "error";
+   tone: "progress" | "info" | "success" | "warning" | "error";
    text: string;
 }
 
