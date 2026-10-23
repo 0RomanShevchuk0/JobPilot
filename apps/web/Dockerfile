@@ -12,9 +12,7 @@ RUN pnpm fetch
 
 COPY . .
 RUN pnpm install --offline --frozen-lockfile --filter @jobpilot/web...
-# the build takes EXTENSION_ID from the root .env; the example's is the real one (the extension's
-# key decides it), and nothing else in it goes into the build
-RUN cp .env.example .env && pnpm turbo run build --filter=@jobpilot/web...
+RUN pnpm turbo run build --filter=@jobpilot/web...
 
 FROM caddy:2-alpine AS runtime
 COPY apps/web/Caddyfile /etc/caddy/Caddyfile

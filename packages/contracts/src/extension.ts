@@ -3,6 +3,17 @@
  * extension's externally_connectable lets only the web app's origin in).
  */
 
+/**
+ * The extension's ids, one for each of its builds: `wxt build` for the server, `pnpm dev` for this
+ * machine. Two ids, so both stay loaded in Chrome side by side. Chrome derives each from its build's
+ * key (apps/extension/wxt.config.ts, which checks they match); the web talks to the one of its own
+ * build, the API lets both in.
+ */
+export const EXTENSION_IDS = {
+   production: "dakikehdmagghigijcpneocecnenklba",
+   development: "mbgegdiecnhgiomfjlolphbndiggfhha",
+} as const;
+
 /** Asks whether the extension is there: it answers { ok: true }. */
 export const EXTENSION_PING = "ping";
 

@@ -13,8 +13,6 @@ export default defineConfig(({ command, mode }) => {
 
    return {
       plugins: [react(), tailwindcss()],
-      // the extension the app talks to, in the code: import.meta.env.EXTENSION_ID
-      define: { "import.meta.env.EXTENSION_ID": JSON.stringify(required("EXTENSION_ID")) },
       // the dev server only: a build is static files, served behind a reverse proxy (Caddy) on the server
       server: command === "serve" ? devServer(required) : undefined,
    };
