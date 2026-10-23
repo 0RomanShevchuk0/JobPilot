@@ -7,7 +7,7 @@ https://github.com/user-attachments/assets/6f1eb4ac-5665-4fd8-b6a6-03cb5711b83b
 
 ## Usage
 
-1. Fill in your profile and upload a CV in the web app.
+1. Sign in with Google, fill in your profile and upload a CV in the web app.
 2. Install the extension and log in to the job sites in Chrome (see below): without a session, jobs
    are scored but you can't apply.
 3. Open a match, press **Apply**, review the answers, then **Open in browser**: the extension opens the
@@ -24,6 +24,8 @@ Requirements:
    - `LLM_PROVIDER=claude-cli`: [Claude Code](https://docs.claude.com/en/docs/claude-code/setup) on your `PATH`, logged in to a Claude subscription (run `claude` once).
    - `LLM_PROVIDER=gemini`: a Gemini API key in `GEMINI_API_KEY`, the free tier is enough ([get one](https://aistudio.google.com/apikey)).
 - **S3-compatible storage** for the CV: a bucket and its keys in `S3_*`.
+- **A Google OAuth client** for signing in, with the redirect URI
+  `http://localhost:5173/api/auth/callback/google`.
 
 ```sh
 git clone https://github.com/0RomanShevchuk0/JobPilot.git && cd JobPilot
@@ -36,17 +38,12 @@ pnpm dev              # web on http://localhost:5173
 
 ### Extension
 
-Sends your job site sessions to the API (it must be running) whenever you log in to a site in Chrome,
-and fills application forms in on the job pages.
+`pnpm dev` builds it into `apps/extension/dist/chrome-mv3-dev`: `chrome://extensions` → Developer mode
+→ **Load unpacked** → that folder. Then open the web app signed in.
 
-```sh
-pnpm --filter @jobpilot/extension build
-```
+## Deploy
 
-`chrome://extensions` → Developer mode → **Load unpacked** → `apps/extension/dist/chrome-mv3`.
-Already logged in? Press **Send sessions now** in its popup. The popup also shows the forms open in
-tabs and how each session went. `pnpm dev` builds `dist/chrome-mv3-dev` instead; restart it after
-changing `wxt.config.ts` or the ports in `.env`.
+Push to `main`: CI, then Deploy builds the images and restarts `docker-compose.prod.yml` on the server.
 
 ## Windows
 
