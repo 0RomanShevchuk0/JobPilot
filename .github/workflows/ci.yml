@@ -27,8 +27,8 @@ jobs:
          - name: Install deps
            run: pnpm install --frozen-lockfile
 
-         # the web's and the extension's builds read the root .env: the example's public addresses and
-         # the extension's id are all they take, no secrets
+         # the extension's build reads the root .env: the example's public addresses are all it takes,
+         # no secrets
          - name: Env for the builds
            run: cp .env.example .env
 

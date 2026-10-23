@@ -3,6 +3,7 @@ import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module.js";
+import { EXTENSION_ORIGINS } from "./auth/extension-origins.js";
 import { SessionGuard } from "./auth/session.guard.js";
 
 const app = await NestFactory.create(AppModule);
@@ -14,8 +15,7 @@ app.setGlobalPrefix("api");
 
 // the JobPilot extension only; the web app needs none, it comes through a proxy as the same origin,
 // and other sites stay refused
-const extensionOrigin = `chrome-extension://${config.getOrThrow<string>("EXTENSION_ID")}`;
-app.enableCors({ origin: [extensionOrigin] });
+app.enableCors({ origin: EXTENSION_ORIGINS });
 
 // every route takes a signed-in user, but those marked @Public(): 401 without a session
 app.useGlobalGuards(app.get(SessionGuard));

@@ -1,9 +1,13 @@
 import {
+   EXTENSION_IDS,
    EXTENSION_PING,
    type ExtensionAnswer,
    type ExtensionFillCommand,
    type ExtensionSignIn,
 } from "@jobpilot/contracts";
+
+/** The extension of this build: `vite` (pnpm dev) talks to the dev one, the server's build to its own. */
+const EXTENSION_ID = import.meta.env.DEV ? EXTENSION_IDS.development : EXTENSION_IDS.production;
 
 /**
  * The part of chrome.runtime a web page gets: Chrome puts it on pages an installed extension lets in
@@ -43,7 +47,7 @@ function sendToExtension<Answer>(message: unknown): Promise<Answer | undefined> 
    const runtime = (globalThis as { chrome?: { runtime?: PageRuntime } }).chrome?.runtime;
    if (!runtime) return Promise.resolve(undefined);
    return new Promise((resolve) => {
-      runtime.sendMessage(import.meta.env.EXTENSION_ID, message, (answer) => {
+      runtime.sendMessage(EXTENSION_ID, message, (answer) => {
          // read to mark it handled: no extension with this id ("Could not establish connection")
          if (runtime.lastError) resolve(undefined);
          else resolve(answer as Answer);

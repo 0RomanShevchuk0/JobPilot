@@ -6,6 +6,7 @@ import { fromNodeHeaders } from "better-auth/node";
 import { bearer } from "better-auth/plugins";
 import type { IncomingHttpHeaders } from "node:http";
 import { Database } from "../infra/database.js";
+import { EXTENSION_ORIGINS } from "./extension-origins.js";
 
 /** Where the sign-in routes live (SignInController): under the API's /api, as the browser asks for them. */
 const SIGN_IN_BASE_PATH = "/api/auth";
@@ -32,7 +33,6 @@ export class SignIn {
 
 function createAuth(config: ConfigService, database: DatabaseClient["authDatabase"]) {
    const webUrl = config.getOrThrow<string>("WEB_URL");
-   const extensionOrigin = `chrome-extension://${config.getOrThrow<string>("EXTENSION_ID")}`;
    return betterAuth({
       // the web's address: the browser signs in there, the API is behind its /api
       baseURL: webUrl,
@@ -50,7 +50,7 @@ function createAuth(config: ConfigService, database: DatabaseClient["authDatabas
       account: { accountLinking: { enabled: true, trustedProviders: ["google"] } },
       // the extension sends the web's session token as Authorization: Bearer
       plugins: [bearer()],
-      trustedOrigins: [webUrl, extensionOrigin],
+      trustedOrigins: [webUrl, ...EXTENSION_ORIGINS],
       // ids are the database's own: uuidv7(), like every other table
       advanced: { database: { generateId: false } },
       telemetry: { enabled: false },
