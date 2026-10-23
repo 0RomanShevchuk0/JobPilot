@@ -6,8 +6,8 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { MatchesService } from "./matches.service.js";
 
 const listQuerySchema = z.object({
-   /** which vacancies: new (not marked yet, the default), applied or hidden */
-   status: z.enum(["new", "applied", "hidden"]).default("new"),
+   /** which vacancies: new (not marked yet, the default) or hidden; the applied ones: GET /matches/applied */
+   status: z.enum(["new", "hidden"]).default("new"),
    /** new vacancies only: "skipped" adds AI skips, prefilter rejections and the ones waiting for a score */
    include: z.literal("skipped").optional(),
    /** the nextCursor of the previous page; absent = the first page */
@@ -23,7 +23,10 @@ const statusBodySchema = z.object({
 export class MatchesController {
    constructor(private readonly matches: MatchesService) {}
 
-   /** Vacancies evaluated for my current profile, best first, a page at a time. */
+   /**
+    * Vacancies evaluated for my current profile, a page at a time: the new ones best first, the hidden
+    * ones the latest hidden first.
+    */
    @Get()
    async list(
       @CurrentUserId() userId: string,
@@ -34,6 +37,13 @@ export class MatchesController {
          includeSkipped: query.include === "skipped",
          after: query.after,
       });
+   }
+
+   /** Everything I applied to, through JobPilot or on my own, the latest first: the history. */
+   // before :vacancyId, which would take "applied" for an id
+   @Get("applied")
+   async listApplied(@CurrentUserId() userId: string) {
+      return this.matches.listApplied(userId);
    }
 
    /** One vacancy as evaluated for my current profile, with its description and every job site it is on. */

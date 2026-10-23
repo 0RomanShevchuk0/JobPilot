@@ -1,5 +1,6 @@
 import type {
    AiAssessment,
+   AppliedVacancy,
    ApplyCheck,
    JobPageCheck,
    ApplicationStatus,
@@ -51,8 +52,8 @@ export interface Assessment {
 }
 
 export interface MatchListOptions {
-   /** which of the user's marks to list: null = new vacancies */
-   status: MatchStatus;
+   /** null = new vacancies, best score first; hidden: the latest hidden first. Applied ones: listApplied */
+   status: null | "hidden";
    /** new vacancies only: add AI skips, prefilter rejections and the ones waiting for a score */
    includeSkipped: boolean;
    /** the last vacancy of the previous page: the list goes on after it; absent = from the top */
@@ -68,11 +69,19 @@ export interface MatchesRepository {
     */
    listForUser(userId: string, options: MatchListOptions): Promise<MatchListItem[]>;
    /**
+    * Every vacancy the user applied to, the latest first: the history. Unlike the lists, whatever became
+    * of the vacancy since: closed, its category unpicked, evaluated for an older profile.
+    */
+   listApplied(userId: string): Promise<AppliedVacancy[]>;
+   /**
     * One vacancy evaluated for the user's current profile version, with what only its own page shows;
     * closed ones too. Undefined when there is no such evaluation.
     */
    getDetails(userId: string, vacancyId: string): Promise<MatchDetails | undefined>;
-   /** Marks a vacancy (null clears the mark). Returns false when it has no evaluation for the user. */
+   /**
+    * Marks a vacancy (null clears the mark), now: the history and the hidden list go by when. Returns
+    * false when it has no evaluation for the user.
+    */
    setStatus(userId: string, vacancyId: string, status: MatchStatus): Promise<boolean>;
    get(userId: string, vacancyId: string): Promise<StoredMatch | undefined>;
    /**
@@ -104,9 +113,15 @@ export interface MatchesRepository {
    ): Promise<boolean>;
 }
 
+/** How a list goes: best score first (the new ones), or the latest marked first (the hidden ones). */
+type MatchOrder = "score" | "marked";
+
+// when the vacancy was marked; the evaluation's date for a mark from before the column was there
+const markedAtSql = sql`coalesce(${vacancyMatches.statusChangedAt}, ${vacancyMatches.evaluatedAt})`;
+
 export function createMatchesRepository(db: Drizzle): MatchesRepository {
-   /** The user's evaluations made for their current profile version that also meet the condition, best first. */
-   function selectMatches(userId: string, condition: SQL | undefined) {
+   /** The user's evaluations made for their current profile version that also meet the condition. */
+   function selectMatches(userId: string, condition: SQL | undefined, order: MatchOrder = "score") {
       // gone postings count too: a closed vacancy on its own page still has a date
       const publishedAt = sql`(
          select max(coalesce((${postings.parsed}->>'publishedAt')::timestamptz, ${postings.firstSeenAt}))
@@ -142,11 +157,16 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
             .innerJoin(vacancies, eq(vacancies.id, vacancyMatches.vacancyId))
             .leftJoin(companies, eq(companies.id, vacancies.companyId))
             .where(and(eq(vacancyMatches.userId, userId), condition))
-            // best score first, unscored (null) as -1 below any score; then the latest evaluated; the id
-            // last, so that no two tie. listForUser pages by the same three columns
+            // score: the best first, unscored (null) as -1 below any score; then the latest evaluated.
+            // marked: the latest marked first. The id last, so that no two tie. listForUser pages by
+            // the same columns
             .orderBy(
-               sql`coalesce(${vacancyMatches.score}, -1) desc`,
-               desc(vacancyMatches.evaluatedAt),
+               ...(order === "score"
+                  ? [
+                       sql`coalesce(${vacancyMatches.score}, -1) desc`,
+                       desc(vacancyMatches.evaluatedAt),
+                    ]
+                  : [desc(markedAtSql)]),
                desc(vacancyMatches.vacancyId),
             )
       );
@@ -225,12 +245,21 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
          const verdict = sql`${vacancyMatches.analysis}->'ai'->>'verdict'`;
          // absent when the job site wasn't asked: such vacancies stay
          const canApply = sql`(${vacancyMatches.analysis}->'applyCheck'->>'canApply') is distinct from 'false'`;
+         const order: MatchOrder = status === null ? "score" : "marked";
          // the next page: what comes below the last vacancy shown, in the order of selectMatches.
          // (a, b, c) < (x, y, z) compares like words: b only when a ties, c only when b does. Its
          // values are read from the table, not sent by the client: JS dates would drop microseconds
-         const belowLastShown = sql`
+         const belowLastShown =
+            order === "score"
+               ? sql`
             (coalesce(${vacancyMatches.score}, -1), ${vacancyMatches.evaluatedAt}, ${vacancyMatches.vacancyId}) < (
                select coalesce(last_shown.score, -1), last_shown.evaluated_at, last_shown.vacancy_id
+               from vacancy_matches last_shown
+               where last_shown.user_id = ${userId} and last_shown.vacancy_id = ${after}
+            )`
+               : sql`
+            (${markedAtSql}, ${vacancyMatches.vacancyId}) < (
+               select coalesce(last_shown.status_changed_at, last_shown.evaluated_at), last_shown.vacancy_id
                from vacancy_matches last_shown
                where last_shown.user_id = ${userId} and last_shown.vacancy_id = ${after}
             )`;
@@ -248,8 +277,67 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
                status === null && !includeSkipped ? canApply : undefined,
                after ? belowLastShown : undefined,
             ),
+            order,
          ).limit(limit);
          return toListItems(userId, rows);
+      },
+
+      async listApplied(userId) {
+         const rows = await db
+            .select({
+               vacancyId: vacancies.id,
+               title: vacancies.title,
+               company: companies.name,
+               // a new sql around it: mapWith sets the decoder on the object it is called on
+               appliedAt: sql`${markedAtSql}`.mapWith(vacancyMatches.evaluatedAt),
+               closedAt: vacancies.closedAt,
+               // an evaluation for the current profile version: the vacancy's page shows it
+               currentProfileVersion: profiles.version,
+            })
+            .from(vacancyMatches)
+            .innerJoin(vacancies, eq(vacancies.id, vacancyMatches.vacancyId))
+            .leftJoin(companies, eq(companies.id, vacancies.companyId))
+            .leftJoin(
+               profiles,
+               and(
+                  eq(profiles.userId, vacancyMatches.userId),
+                  eq(profiles.version, vacancyMatches.profileVersion),
+               ),
+            )
+            .where(and(eq(vacancyMatches.userId, userId), eq(vacancyMatches.status, "applied")))
+            .orderBy(desc(markedAtSql), desc(vacancyMatches.vacancyId));
+         if (rows.length === 0) return [];
+
+         const vacancyIds = rows.map((r) => r.vacancyId);
+         // every job site it was on, gone postings too: a closed vacancy has nothing active left
+         const listedOn = await db
+            .selectDistinct({ vacancyId: postings.vacancyId, sourceName: sources.name })
+            .from(postings)
+            .innerJoin(sources, eq(sources.id, postings.sourceId))
+            .where(inArray(postings.vacancyId, vacancyIds))
+            .orderBy(sources.name);
+         const userApplications = await db
+            .select({
+               vacancyId: postings.vacancyId,
+               postingId: applications.postingId,
+               id: applications.id,
+               status: applications.status,
+            })
+            .from(applications)
+            .innerJoin(postings, eq(postings.id, applications.postingId))
+            .where(and(eq(applications.userId, userId), inArray(postings.vacancyId, vacancyIds)))
+            .orderBy(desc(applications.updatedAt));
+
+         return rows.map(({ appliedAt, closedAt, currentProfileVersion, ...r }) => ({
+            ...r,
+            appliedAt: appliedAt.toISOString(),
+            sourceNames: listedOn
+               .filter((l) => l.vacancyId === r.vacancyId)
+               .map((l) => l.sourceName),
+            closed: closedAt !== null,
+            evaluated: currentProfileVersion !== null,
+            application: applicationOf(userApplications, (a) => a.vacancyId === r.vacancyId),
+         }));
       },
 
       async getDetails(userId, vacancyId) {
@@ -280,7 +368,7 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
       async setStatus(userId, vacancyId, status) {
          const rows = await db
             .update(vacancyMatches)
-            .set({ status })
+            .set({ status, statusChangedAt: status === null ? null : sql`now()` })
             .where(and(eq(vacancyMatches.userId, userId), eq(vacancyMatches.vacancyId, vacancyId)))
             .returning({ vacancyId: vacancyMatches.vacancyId });
          return rows.length > 0;

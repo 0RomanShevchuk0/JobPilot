@@ -274,6 +274,9 @@ export const vacancyMatches = pgTable(
       evaluatedAt: tstz("evaluated_at").notNull().defaultNow(),
       // the user's mark (applied / hidden), null = new; re-evaluations keep it
       status: text("status").$type<Exclude<MatchStatus, null>>(),
+      // when the status was set: the applied ones' history and the hidden ones go by it, latest first.
+      // Null without a status
+      statusChangedAt: tstz("status_changed_at"),
    },
    (t) => [primaryKey({ columns: [t.userId, t.vacancyId] })],
 );

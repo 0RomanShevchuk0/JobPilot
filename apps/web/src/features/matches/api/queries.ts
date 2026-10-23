@@ -9,11 +9,12 @@ import {
 import { apiGet, apiPatch } from "../../../shared/api/client";
 import { queryKeys } from "../../../shared/api/queryKeys";
 
-export type MatchesTab = "new" | "applied" | "hidden";
+/** The lists in Matches: what to decide on, and what I hid. The applied ones are on Applications. */
+export type MatchesTab = "new" | "hidden";
 
 /**
- * Vacancies evaluated for my current profile, best first, a page at a time: new ones, or the ones I
- * marked. A refetch reloads every page loaded, from the first.
+ * Vacancies evaluated for my current profile, a page at a time: the new ones best first, the hidden
+ * ones the latest hidden first. A refetch reloads every page loaded, from the first.
  */
 export function useMatches(tab: MatchesTab, includeSkipped: boolean) {
    // skipped ones are only among the new
@@ -57,6 +58,8 @@ export function useMarkMatch(vacancyId: string) {
             type: "inactive",
          });
          void queryClient.invalidateQueries({ queryKey: queryKeys.matches.details(vacancyId) });
+         // marked applied, or the mark taken back: the history on Applications changes
+         void queryClient.invalidateQueries({ queryKey: queryKeys.applications.applied() });
       },
    });
 }
