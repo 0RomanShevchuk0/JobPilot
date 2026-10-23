@@ -15,6 +15,11 @@ export const dom = {
       return action;
    },
 
+   /** A spinning ring in the text's color: something under way (style.css, .spinner). */
+   spinner(): HTMLElement {
+      return dom.element("span", "spinner", "");
+   },
+
    /** A card's title, cut short with an ellipsis when long: the whole of it on hover. */
    cardTitle(text: string): HTMLElement {
       const title = dom.element("span", "site-title", text);

@@ -1,3 +1,4 @@
+import type { ExpiredSession } from "@jobpilot/contracts";
 import { browserSites } from "@jobpilot/sources/page";
 import { browser } from "wxt/browser";
 import { dom } from "../../shared/dom.js";
@@ -10,6 +11,7 @@ import {
 } from "./sync-session.js";
 
 const SESSIONS_LIST_SELECTOR = "#sessions-list";
+const SESSIONS_CHECKING_SELECTOR = "#sessions-checking";
 const SEND_BUTTON_SELECTOR = "#send-sessions";
 
 /** The cards' dates: "21 Oct, 14:32". */
@@ -35,18 +37,38 @@ interface SiteView {
  */
 export function mountSessionsSection(): () => Promise<void> {
    const list = document.querySelector<HTMLUListElement>(SESSIONS_LIST_SELECTOR)!;
+   const checking = document.querySelector<HTMLElement>(SESSIONS_CHECKING_SELECTOR)!;
    const button = document.querySelector<HTMLButtonElement>(SEND_BUTTON_SELECTOR)!;
    button.addEventListener("click", () => void sendAllNow(button));
-   return () => renderSessions(list);
+   // what the API said last, while this popup is open: a redraw shows it until the new answer comes
+   let lastExpired: ExpiredSession[] | undefined;
+   // redraws overlap (every change in storage starts one): only the latest draws the API's answer
+   let latest = 0;
+   return async () => {
+      const redraw = ++latest;
+      // the sendings are in the extension's storage, shown at once; whether the sessions still work
+      // takes the API, slow on a small server: a line says it's being asked meanwhile
+      const lastSyncs = await readLastSyncs();
+      drawSessions(list, lastSyncs, lastExpired);
+      checking.hidden = lastExpired !== undefined;
+      const expired = await sessionsApi.fetchExpired();
+      if (redraw !== latest) return;
+      lastExpired = expired;
+      checking.hidden = true;
+      drawSessions(list, lastSyncs, lastExpired);
+   };
 }
 
 /**
  * Each site's last sending, by the button or by itself (a login, a retry), and whether the session works:
  * the login cookie being there doesn't say, the site can log you out on its side. Only the server's
- * worker finds that out, using it; nothing is shown about it while the API isn't running.
+ * worker finds that out, using it; nothing is shown about it while the API isn't answering.
  */
-async function renderSessions(list: HTMLUListElement): Promise<void> {
-   const [lastSyncs, expired] = await Promise.all([readLastSyncs(), sessionsApi.fetchExpired()]);
+function drawSessions(
+   list: HTMLUListElement,
+   lastSyncs: (LastSync | undefined)[],
+   expired: ExpiredSession[] | undefined,
+): void {
    const items = browserSites.map((site, i) => {
       const view = describe(lastSyncs[i]);
       const item = document.createElement("li");
@@ -74,7 +96,7 @@ async function renderSessions(list: HTMLUListElement): Promise<void> {
 async function sendAllNow(button: HTMLButtonElement): Promise<void> {
    const label = button.textContent;
    button.disabled = true;
-   button.textContent = "Sending…";
+   button.replaceChildren(dom.spinner(), "Sending…");
    try {
       await browser.runtime.sendMessage(SYNC_ALL_MESSAGE);
    } finally {
