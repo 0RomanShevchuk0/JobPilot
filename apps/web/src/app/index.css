@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+@theme {
+   /* hidden for its delay, then shown at once: a loader for what takes a while, not a flash */
+   --animate-appear-late: appear 0s 300ms both;
+
+   @keyframes appear {
+      from {
+         opacity: 0;
+      }
+      to {
+         opacity: 1;
+      }
+   }
+}

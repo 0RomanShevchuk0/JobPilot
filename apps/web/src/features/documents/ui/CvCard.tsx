@@ -56,8 +56,8 @@ export function CvCard({ cv }: { cv?: DocumentListItem }) {
                      <a href={documentFileUrl(cv.id)} download className={buttonStyles()}>
                         Download
                      </a>
-                     <Button onClick={pickFile} disabled={busy}>
-                        Replace
+                     <Button onClick={pickFile} disabled={busy} loading={upload.isPending}>
+                        {upload.isPending ? "Uploading…" : "Replace"}
                      </Button>
                      <Button
                         variant="dangerGhost"
@@ -71,7 +71,12 @@ export function CvCard({ cv }: { cv?: DocumentListItem }) {
                {cv && confirmingDelete && (
                   <>
                      <span className="text-sm text-gray-700">Delete the CV?</span>
-                     <Button variant="danger" onClick={() => deleteCv(cv.id)} disabled={busy}>
+                     <Button
+                        variant="danger"
+                        onClick={() => deleteCv(cv.id)}
+                        disabled={busy}
+                        loading={remove.isPending}
+                     >
                         Delete
                      </Button>
                      <Button onClick={() => setConfirmingDelete(false)} disabled={busy}>
@@ -80,8 +85,13 @@ export function CvCard({ cv }: { cv?: DocumentListItem }) {
                   </>
                )}
                {!cv && (
-                  <Button variant="primary" onClick={pickFile} disabled={busy}>
-                     Upload PDF
+                  <Button
+                     variant="primary"
+                     onClick={pickFile}
+                     disabled={busy}
+                     loading={upload.isPending}
+                  >
+                     {upload.isPending ? "Uploading…" : "Upload PDF"}
                   </Button>
                )}
             </div>
@@ -99,7 +109,6 @@ export function CvCard({ cv }: { cv?: DocumentListItem }) {
             }}
          />
 
-         {upload.isPending && <p className="mt-3 text-sm text-gray-500">Uploading…</p>}
          {upload.data?.hasText === false && (
             <p className="mt-3 text-sm text-amber-700">
                This PDF has no text, it looks like a scan. Form answers and letters can't use it:

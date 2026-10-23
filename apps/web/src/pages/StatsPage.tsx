@@ -1,7 +1,7 @@
 import type { StatsPeriod } from "@jobpilot/contracts";
 import { useState } from "react";
 import { StatsFunnel, StatsTimeline, useStats } from "../features/stats";
-import { Button } from "../shared/ui";
+import { Button, PageLoader } from "../shared/ui";
 
 const periods: { period: StatsPeriod; title: string }[] = [
    { period: "day", title: "24 hours" },
@@ -31,7 +31,7 @@ export function StatsPage() {
             ))}
          </nav>
 
-         {stats.isPending && <p className="text-gray-500">Loading…</p>}
+         {stats.isPending && <PageLoader />}
          {stats.isError && <p className="text-red-600">{stats.error.message}</p>}
          {stats.data && (
             <div className="space-y-6">

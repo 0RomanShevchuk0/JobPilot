@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MatchCard, useMatches, type MatchesTab } from "../features/matches";
 import { ExpiredSessionsNotice } from "../features/sessions";
-import { Button, LoadMoreTrigger } from "../shared/ui";
+import { Button, LoadMoreTrigger, PageLoader } from "../shared/ui";
 
 const tabs: MatchesTab[] = ["new", "applied", "hidden"];
 
@@ -43,7 +43,7 @@ export function MatchesPage() {
             ))}
          </nav>
 
-         {matches.isPending && <p className="text-gray-500">Loading…</p>}
+         {matches.isPending && <PageLoader />}
          {matches.isError && !matches.isFetchNextPageError && (
             <p className="text-red-600">{matches.error.message}</p>
          )}
@@ -53,7 +53,7 @@ export function MatchesPage() {
                <MatchCard key={match.vacancyId} match={match} />
             ))}
          </ul>
-         {matches.isFetchingNextPage && <p className="mt-4 text-gray-500">Loading more…</p>}
+         {matches.isFetchingNextPage && <PageLoader label="Loading more…" />}
          {/* not retried by scrolling: a failing request would repeat at once */}
          {matches.isFetchNextPageError && (
             <div className="mt-4 flex items-center gap-3">

@@ -57,6 +57,7 @@ function PostingsToApply({ postings }: { postings: MatchPosting[] }) {
                         size="sm"
                         onClick={() => startApplication(posting.id)}
                         disabled={apply.isPending}
+                        loading={apply.isPending && apply.variables === posting.id}
                      >
                         Apply
                      </Button>

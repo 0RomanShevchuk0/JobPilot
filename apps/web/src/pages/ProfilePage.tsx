@@ -1,7 +1,7 @@
 import { CvCard, useDocuments } from "../features/documents";
 import { ProfileForm, useProfile } from "../features/profile";
 import { ExpiredSessionsNotice } from "../features/sessions";
-import { ReevaluatesMark } from "../shared/ui";
+import { PageLoader, ReevaluatesMark } from "../shared/ui";
 
 /**
  * Me, as vacancies are evaluated and form answers written: the CV and the job-search profile. Each
@@ -21,19 +21,22 @@ export function ProfilePage() {
             </p>
          </header>
          <ExpiredSessionsNotice />
-         <div className="mb-4">
-            {documents.isPending && <p className="text-gray-500">Loading…</p>}
-            {documents.isError && <p className="text-red-600">{documents.error.message}</p>}
-            {documents.data && <CvCard cv={documents.data.find((d) => d.isBase)} />}
-         </div>
-         {profile.isPending && <p className="text-gray-500">Loading…</p>}
+         {/* one loader for both: the form needs to know whether there is a CV, so the page shows once
+             both are in, not the CV card first and the form jumping in under it */}
+         {(documents.isPending || profile.isPending) && <PageLoader />}
+         {documents.isError && <p className="mb-4 text-red-600">{documents.error.message}</p>}
          {profile.isError && <p className="text-red-600">{profile.error.message}</p>}
-         {/* not keyed by version: a CV upload bumps it too, and must not wipe unsaved edits */}
-         {profile.isSuccess && (
-            <ProfileForm
-               saved={profile.data?.profile}
-               hasCv={documents.data?.some((d) => d.isBase) ?? false}
-            />
+         {documents.isSuccess && profile.isSuccess && (
+            <>
+               <div className="mb-4">
+                  <CvCard cv={documents.data.find((d) => d.isBase)} />
+               </div>
+               {/* not keyed by version: a CV upload bumps it too, and must not wipe unsaved edits */}
+               <ProfileForm
+                  saved={profile.data?.profile}
+                  hasCv={documents.data.some((d) => d.isBase)}
+               />
+            </>
          )}
       </main>
    );

@@ -23,7 +23,7 @@ export function SignInScreen() {
             Finds jobs on Djinni and DOU, scores them against your profile and fills in applications
             for you to send.
          </p>
-         <Button variant="primary" className="mt-8 w-full" onClick={signIn} disabled={starting}>
+         <Button variant="primary" className="mt-8 w-full" onClick={signIn} loading={starting}>
             {starting ? "Opening Google…" : "Sign in with Google"}
          </Button>
          {failed && <p className="mt-4 text-sm text-red-600">Signing in failed: {failed}</p>}
