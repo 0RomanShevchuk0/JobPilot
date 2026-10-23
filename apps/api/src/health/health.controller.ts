@@ -1,4 +1,5 @@
 import { Controller, Get, ServiceUnavailableException } from "@nestjs/common";
+import { Public } from "../auth/public.decorator.js";
 import { Database } from "../infra/database.js";
 import { RedisService } from "../infra/redis.service.js";
 
@@ -21,6 +22,8 @@ async function probe(check: () => Promise<unknown>): Promise<ProbeStatus> {
    }
 }
 
+// for whatever checks the API is up: no user to sign in
+@Public()
 @Controller("health")
 export class HealthController {
    constructor(

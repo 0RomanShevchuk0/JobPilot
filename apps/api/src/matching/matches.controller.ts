@@ -1,7 +1,7 @@
 import { matchStatusSchema } from "@jobpilot/contracts";
 import { Body, Controller, Get, NotFoundException, Param, Patch, Query } from "@nestjs/common";
 import { z } from "zod";
-import { CurrentUser } from "../auth/current-user.service.js";
+import { CurrentUserId } from "../auth/current-user-id.decorator.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { MatchesService } from "./matches.service.js";
 
@@ -21,17 +21,14 @@ const statusBodySchema = z.object({
 
 @Controller("matches")
 export class MatchesController {
-   constructor(
-      private readonly matches: MatchesService,
-      private readonly user: CurrentUser,
-   ) {}
+   constructor(private readonly matches: MatchesService) {}
 
    /** Vacancies evaluated for my current profile, best first, a page at a time. */
    @Get()
    async list(
+      @CurrentUserId() userId: string,
       @Query(new ZodValidationPipe(listQuerySchema)) query: z.infer<typeof listQuerySchema>,
    ) {
-      const userId = await this.user.id();
       return this.matches.list(userId, {
          status: query.status === "new" ? null : query.status,
          includeSkipped: query.include === "skipped",
@@ -41,8 +38,10 @@ export class MatchesController {
 
    /** One vacancy as evaluated for my current profile, with its description and every job site it is on. */
    @Get(":vacancyId")
-   async get(@Param("vacancyId", new ZodValidationPipe(z.uuid())) vacancyId: string) {
-      const userId = await this.user.id();
+   async get(
+      @CurrentUserId() userId: string,
+      @Param("vacancyId", new ZodValidationPipe(z.uuid())) vacancyId: string,
+   ) {
       const match = await this.matches.get(userId, vacancyId);
       if (!match) throw new NotFoundException("No evaluated vacancy with this id");
       return match;
@@ -51,10 +50,10 @@ export class MatchesController {
    /** Marks a vacancy as applied or hidden, or clears the mark. */
    @Patch(":vacancyId")
    async setStatus(
+      @CurrentUserId() userId: string,
       @Param("vacancyId", new ZodValidationPipe(z.uuid())) vacancyId: string,
       @Body(new ZodValidationPipe(statusBodySchema)) body: z.infer<typeof statusBodySchema>,
    ) {
-      const userId = await this.user.id();
       const found = await this.matches.setStatus(userId, vacancyId, body.status);
       if (!found) throw new NotFoundException("No evaluated vacancy with this id");
       return { vacancyId, status: body.status };

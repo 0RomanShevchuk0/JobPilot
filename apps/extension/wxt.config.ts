@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 import { defineConfig } from "wxt";
 import { jobSitePages } from "./shared/job-sites.js";
 
-// the monorepo's .env: the API and the web app listen on the ports there, the extension talks to them.
-// Built into the extension: after changing a port, build it again
-if (!process.env.API_PORT) process.loadEnvFile("../../.env");
+// the monorepo's .env: the API's and the web app's addresses, as the browser reaches them (the domain on
+// the server). Built into the extension: after changing one, build it again
+if (!process.env.API_URL) process.loadEnvFile("../../.env");
 
 function required(name: string): string {
    const value = process.env[name];
@@ -12,8 +12,10 @@ function required(name: string): string {
    return value;
 }
 
-const apiUrl = `http://localhost:${required("API_PORT")}`;
-const webOrigin = `http://localhost:${required("WEB_PORT")}`;
+// the API, its /api included
+const apiUrl = required("API_URL");
+// the web app's origin, the one the extension takes messages from
+const webOrigin = new URL(required("WEB_URL")).origin;
 
 // the public half of an RSA key (not a secret; the private half isn't kept, nothing needs it): Chrome
 // derives the id from it, so a "Load unpacked" copy has the same id on every machine, the one the API's
