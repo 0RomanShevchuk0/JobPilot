@@ -1,22 +1,18 @@
+import { eq } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { users } from "../schema.js";
 
 export interface UsersRepository {
-   /** The user with this email, created if missing. Returns the user id. */
-   ensure(email: string): Promise<string>;
+   /** The id of the user with this email; undefined when nobody signed in with it. */
+   findIdByEmail(email: string): Promise<string | undefined>;
    listIds(): Promise<string[]>;
 }
 
 export function createUsersRepository(db: Drizzle): UsersRepository {
    return {
-      async ensure(email) {
-         const [row] = await db
-            .insert(users)
-            .values({ email })
-            // a no-op update so RETURNING gives the id of an existing user too
-            .onConflictDoUpdate({ target: users.email, set: { email } })
-            .returning({ id: users.id });
-         return row.id;
+      async findIdByEmail(email) {
+         const [row] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
+         return row?.id;
       },
 
       async listIds() {
