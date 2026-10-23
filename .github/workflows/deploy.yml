@@ -16,6 +16,12 @@ jobs:
       permissions:
          packages: write
 
+      # one job per image, side by side: each with its own log, a failed one named in the run.
+      # The worker's image runs the migrations too (the migrate service)
+      strategy:
+         matrix:
+            app: [worker, api, web]
+
       steps:
          - name: Checkout
            uses: actions/checkout@v4
@@ -25,14 +31,14 @@ jobs:
 
          # ghcr.io rejects uppercase in image names, so the owner is spelled out in lower case.
          # The runner is x86-64 like the server, so the image is built for it as is.
-         - name: Build the worker image
-           run: docker build -f apps/worker/Dockerfile -t ghcr.io/0romanshevchuk0/jobpilot-worker:latest .
+         - name: Build the ${{ matrix.app }} image
+           run: docker build -f apps/${{ matrix.app }}/Dockerfile -t ghcr.io/0romanshevchuk0/jobpilot-${{ matrix.app }}:latest .
 
          - name: Push the image
-           run: docker push ghcr.io/0romanshevchuk0/jobpilot-worker:latest
+           run: docker push ghcr.io/0romanshevchuk0/jobpilot-${{ matrix.app }}:latest
 
    deploy:
-      # Only runs if the build job finished successfully.
+      # Only runs once every image is built and pushed: one failed, and the server keeps what it runs.
       needs: build
       runs-on: ubuntu-latest
 
@@ -46,7 +52,7 @@ jobs:
               # Records the server's host key so ssh does not stop to ask about it.
               ssh-keyscan -H "${{ vars.JOBPILOT_HOST }}" >> ~/.ssh/known_hosts
 
-         # The container applies the database migrations itself before starting the new worker.
+         # The migrate service brings the database schema up to date before the new worker and API start.
          - name: Pull the new image and restart
            run: |
               ssh -i ~/.ssh/deploy_key "${{ secrets.JOBPILOT_SSH_USER }}@${{ vars.JOBPILOT_HOST }}" '

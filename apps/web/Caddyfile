@@ -1,0 +1,18 @@
+# The server's one door: the web app's address (WEB_URL in .env, https://<domain>), its certificate
+# from Let's Encrypt, got and renewed by Caddy. The browser sees one origin, so the sign-in cookie
+# works without CORS, as through Vite's proxy in dev.
+{$WEB_URL} {
+	encode zstd gzip
+
+	# the API's routes are under /api: passed on as they are
+	handle /api/* {
+		reverse_proxy api:{$API_PORT}
+	}
+
+	# the app's own routes (/matches, /applications/…) are index.html's, the router picks the page
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

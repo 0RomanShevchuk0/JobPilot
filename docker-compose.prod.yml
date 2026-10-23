@@ -1,13 +1,13 @@
-# The server: the worker collecting and scoring vacancies, and its Redis. Nothing is reachable from
-# outside: no ports are published. The database is the shared one in Neon (DATABASE_URL in .env);
-# the API, the web app and filling forms in run on the user's machine.
+# The server: the web app and the API behind Caddy, the worker collecting and scoring vacancies, and
+# their Redis. Only Caddy is reachable from outside, on 80 and 443 (WEB_URL in .env is its address);
+# the rest talk on compose's own network. The database is the shared one in Neon (DATABASE_URL in .env).
 
 # Logs go to Google Cloud Logging (Logs Explorer), so they outlive the containers a deploy replaces;
 # `docker compose logs` still reads the local copy. The project and the VM come from its metadata.
 x-logging: &logging
    driver: gcplogs
    options:
-      # the container's command line in each entry: tells redis and the worker apart
+      # the container's command line in each entry: tells the services apart
       gcp-log-cmd: "true"
 
 services:
@@ -25,6 +25,14 @@ services:
          timeout: 3s
          retries: 10
 
+   # the database schema brought up to date, then exits: the worker and the API start after it, so the
+   # new code never runs against an old schema
+   migrate:
+      image: ghcr.io/0romanshevchuk0/jobpilot-worker:latest
+      logging: *logging
+      env_file: .env
+      command: ["node", "dist/scripts/migrate.js"]
+
    worker:
       image: ghcr.io/0romanshevchuk0/jobpilot-worker:latest
       build:
@@ -41,6 +49,52 @@ services:
       depends_on:
          redis:
             condition: service_healthy
+         migrate:
+            condition: service_completed_successfully
+
+   api:
+      image: ghcr.io/0romanshevchuk0/jobpilot-api:latest
+      build:
+         context: .
+         dockerfile: apps/api/Dockerfile
+      restart: always
+      logging: *logging
+      env_file: .env
+      environment:
+         REDIS_URL: redis://redis:6379
+         # the worker here is the server's: no sessions saved to files for a local one
+         WORKER_ROLE: server
+      depends_on:
+         redis:
+            condition: service_healthy
+         migrate:
+            condition: service_completed_successfully
+
+   web:
+      image: ghcr.io/0romanshevchuk0/jobpilot-web:latest
+      build:
+         context: .
+         dockerfile: apps/web/Dockerfile
+      restart: always
+      logging: *logging
+      # the Caddyfile's two, from .env: the site's address and the API's port. Not the whole .env, the
+      # secrets stay out of the one container facing the internet
+      environment:
+         WEB_URL: ${WEB_URL}
+         API_PORT: ${API_PORT}
+      ports:
+         - "80:80"
+         - "443:443"
+         # HTTP/3
+         - "443:443/udp"
+      volumes:
+         # the certificates: kept across deploys, Let's Encrypt limits how often they're issued
+         - caddydata:/data
+         - caddyconfig:/config
+      depends_on:
+         - api
 
 volumes:
    redisdata:
+   caddydata:
+   caddyconfig:
