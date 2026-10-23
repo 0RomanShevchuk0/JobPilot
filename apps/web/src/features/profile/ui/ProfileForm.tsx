@@ -81,7 +81,7 @@ export function ProfileForm({ saved, hasCv }: ProfileFormProps) {
       <form onSubmit={submit} className="space-y-4">
          {/* shown without a CV too: whoever starts typing first learns the CV can fill the rest */}
          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-            <Button onClick={fill} disabled={!hasCv || fromCv.isPending}>
+            <Button onClick={fill} disabled={!hasCv} loading={fromCv.isPending}>
                {fromCv.isPending ? "Reading the CV…" : "Fill from CV"}
             </Button>
             {!hasCv ? (
@@ -260,7 +260,7 @@ export function ProfileForm({ saved, hasCv }: ProfileFormProps) {
                   <Button onClick={discard} disabled={save.isPending}>
                      Discard
                   </Button>
-                  <Button type="submit" variant="primary" disabled={save.isPending}>
+                  <Button type="submit" variant="primary" loading={save.isPending}>
                      {save.isPending ? "Saving…" : "Save"}
                   </Button>
                </div>

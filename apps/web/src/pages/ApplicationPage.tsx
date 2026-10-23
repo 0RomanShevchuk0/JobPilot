@@ -11,7 +11,7 @@ import {
    useStartApplication,
 } from "../features/applications";
 import { documentFileUrl, useDocuments } from "../features/documents";
-import { Button } from "../shared/ui";
+import { Button, PageLoader } from "../shared/ui";
 
 /**
  * One application: while the worker reads the form and answers it, then the answers to review, opened
@@ -26,7 +26,7 @@ export function ApplicationPage() {
          <Link to="/applications" className="text-sm text-gray-500 hover:text-gray-900">
             ← Applications
          </Link>
-         {application.isPending && <p className="mt-4 text-gray-500">Loading…</p>}
+         {application.isPending && <PageLoader />}
          {application.isError && <p className="mt-4 text-red-600">{application.error.message}</p>}
          {application.data && <Application key={application.data.id} app={application.data} />}
       </main>
@@ -91,6 +91,7 @@ function Application({ app }: { app: ApplicationView }) {
                <Button
                   onClick={() => save.mutate(changes, { onSuccess: clearDrafts })}
                   disabled={busy || app.filling}
+                  loading={save.isPending}
                >
                   Save changes
                </Button>
@@ -103,6 +104,7 @@ function Application({ app }: { app: ApplicationView }) {
                   variant="primary"
                   onClick={() => fill.mutate(changes, { onSuccess: clearDrafts })}
                   disabled={busy}
+                  loading={fill.isPending}
                >
                   {app.filling ? "Show in browser" : "Open in browser"}
                </Button>
@@ -111,6 +113,7 @@ function Application({ app }: { app: ApplicationView }) {
                <Button
                   onClick={() => prepareAgain.mutate(app.postingId, { onSuccess: clearDrafts })}
                   disabled={busy || app.filling}
+                  loading={prepareAgain.isPending}
                >
                   {app.status === "ready_for_review" ? "Answer again" : "Try again"}
                </Button>

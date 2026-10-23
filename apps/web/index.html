@@ -4,9 +4,49 @@
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>JobPilot</title>
+      <!-- the loader before the app's script has loaded (it takes a moment on a slow connection):
+           React replaces it, with PageLoader's look in the same place -->
+      <style>
+         .boot-loader {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 48px 0;
+            color: #6b7280;
+            font:
+               14px/20px system-ui,
+               sans-serif;
+            /* only once loading takes a while, as PageLoader */
+            animation: boot-appear 0s 300ms both;
+         }
+         .boot-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: boot-spin 1s linear infinite;
+         }
+         @keyframes boot-spin {
+            to {
+               transform: rotate(360deg);
+            }
+         }
+         @keyframes boot-appear {
+            from {
+               opacity: 0;
+            }
+            to {
+               opacity: 1;
+            }
+         }
+      </style>
    </head>
    <body>
-      <div id="root"></div>
+      <div id="root">
+         <div class="boot-loader" role="status"><span class="boot-spinner"></span>Loading…</div>
+      </div>
       <script type="module" src="/src/app/main.tsx"></script>
    </body>
 </html>

@@ -38,7 +38,7 @@ export function MatchActions({ match }: { match: MatchListItem }) {
                variant="primary"
                size="sm"
                onClick={() => startApplication(onlyPosting.id)}
-               disabled={apply.isPending}
+               loading={apply.isPending}
             >
                Apply
             </Button>
@@ -70,6 +70,7 @@ export function MatchActions({ match }: { match: MatchListItem }) {
                      size="sm"
                      onClick={() => mark.mutate("applied")}
                      disabled={mark.isPending}
+                     loading={mark.isPending && mark.variables === "applied"}
                   >
                      Applied
                   </Button>
@@ -78,6 +79,7 @@ export function MatchActions({ match }: { match: MatchListItem }) {
                      size="sm"
                      onClick={() => mark.mutate("hidden")}
                      disabled={mark.isPending}
+                     loading={mark.isPending && mark.variables === "hidden"}
                   >
                      Hide
                   </Button>
@@ -87,7 +89,7 @@ export function MatchActions({ match }: { match: MatchListItem }) {
                   variant="outline"
                   size="sm"
                   onClick={() => mark.mutate(null)}
-                  disabled={mark.isPending}
+                  loading={mark.isPending}
                >
                   Back to new
                </Button>

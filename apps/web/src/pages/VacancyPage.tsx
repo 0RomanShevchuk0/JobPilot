@@ -1,6 +1,7 @@
 import type { MatchDetails } from "@jobpilot/contracts";
 import { Link, useParams } from "react-router";
 import { MatchEvaluation, MatchHeader, PostingLinks, useMatch } from "../features/matches";
+import { PageLoader } from "../shared/ui";
 
 /** One vacancy as evaluated for my profile: every job site it is on, the evaluation, the description. */
 export function VacancyPage() {
@@ -12,7 +13,7 @@ export function VacancyPage() {
          <Link to="/matches" className="text-sm text-gray-500 hover:text-gray-900">
             ← Matches
          </Link>
-         {match.isPending && <p className="mt-4 text-gray-500">Loading…</p>}
+         {match.isPending && <PageLoader />}
          {match.isError && <p className="mt-4 text-red-600">{match.error.message}</p>}
          {match.data && <Vacancy match={match.data} />}
       </main>
