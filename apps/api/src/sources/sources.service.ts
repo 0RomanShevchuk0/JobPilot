@@ -1,12 +1,22 @@
 import type { ExpiredSession, SiteSession } from "@jobpilot/contracts";
 import { encryptSession, SESSION_PUBLIC_KEY } from "@jobpilot/session-crypto";
 import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { mkdir, writeFile } from "node:fs/promises";
 import { Database } from "../infra/database.js";
 
 @Injectable()
 export class SourcesService {
-   constructor(private readonly db: Database) {}
+   // a local worker reads the sessions from files the API saves (the default, as for the worker); the
+   // server's reads them from the database, decrypting them itself
+   private readonly forLocalWorker: boolean;
+
+   constructor(
+      private readonly db: Database,
+      config: ConfigService,
+   ) {
+      this.forLocalWorker = (config.get<string>("WORKER_ROLE") || "local") === "local";
+   }
 
    /** As the worker found them using the sessions; one that works again drops off by itself. */
    async expiredSessions(userId: string): Promise<ExpiredSession[]> {
@@ -22,7 +32,7 @@ export class SourcesService {
       const json = JSON.stringify(session, null, 2);
       const encrypted = await encryptSession(json, SESSION_PUBLIC_KEY);
       await this.db.sourceSessions.saveSession(userId, source, encrypted);
-      await this.saveLocalSessionFile(userId, source, json);
+      if (this.forLocalWorker) await this.saveLocalSessionFile(userId, source, json);
    }
 
    /**
