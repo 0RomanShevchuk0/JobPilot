@@ -1,4 +1,4 @@
-import type { ApplicationListItem, ApplicationView } from "@jobpilot/contracts";
+import type { ApplicationListItem, ApplicationView, AppliedVacancy } from "@jobpilot/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPatch, apiPost } from "../../../shared/api/client";
 import { queryKeys } from "../../../shared/api/queryKeys";
@@ -19,6 +19,17 @@ export function useApplications() {
    return useQuery({
       queryKey: queryKeys.applications.list(),
       queryFn: () => apiGet<ApplicationListItem[]>("/applications"),
+   });
+}
+
+/**
+ * Every vacancy I applied to, through JobPilot or on my own, the latest first: the history, whatever
+ * became of the vacancies since.
+ */
+export function useAppliedVacancies() {
+   return useQuery({
+      queryKey: queryKeys.applications.applied(),
+      queryFn: () => apiGet<AppliedVacancy[]>("/matches/applied"),
    });
 }
 

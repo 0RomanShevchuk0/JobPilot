@@ -3,10 +3,11 @@ import { MatchCard, useMatches, type MatchesTab } from "../features/matches";
 import { ExpiredSessionsNotice } from "../features/sessions";
 import { Button, LoadMoreTrigger, PageLoader } from "../shared/ui";
 
-const tabs: MatchesTab[] = ["new", "applied", "hidden"];
+const tabs: MatchesTab[] = ["new", "hidden"];
 
 /**
- * Vacancies evaluated for my current profile, best first: new ones, or the ones I marked. The tab and
+ * Vacancies evaluated for my current profile: the new ones to decide on, best first, and the ones I
+ * hid, the latest first. What I applied to is on Applications, as its history. The tab and
  * "show skipped" are in the address (?tab=hidden&skipped=1): back from a vacancy, the list is as I
  * left it, and a reload keeps it too.
  */
