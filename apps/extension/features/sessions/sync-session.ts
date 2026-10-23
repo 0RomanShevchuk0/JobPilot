@@ -2,7 +2,7 @@ import { browserSites, type BrowserSite } from "@jobpilot/sources/page";
 import { browser } from "wxt/browser";
 import { sendSession, type SendResult } from "./send-session.js";
 
-/** Fires while a session didn't reach the API (not running, mostly), to send it again. */
+/** Fires while a session didn't reach the API (not running, not signed in), to send it again. */
 export const RESEND_ALARM = "resend-sessions";
 /** Only the delay after the API starts depends on it: the server's worker doesn't need it sooner. */
 export const RESEND_EVERY_MINUTES = 5;
