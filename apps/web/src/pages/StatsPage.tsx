@@ -1,5 +1,5 @@
 import type { StatsPeriod } from "@jobpilot/contracts";
-import { useState } from "react";
+import { useSearchParams } from "react-router";
 import { StatsFunnel, StatsTimeline, useStats } from "../features/stats";
 import { Button, PageLoader } from "../shared/ui";
 
@@ -10,9 +10,16 @@ const periods: { period: StatsPeriod; title: string }[] = [
    { period: "all", title: "All time" },
 ];
 
-/** How many vacancies were found over a period, how many suited me and what I did with them. */
+/**
+ * How many vacancies were found over a period, how many suited me and what I did with them. The period
+ * is in the address (?period=week), kept on a reload and back.
+ */
 export function StatsPage() {
-   const [period, setPeriod] = useState<StatsPeriod>("day");
+   const [params, setParams] = useSearchParams();
+   const period = periods.find((p) => p.period === params.get("period"))?.period ?? "day";
+   // in place of the address, as the tabs in Matches
+   const setPeriod = (p: StatsPeriod) =>
+      setParams(p === "day" ? {} : { period: p }, { replace: true });
    const stats = useStats(period);
 
    return (

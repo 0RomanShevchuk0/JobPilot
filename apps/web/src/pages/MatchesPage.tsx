@@ -1,14 +1,28 @@
-import { useState } from "react";
+import { useSearchParams } from "react-router";
 import { MatchCard, useMatches, type MatchesTab } from "../features/matches";
 import { ExpiredSessionsNotice } from "../features/sessions";
 import { Button, LoadMoreTrigger, PageLoader } from "../shared/ui";
 
 const tabs: MatchesTab[] = ["new", "applied", "hidden"];
 
-/** Vacancies evaluated for my current profile, best first: new ones, or the ones I marked. */
+/**
+ * Vacancies evaluated for my current profile, best first: new ones, or the ones I marked. The tab and
+ * "show skipped" are in the address (?tab=hidden&skipped=1): back from a vacancy, the list is as I
+ * left it, and a reload keeps it too.
+ */
 export function MatchesPage() {
-   const [tab, setTab] = useState<MatchesTab>("new");
-   const [showSkipped, setShowSkipped] = useState(false);
+   const [params, setParams] = useSearchParams();
+   const tab = tabs.find((t) => t === params.get("tab")) ?? "new";
+   const showSkipped = params.get("skipped") === "1";
+   // in place of the address, not a new entry: back leaves the page, it doesn't walk through tabs
+   const setView = (view: { tab: MatchesTab; showSkipped: boolean }) => {
+      const next = new URLSearchParams();
+      if (view.tab !== "new") next.set("tab", view.tab);
+      if (view.showSkipped) next.set("skipped", "1");
+      setParams(next, { replace: true });
+   };
+   const setTab = (t: MatchesTab) => setView({ tab: t, showSkipped });
+   const setShowSkipped = (show: boolean) => setView({ tab, showSkipped: show });
    const matches = useMatches(tab, showSkipped);
    const items = matches.data?.pages.flatMap((page) => page.items);
 

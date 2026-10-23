@@ -1,4 +1,4 @@
-import { Navigate, NavLink, Route, Routes } from "react-router";
+import { Navigate, NavLink, Route, Routes, ScrollRestoration } from "react-router";
 import { RequireSignIn, UserMenu } from "../features/sign-in";
 import { ApplicationPage } from "../pages/ApplicationPage";
 import { ApplicationsPage } from "../pages/ApplicationsPage";
@@ -14,10 +14,14 @@ const pages = [
    { path: "/stats", title: "Stats" },
 ];
 
-/** The app's pages under a top bar to switch between them, for a signed-in user only. */
+/**
+ * The app's pages under a top bar to switch between them, for a signed-in user only. A new page opens
+ * at its top, going back returns to where the page was scrolled to (the list of matches mid-way).
+ */
 export function App() {
    return (
       <RequireSignIn>
+         <ScrollRestoration />
          <nav className="border-b border-gray-200">
             <div className="mx-auto flex max-w-4xl items-center gap-4 px-6 py-3">
                {pages.map((page) => (

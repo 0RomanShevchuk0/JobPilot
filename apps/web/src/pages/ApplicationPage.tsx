@@ -11,7 +11,7 @@ import {
    useStartApplication,
 } from "../features/applications";
 import { documentFileUrl, useDocuments } from "../features/documents";
-import { Button, PageLoader } from "../shared/ui";
+import { BackLink, Button, PageLoader } from "../shared/ui";
 
 /**
  * One application: while the worker reads the form and answers it, then the answers to review, opened
@@ -23,9 +23,7 @@ export function ApplicationPage() {
 
    return (
       <main className="mx-auto max-w-4xl p-6">
-         <Link to="/applications" className="text-sm text-gray-500 hover:text-gray-900">
-            ← Applications
-         </Link>
+         <BackLink fallback="/applications" fallbackLabel="Applications" />
          {application.isPending && <PageLoader />}
          {application.isError && <p className="mt-4 text-red-600">{application.error.message}</p>}
          {application.data && <Application key={application.data.id} app={application.data} />}
@@ -59,14 +57,22 @@ function Application({ app }: { app: ApplicationView }) {
       <>
          <header className="mt-2 mb-6">
             <h1 className="text-2xl font-semibold">{app.title ?? "Application"}</h1>
-            <a
-               href={app.postingUrl}
-               target="_blank"
-               rel="noreferrer"
-               className="text-sm text-gray-500 hover:underline"
-            >
-               {app.postingUrl}
-            </a>
+            <p className="flex flex-wrap gap-x-4 text-sm text-gray-500">
+               {/* the vacancy's evaluation and its other job sites; gone vacancies have none */}
+               {app.vacancyId && (
+                  <Link to={`/matches/${app.vacancyId}`} className="hover:underline">
+                     The vacancy in Matches
+                  </Link>
+               )}
+               <a
+                  href={app.postingUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:underline"
+               >
+                  {app.postingUrl}
+               </a>
+            </p>
          </header>
 
          <ApplicationStatusNotice app={app} />
