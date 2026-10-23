@@ -1,16 +1,15 @@
 import { SessionExpiredError } from "@jobpilot/contracts";
 import type { DatabaseClient } from "@jobpilot/db";
-import { canUseSessionOf, loadSession } from "./session.js";
+import { loadSession } from "./session.js";
 import { findSource } from "./sources.js";
 
 export type ProbeResult = "ok" | "logged out" | "unknown";
 
 /**
- * Tries the session of everyone searching on the source whose session this worker can use (see
- * canUseSessionOf), each their own, on a page of one of its postings still up, as the can-apply check
- * would, and records how it went for them. Run with every discover, so a session that is over shows in
- * the web without waiting for a new vacancy, and one logged into again stops showing. A user without a
- * session is logged out with no request made.
+ * Tries the session of everyone searching on the source, each their own, on a page of one of its
+ * postings still up, as the can-apply check would, and records how it went for them. Run with every
+ * discover, so a session that is over shows in the web without waiting for a new vacancy, and one
+ * logged into again stops showing. A user without a session is logged out with no request made.
  */
 export async function probeSessions(
    source: string,
@@ -24,7 +23,6 @@ export async function probeSessions(
    const results = [];
    const userIds = await database.profiles.listUserIdsWithCategoriesOn(source);
    for (const userId of userIds) {
-      if (!(await canUseSessionOf(database, userId))) continue;
       results.push({ userId, result: await probeSession(source, url, userId, database) });
    }
    return results;

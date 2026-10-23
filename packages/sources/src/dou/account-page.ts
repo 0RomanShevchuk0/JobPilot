@@ -7,7 +7,7 @@ import {
 import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
 import { getText } from "../http.js";
-import { sessionCookieHeader } from "../saved-session.js";
+import { sessionCookieHeader } from "../session-cookie.js";
 import { CLOSED_JOB_SELECTOR } from "./job-page.js";
 import {
    ALREADY_APPLIED_SELECTOR,
