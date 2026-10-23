@@ -26,5 +26,5 @@ WORKDIR /app/apps/worker
 COPY --chown=node:node --from=build /out ./
 USER node
 
-# the schema first, so the new code never runs against an old one
-CMD ["sh", "-c", "node dist/scripts/migrate.js && exec node dist/main.js"]
+# the schema is the migrate service's (docker-compose.prod.yml, this image too), done before this starts
+CMD ["node", "dist/main.js"]
