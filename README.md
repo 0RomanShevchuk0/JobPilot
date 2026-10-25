@@ -42,6 +42,12 @@ pnpm dev                    # web on http://localhost:5173
 `pnpm dev` builds it into `apps/extension/dist/chrome-mv3-dev`: `chrome://extensions` → Developer mode
 → **Load unpacked** → that folder. Then open the web app signed in.
 
+For the server (`PROD_WEB_URL`, `PROD_API_URL` in `.env`), into `apps/extension/dist/chrome-mv3-prod`:
+
+```sh
+pnpm --filter @jobpilot/extension build:prod
+```
+
 ## Deploy
 
 Push to `main`: CI, then Deploy builds the images and restarts `docker-compose.prod.yml` on the server.
