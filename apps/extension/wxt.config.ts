@@ -3,8 +3,8 @@ import { createHash } from "node:crypto";
 import { defineConfig } from "wxt";
 import { jobSitePages } from "./shared/job-sites.js";
 
-// the monorepo's .env: the API's and the web app's addresses, as the browser reaches them (the domain on
-// the server). Built into the extension: after changing one, build it again
+// the monorepo's .env: the addresses the extension is built for. Built into it: after changing one,
+// build it again
 if (!process.env.API_URL) process.loadEnvFile("../../.env");
 
 function required(name: string): string {
@@ -13,10 +13,24 @@ function required(name: string): string {
    return value;
 }
 
-// the API, its /api included
-const apiUrl = required("API_URL");
-// the web app's origin, the one the extension takes messages from
-const webOrigin = new URL(required("WEB_URL")).origin;
+/**
+ * The prod build (pnpm build:prod), for the server: its own mode, so WXT writes it to its own folder,
+ * dist/chrome-mv3-prod, and no other build overwrites the one loaded for the server.
+ */
+const PROD_MODE = "prod";
+
+/**
+ * Where the build talks to: the API (its /api included) and the web app's origin, the one the extension
+ * takes messages from. The prod build: PROD_API_URL and PROD_WEB_URL, the server's. Any other: this
+ * machine's, API_URL and WEB_URL.
+ */
+function addressesOf(mode: string): { apiUrl: string; webOrigin: string } {
+   const prefix = mode === PROD_MODE ? "PROD_" : "";
+   return {
+      apiUrl: required(`${prefix}API_URL`),
+      webOrigin: new URL(required(`${prefix}WEB_URL`)).origin,
+   };
+}
 
 // the public halves of two RSA keys, one for each build (not secrets; the private halves aren't kept,
 // nothing needs them). Chrome derives the id from the key, so a "Load unpacked" copy has the same id on
@@ -49,22 +63,25 @@ for (const build of ["production", "development"] as const) {
 export default defineConfig({
    // no auto-imports: imported by hand from their own modules (wxt/browser…), like everything else
    imports: false,
-   // with the other packages' builds: gitignored, prettier skips it, turbo caches it.
-   // `pnpm dev` writes dist/chrome-mv3-dev: load that folder in chrome://extensions
+   // with the other packages' builds: gitignored, prettier skips it, turbo caches it. Load in
+   // chrome://extensions: dist/chrome-mv3-dev (`pnpm dev`), dist/chrome-mv3-prod (build:prod)
    outDir: "dist",
    // the dev build's CSP lets in scripts from this port only: a second `pnpm dev` fails instead of
    // moving to the next port, where the loaded extension couldn't run its scripts
    dev: { server: { port: 3399, strictPort: true } },
    // in the code: import.meta.env.API_URL, the API; import.meta.env.WEB_URL, the web app
-   vite: () => ({
-      define: {
-         "import.meta.env.API_URL": JSON.stringify(apiUrl),
-         "import.meta.env.WEB_URL": JSON.stringify(webOrigin),
-      },
-   }),
-   // `wxt build` is the server's build, `wxt` (pnpm dev) this machine's: its own key, and a name to tell
-   // the two apart in chrome://extensions
-   manifest: ({ command }) => ({
+   vite: ({ mode }) => {
+      const { apiUrl, webOrigin } = addressesOf(mode);
+      return {
+         define: {
+            "import.meta.env.API_URL": JSON.stringify(apiUrl),
+            "import.meta.env.WEB_URL": JSON.stringify(webOrigin),
+         },
+      };
+   },
+   // `wxt build` (build:prod among them) has the server's key, `wxt` (pnpm dev) this machine's: its
+   // own key, and a name to tell the two apart in chrome://extensions
+   manifest: ({ command, mode }) => ({
       name: command === "build" ? "JobPilot" : "JobPilot (dev)",
       key: command === "build" ? BUILD_KEYS.production : BUILD_KEYS.development,
       // cookies: the job sites' cookies, httpOnly ones too, the user's session there;
@@ -76,6 +93,6 @@ export default defineConfig({
       // the job sites' pages: their cookies, the job pages with the form (from @jobpilot/sources)
       host_permissions: jobSitePages,
       // the web app may talk to the extension: whether it is there, and which application to fill in
-      externally_connectable: { matches: [`${webOrigin}/*`] },
+      externally_connectable: { matches: [`${addressesOf(mode).webOrigin}/*`] },
    }),
 });
