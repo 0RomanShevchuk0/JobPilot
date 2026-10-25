@@ -4,12 +4,13 @@ import { Spinner } from "./Spinner";
 export type ButtonVariant = "primary" | "secondary" | "outline" | "danger" | "dangerGhost";
 export type ButtonSize = "sm" | "md";
 
+// every one has a border, transparent but outline's: buttons side by side are the same height
 const variants: Record<ButtonVariant, string> = {
-   primary: "bg-gray-900 text-white hover:bg-gray-700",
-   secondary: "bg-gray-100 text-gray-700 hover:bg-gray-200",
-   outline: "border border-gray-300 text-gray-700 hover:bg-gray-50",
-   danger: "bg-red-600 text-white hover:bg-red-700",
-   dangerGhost: "text-red-600 hover:bg-red-50",
+   primary: "border-transparent bg-gray-900 text-white hover:bg-gray-700",
+   secondary: "border-transparent bg-gray-100 text-gray-700 hover:bg-gray-200",
+   outline: "border-gray-300 text-gray-700 hover:bg-gray-50",
+   danger: "border-transparent bg-red-600 text-white hover:bg-red-700",
+   dangerGhost: "border-transparent text-red-600 hover:bg-red-50",
 };
 
 const sizes: Record<ButtonSize, string> = {
@@ -22,9 +23,12 @@ interface ButtonLook {
    size?: ButtonSize;
 }
 
-/** A button's classes, for links that look like buttons. */
+/**
+ * A button's classes, for links that look like buttons. The label stays on one line: squeezed, a
+ * button wraps into a tall block; the text around it gives way instead.
+ */
 export function buttonStyles({ variant = "secondary", size = "md" }: ButtonLook = {}): string {
-   return `rounded text-sm disabled:opacity-50 ${sizes[size]} ${variants[variant]}`;
+   return `rounded border text-sm whitespace-nowrap disabled:opacity-50 ${sizes[size]} ${variants[variant]}`;
 }
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> &

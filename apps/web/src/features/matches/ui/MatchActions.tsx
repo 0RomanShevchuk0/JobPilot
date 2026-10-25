@@ -14,8 +14,8 @@ const isToApplyThrough = (posting: MatchPosting) =>
 
 /**
  * What I can do with a vacancy: apply on its job site (one left to apply through) or pick which on its
- * page (several), hide it or show it again. Applied on some of its sites, it says where is left: each
- * one gets me seen more.
+ * page (several), hide it or show it again. Where applying stands on each site is on the card's site
+ * badges ("Djinni · sent", "DOU").
  */
 export function MatchActions({ match }: { match: MatchListItem }) {
    const mark = useMarkMatch(match.vacancyId);
@@ -51,7 +51,7 @@ export function MatchActions({ match }: { match: MatchListItem }) {
 
    return (
       // relative z-10: above the card's stretched link, so the buttons stay clickable on their own
-      <div className="relative z-10 ml-auto flex max-w-xs shrink-0 flex-col items-end gap-2">
+      <div className="relative z-10 ml-auto flex shrink-0 flex-col items-end gap-2">
          <div className="flex items-start gap-2">
             {applyAction()}
             {match.status === null ? (
@@ -74,13 +74,9 @@ export function MatchActions({ match }: { match: MatchListItem }) {
                </Button>
             )}
          </div>
-         {!onItsPage && appliedOn.length > 0 && toApply.length > 0 && (
-            <p className="text-right text-xs text-gray-500">
-               Applied on {appliedOn.map((p) => p.sourceName).join(", ")} ·{" "}
-               {toApply.map((p) => p.sourceName).join(", ")} left
-            </p>
+         {mark.isError && (
+            <p className="max-w-xs text-right text-sm text-red-600">{mark.error.message}</p>
          )}
-         {mark.isError && <p className="text-right text-sm text-red-600">{mark.error.message}</p>}
       </div>
    );
 }

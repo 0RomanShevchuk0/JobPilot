@@ -21,7 +21,9 @@ export function MarkSentByHandButton({ postingId }: { postingId: string }) {
             Mark applied
          </Button>
          {markSent.isError && (
-            <span className="text-right text-sm text-red-600">{markSent.error.message}</span>
+            <span className="max-w-xs text-right text-sm text-red-600">
+               {markSent.error.message}
+            </span>
          )}
       </span>
    );
