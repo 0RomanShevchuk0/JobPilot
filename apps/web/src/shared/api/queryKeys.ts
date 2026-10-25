@@ -12,7 +12,7 @@ export const queryKeys = {
    },
    applications: {
       all: ["applications"] as const,
-      list: () => ["applications", "list"] as const,
+      list: (tab: string) => ["applications", "list", tab] as const,
       details: (id: string) => ["applications", "details", id] as const,
    },
    documents: {

@@ -125,7 +125,7 @@ export interface DocumentListItem {
    createdAt: string;
 }
 
-/** An application in GET /applications, newest activity first. The API's wire format: ISO dates. */
+/** An application in GET /applications. The API's wire format: ISO dates. */
 export interface ApplicationListItem {
    id: string;
    vacancyId: string | null;
@@ -146,6 +146,22 @@ export interface ApplicationListItem {
    submittedAt: string | null;
    createdAt: string;
    updatedAt: string;
+}
+
+/**
+ * The lists of GET /applications. In progress: something can still be done with them (JobPilot
+ * preparing, me checking or trying again) while their vacancy isn't hidden. Sent: by JobPilot or
+ * marked by hand. One the job site refused is in neither: its vacancy shows in Matches with "Show
+ * skipped", the reason on its card.
+ */
+export const applicationListTabs = ["in-progress", "sent"] as const;
+export type ApplicationListTab = (typeof applicationListTabs)[number];
+
+/** A page of GET /applications. */
+export interface ApplicationListPage {
+   items: ApplicationListItem[];
+   /** what to pass as ?after= for the next page; null on the last one */
+   nextCursor: string | null;
 }
 
 /** An application in GET /applications/:id: with its answers. */

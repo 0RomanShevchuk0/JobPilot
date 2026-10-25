@@ -1,5 +1,10 @@
-import type { ApplicationListItem, ApplicationStatus, FormField } from "@jobpilot/contracts";
-import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
+import type {
+   ApplicationListItem,
+   ApplicationListTab,
+   ApplicationStatus,
+   FormField,
+} from "@jobpilot/contracts";
+import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { applications, postings, sources, vacancies, vacancyMatches } from "../schema.js";
 import { externalApplyUrl } from "./matches.js";
@@ -24,6 +29,13 @@ export interface ApplicationToPrepare {
 /** What the worker needs to fill an application into the form. */
 export type ApplicationToFill = ApplicationToPrepare;
 
+export interface ApplicationListOptions {
+   tab: ApplicationListTab;
+   /** the last application of the previous page: the list goes on after it; absent = from the top */
+   after?: string;
+   limit: number;
+}
+
 export interface ApplicationsRepository {
    /**
     * The posting to apply through, if it exists and is still on its job site: whether that site sends
@@ -35,8 +47,11 @@ export interface ApplicationsRepository {
     * stay until new answers replace them). Returns undefined when it was already submitted.
     */
    startPreparing(userId: string, postingId: string): Promise<{ id: string } | undefined>;
-   /** My applications, the latest activity first. */
-   listForUser(userId: string): Promise<ApplicationListItem[]>;
+   /**
+    * My applications in one of the lists, a page at a time: in progress the latest activity first,
+    * sent the latest sent first.
+    */
+   listForUser(userId: string, options: ApplicationListOptions): Promise<ApplicationListItem[]>;
    get(userId: string, applicationId: string): Promise<StoredApplication | undefined>;
    getToPrepare(applicationId: string): Promise<ApplicationToPrepare | undefined>;
    /** The form was read and answered: ready for the user to review. */
@@ -85,6 +100,9 @@ const listColumns = {
 // the worker finishing a preparation leaves alone one I marked sent by hand meanwhile
 const notSentSql = ne(applications.status, "submitted");
 
+// what the in-progress list holds: something can still be done with it
+const inWorkStatuses: ApplicationStatus[] = ["draft", "preparing", "ready_for_review", "failed"];
+
 // the user's evaluation of the application's vacancy: whether they hid it
 const vacancyOfApplicationSql = and(
    eq(vacancyMatches.userId, applications.userId),
@@ -126,7 +144,20 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
          return row;
       },
 
-      async listForUser(userId) {
+      async listForUser(userId, { tab, after, limit }) {
+         // a sent one always has its date
+         const sortedAt = tab === "sent" ? applications.submittedAt : applications.updatedAt;
+         const lastShownSortedAt =
+            tab === "sent" ? sql`last_shown.submitted_at` : sql`last_shown.updated_at`;
+         // the next page: what comes below the last application shown. (a, b) < (x, y) compares like
+         // words: b only when a ties. Its values are read from the table, not sent by the client: JS
+         // dates would drop microseconds
+         const belowLastShown = sql`
+            (${sortedAt}, ${applications.id}) < (
+               select ${lastShownSortedAt}, last_shown.id
+               from applications last_shown
+               where last_shown.user_id = ${userId} and last_shown.id = ${after}
+            )`;
          const rows = await db
             .select(listColumns)
             .from(applications)
@@ -134,8 +165,21 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
             .leftJoin(vacancies, eq(vacancies.id, postings.vacancyId))
             .innerJoin(sources, eq(sources.id, postings.sourceId))
             .leftJoin(vacancyMatches, vacancyOfApplicationSql)
-            .where(eq(applications.userId, userId))
-            .orderBy(desc(applications.updatedAt));
+            .where(
+               and(
+                  eq(applications.userId, userId),
+                  tab === "sent"
+                     ? eq(applications.status, "submitted")
+                     : // once I hide its vacancy, I'm done with it
+                       and(
+                          inArray(applications.status, inWorkStatuses),
+                          isNull(vacancyMatches.status),
+                       ),
+                  after ? belowLastShown : undefined,
+               ),
+            )
+            .orderBy(desc(sortedAt), desc(applications.id))
+            .limit(limit);
          return rows.map(withIsoDates);
       },
 
