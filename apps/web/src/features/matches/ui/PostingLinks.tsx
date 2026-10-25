@@ -1,5 +1,6 @@
 import type { MatchListItem, MatchPosting } from "@jobpilot/contracts";
 import { PostingApplyActions } from "./PostingApplyActions";
+import { PostingStatus } from "./PostingStatus";
 
 /**
  * Every job site the vacancy is listed on, each with its own way to apply and how it went: a vacancy
@@ -20,7 +21,10 @@ export function PostingLinks({ match }: { match: MatchListItem }) {
          <ul className="mt-2 space-y-2">
             {postings.map((posting) => (
                <li key={posting.url} className="flex items-center justify-between gap-3">
-                  <PostingLink posting={posting} />
+                  <span className="flex min-w-0 items-center gap-2">
+                     <PostingLink posting={posting} />
+                     <PostingStatus posting={posting} details />
+                  </span>
                   <PostingApplyActions posting={posting} />
                </li>
             ))}
