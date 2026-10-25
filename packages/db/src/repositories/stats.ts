@@ -2,6 +2,7 @@ import type { Stats } from "@jobpilot/contracts";
 import { and, count, eq, gte, not, sql, type SQL } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { applications, postings, vacancies, vacancyMatches } from "../schema.js";
+import { postingRefusedOnItsPageSql } from "./apply-checks.js";
 import { userSubscribedToVacancySql } from "./subscriptions.js";
 
 export interface StatsOptions {
@@ -27,21 +28,22 @@ export function createStatsRepository(db: Drizzle): StatsRepository {
    const suitable = sql`${verdict} in ('apply', 'stretch')`;
    // absent when the job site wasn't asked: counted as not refused, as the matches list does
    const notRefused = sql`(${vacancyMatches.analysis}->'applyCheck'->>'canApply') is distinct from 'false'`;
-   // refused when preparing an application too, on every job site the vacancy is still on: as
-   // refused as the check's "can't apply", as the matches list shows it. A closed vacancy (no posting
-   // left) isn't refused this way: "every one of none" would count it so
+   // refused on every job site the vacancy is still on, each on its page (the can-apply check) or to
+   // an application: as refused as the check's "can't apply" as one, as the
+   // matches list shows it. A closed vacancy (no posting left) isn't refused this way: "every one of
+   // none" would count it so
    const refusedOnEverySite = (userId: string) => {
       const activePosting = sql`${postings.vacancyId} = ${vacancies.id} and ${postings.goneAt} is null`;
+      const refusedAnApplication = sql`exists (
+         select 1 from ${applications}
+         where ${applications.userId} = ${userId} and ${applications.postingId} = ${postings.id}
+            and ${applications.status} = 'cannot_apply'
+      )`;
       // in parentheses: not() puts none around what it negates
       return sql`(exists (select 1 from ${postings} where ${activePosting})
          and not exists (
             select 1 from ${postings}
-            where ${activePosting}
-               and not exists (
-                  select 1 from ${applications}
-                  where ${applications.userId} = ${userId} and ${applications.postingId} = ${postings.id}
-                     and ${applications.status} = 'cannot_apply'
-               )
+            where ${activePosting} and not (${postingRefusedOnItsPageSql} or ${refusedAnApplication})
          ))`;
    };
    const userMatch = (userId: string) =>

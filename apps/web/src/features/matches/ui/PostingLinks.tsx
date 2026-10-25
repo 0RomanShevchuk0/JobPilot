@@ -21,10 +21,7 @@ export function PostingLinks({ match }: { match: MatchListItem }) {
             {postings.map((posting) => (
                <li key={posting.url} className="flex items-center justify-between gap-3">
                   <PostingLink posting={posting} />
-                  <PostingApplyActions
-                     posting={posting}
-                     refusedOnSite={match.cannotApplyReason !== null}
-                  />
+                  <PostingApplyActions posting={posting} />
                </li>
             ))}
          </ul>

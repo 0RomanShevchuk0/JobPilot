@@ -1,7 +1,7 @@
 import type {
    AiAssessment,
    ApplyCheck,
-   JobPageCheck,
+   JobPageChecks,
    ApplicationOrigin,
    ApplicationStatus,
    MatchAnalysis,
@@ -22,6 +22,7 @@ import {
    vacancies,
    vacancyMatches,
 } from "../schema.js";
+import { postingRefusedOnItsPageSql } from "./apply-checks.js";
 import { userSubscribedToVacancySql } from "./subscriptions.js";
 
 export interface MatchInput {
@@ -107,7 +108,7 @@ export interface MatchesRepository {
       userId: string,
       vacancyId: string,
       profileVersion: number,
-      check: Partial<JobPageCheck>,
+      check: JobPageChecks,
    ): Promise<boolean>;
 }
 
@@ -119,13 +120,15 @@ const markedAtSql = sql`coalesce(${vacancyMatches.statusChangedAt}, ${vacancyMat
 
 /**
  * Whether the vacancy has a posting the user can still apply through: on its job site, with no
- * application of theirs sent through it, nor one the site refused. What makes a vacancy new: one on
- * two sites applied to on one stays new, applying on each gets it seen more.
+ * application of theirs sent through it, nor one the site refused, and not refused by its page in
+ * the can-apply check (in the evaluation the query reads). What makes a vacancy new: one
+ * on two sites applied to on one stays new, applying on each gets it seen more.
  */
 function hasPostingToApplyThroughSql(userId: string) {
    return sql`exists (
       select 1 from ${postings}
       where ${postings.vacancyId} = ${vacancies.id} and ${postings.goneAt} is null
+         and not ${postingRefusedOnItsPageSql}
          and not exists (
             select 1 from ${applications}
             where ${applications.userId} = ${userId} and ${applications.postingId} = ${postings.id}
@@ -233,11 +236,9 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
          .where(and(eq(applications.userId, userId), inArray(postings.vacancyId, vacancyIds)))
          .orderBy(desc(applications.updatedAt));
 
-      return rows.map(({ analysis, salaryMin, salaryMax, salaryCurrency, salaryPeriod, ...r }) => ({
-         ...r,
-         evaluatedAt: r.evaluatedAt.toISOString(),
-         publishedAt: r.publishedAt.toISOString(),
-         postings: activePostings
+      return rows.map(({ analysis, salaryMin, salaryMax, salaryCurrency, salaryPeriod, ...r }) => {
+         const vacancyApplications = userApplications.filter((a) => a.vacancyId === r.vacancyId);
+         const vacancyPostings = activePostings
             .filter((p) => p.vacancyId === r.vacancyId)
             .map(({ id, source, sourceName, url, apply }) => ({
                id,
@@ -245,32 +246,36 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
                sourceName,
                url,
                externalApplyUrl: externalApplyUrl(apply),
-               application: applicationOf(userApplications, (a) => a.postingId === id),
-            })),
-         application: applicationOf(userApplications, (a) => a.vacancyId === r.vacancyId),
-         verdict: analysis.ai?.verdict ?? null,
-         summary: analysis.ai?.summary ?? null,
-         concerns: analysis.ai?.concerns ?? [],
-         matchedSkills: analysis.ai?.matchedSkills ?? [],
-         missingSkills: analysis.ai?.missingSkills ?? [],
-         rejectedBy: analysis.prefilter.rejectedBy,
-         cannotApplyReason:
-            cannotApplyReason(analysis.applyCheck) ??
-            refusedOnEverySiteLeft(
-               activePostings.filter((p) => p.vacancyId === r.vacancyId),
-               userApplications.filter((a) => a.vacancyId === r.vacancyId),
-            ),
-         salaryFit: analysis.salaryFit ?? null,
-         salary:
-            salaryCurrency && salaryPeriod && (salaryMin !== null || salaryMax !== null)
-               ? {
-                    min: salaryMin ?? undefined,
-                    max: salaryMax ?? undefined,
-                    currency: salaryCurrency,
-                    period: salaryPeriod,
-                 }
-               : null,
-      }));
+               application: applicationOf(vacancyApplications, (a) => a.postingId === id),
+               cannotApplyReason: postingRefusal(analysis, id, vacancyApplications),
+            }));
+         return {
+            ...r,
+            evaluatedAt: r.evaluatedAt.toISOString(),
+            publishedAt: r.publishedAt.toISOString(),
+            postings: vacancyPostings,
+            application: applicationOf(vacancyApplications, () => true),
+            verdict: analysis.ai?.verdict ?? null,
+            summary: analysis.ai?.summary ?? null,
+            concerns: analysis.ai?.concerns ?? [],
+            matchedSkills: analysis.ai?.matchedSkills ?? [],
+            missingSkills: analysis.ai?.missingSkills ?? [],
+            rejectedBy: analysis.prefilter.rejectedBy,
+            cannotApplyReason:
+               cannotApplyReason(analysis.applyCheck) ??
+               refusedOnEverySiteLeft(vacancyPostings, vacancyApplications),
+            salaryFit: analysis.salaryFit ?? null,
+            salary:
+               salaryCurrency && salaryPeriod && (salaryMin !== null || salaryMax !== null)
+                  ? {
+                       min: salaryMin ?? undefined,
+                       max: salaryMax ?? undefined,
+                       currency: salaryCurrency,
+                       period: salaryPeriod,
+                    }
+                  : null,
+         };
+      });
    }
 
    return {
@@ -393,7 +398,7 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
          const rows = await db
             .update(vacancyMatches)
             .set({
-               // its keys (applyCheck, salaryFit) go next to the prefilter's in the analysis
+               // its keys (applyCheck, applyChecks, salaryFit) go next to the prefilter's in the analysis
                analysis: sql`${vacancyMatches.analysis} || ${JSON.stringify(check)}::jsonb`,
             })
             .where(
@@ -441,19 +446,34 @@ function cannotApplyReason(applyCheck: ApplyCheck | undefined): string | null {
 }
 
 /**
- * Why there is nowhere to apply: the vacancy was never applied to, and every active posting was
- * refused when preparing an application ("DOU: you applied already"). Null while one is still open,
- * or once it was applied to anywhere: then it is done with, not refused.
+ * Why I can't apply through the posting: its page refused in the can-apply check (its own answer, or
+ * the answer as one in an evaluation checked before each site's was kept: every site refused then),
+ * or the site refused an application. Null when I can, or it wasn't asked.
+ */
+function postingRefusal(
+   analysis: MatchAnalysis,
+   postingId: string,
+   vacancyApplications: UserApplication[],
+): string | null {
+   const checked = analysis.applyChecks ? analysis.applyChecks[postingId] : analysis.applyCheck;
+   if (checked && !checked.canApply) return checked.reason;
+   const refused = vacancyApplications.find(
+      (a) => a.postingId === postingId && a.status === "cannot_apply",
+   );
+   return refused ? (refused.failureReason ?? "can't apply") : null;
+}
+
+/**
+ * Why there is nowhere to apply: the vacancy was never applied to, and every active posting refused,
+ * on its page or to an application ("DOU: you applied already"). Null while one is still open, or
+ * once it was applied to anywhere: then it is done with, not refused.
  */
 function refusedOnEverySiteLeft(
-   vacancyPostings: { id: string; sourceName: string }[],
+   vacancyPostings: { sourceName: string; cannotApplyReason: string | null }[],
    vacancyApplications: UserApplication[],
 ): string | null {
    if (vacancyApplications.some((a) => a.status === "submitted")) return null;
-   const refusalOf = (postingId: string) =>
-      vacancyApplications.find((a) => a.postingId === postingId && a.status === "cannot_apply");
-   if (vacancyPostings.length === 0 || !vacancyPostings.every((p) => refusalOf(p.id))) return null;
-   return vacancyPostings
-      .map((p) => `${p.sourceName}: ${refusalOf(p.id)?.failureReason ?? "can't apply"}`)
-      .join("; ");
+   if (vacancyPostings.length === 0) return null;
+   if (!vacancyPostings.every((p) => p.cannotApplyReason !== null)) return null;
+   return vacancyPostings.map((p) => `${p.sourceName}: ${p.cannotApplyReason}`).join("; ");
 }

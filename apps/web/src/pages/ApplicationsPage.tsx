@@ -56,7 +56,7 @@ export function ApplicationsPage() {
                   <h2 className="mb-2 text-sm font-medium text-gray-600">Sent</h2>
                   {sent.length === 0 ? (
                      <p className="text-sm text-gray-500">
-                        Nothing yet: what you send through JobPilot, or mark Applied on a job site
+                        Nothing yet: what you send through JobPilot, or Mark applied on a job site
                         in Matches, shows here.
                      </p>
                   ) : (
