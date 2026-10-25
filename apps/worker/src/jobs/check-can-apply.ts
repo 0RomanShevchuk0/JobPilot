@@ -39,6 +39,8 @@ export async function handleCheckCanApply(
 
    const active = await database.postings.listActive(vacancyId);
    const checks: JobPageCheck[] = [];
+   // each site's answer on its own, by posting: one refusing is one fewer to apply through
+   const applyChecks: Record<string, ApplyCheck> = {};
    let notAsked = 0;
    let gone = 0;
    for (const posting of active) {
@@ -57,6 +59,7 @@ export async function handleCheckCanApply(
          gone++;
       } else {
          checks.push(result.check);
+         applyChecks[posting.id] = result.check.applyCheck;
       }
    }
    // the rebuild closes the vacancy: nothing left to score
@@ -64,12 +67,10 @@ export async function handleCheckCanApply(
 
    const pageCheck = combineChecks(checks, notAsked);
    if (pageCheck) {
-      const saved = await database.matches.saveJobPageCheck(
-         userId,
-         vacancyId,
-         stored.version,
-         pageCheck,
-      );
+      const saved = await database.matches.saveJobPageCheck(userId, vacancyId, stored.version, {
+         ...pageCheck,
+         applyChecks,
+      });
       if (!saved) return "stale";
    }
    const applyCheck = pageCheck?.applyCheck;

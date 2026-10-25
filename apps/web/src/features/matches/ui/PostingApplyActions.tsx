@@ -1,43 +1,39 @@
 import type { MatchPosting } from "@jobpilot/contracts";
 import { Link, useNavigate } from "react-router";
-import { Button, buttonStyles } from "../../../shared/ui";
+import { ArrowRightIcon, Badge, Button, buttonStyles } from "../../../shared/ui";
 import {
    applicationStatusLabels,
-   useMarkSentByHand,
+   applicationStatusStyles,
    useStartApplication,
    useUnmarkSentByHand,
 } from "../../applications";
 import { ExternalApplyLink } from "./ExternalApplyLink";
-
-interface Props {
-   posting: MatchPosting;
-   /** the job site's check said I can't apply on it: no Apply through JobPilot */
-   refusedOnSite: boolean;
-}
+import { MarkSentByHandButton } from "./MarkSentByHandButton";
 
 /**
  * What I can do through one posting: Apply (JobPilot fills the job site's form in), or apply on the
- * employer's site it sends to, and mark it Applied when I did it myself, whatever became of JobPilot's
+ * employer's site it sends to, and Mark applied when I did it myself, whatever became of JobPilot's
  * application there. Once sent, when and how; one I marked by hand can be taken back.
  */
-export function PostingApplyActions({ posting, refusedOnSite }: Props) {
+export function PostingApplyActions({ posting }: { posting: MatchPosting }) {
    const apply = useStartApplication();
-   const markSent = useMarkSentByHand();
    const unmarkSent = useUnmarkSentByHand();
    const navigate = useNavigate();
    const { application } = posting;
-   const error = apply.error ?? markSent.error ?? unmarkSent.error;
-
-   const markSentButton = (
-      <Button
-         variant="outline"
-         size="sm"
-         onClick={() => markSent.mutate(posting.id)}
-         loading={markSent.isPending}
-         title="I applied through this job site myself"
-      >
-         Applied
-      </Button>
+   const error = apply.error ?? unmarkSent.error;
+   const markSentButton = <MarkSentByHandButton postingId={posting.id} />;
+   // why its site refused, on its page or to an application: shown whatever else stands next to it
+   const refusal = posting.cannotApplyReason && (
+      <span className="max-w-60 truncate text-sm text-gray-500" title={posting.cannotApplyReason}>
+         Can't apply: {posting.cannotApplyReason}
+      </span>
+   );
+   // anything started on this site shows its status; nothing started, only what I can do. A refusal
+   // stands in for it: the reason says more than "can't apply"
+   const statusBadge = application && (
+      <Badge tone={applicationStatusStyles[application.status]}>
+         {applicationStatusLabels[application.status]}
+      </Badge>
    );
 
    function actions() {
@@ -47,8 +43,9 @@ export function PostingApplyActions({ posting, refusedOnSite }: Props) {
             : "";
          return (
             <>
-               <span className="text-sm text-green-700">
-                  Applied {sentOn} · {application.origin === "manual" ? "by hand" : "JobPilot"}
+               {statusBadge}
+               <span className="text-sm text-gray-500">
+                  {sentOn} · {application.origin === "manual" ? "by hand" : "JobPilot"}
                </span>
                {application.origin === "manual" && (
                   <Button
@@ -64,16 +61,30 @@ export function PostingApplyActions({ posting, refusedOnSite }: Props) {
          );
       }
       if (application) {
+         // ready: checking the answers and sending is what's next, the main thing here
+         const ready = application.status === "ready_for_review";
+         const linkStyles = buttonStyles({ variant: ready ? "primary" : "outline", size: "sm" });
          return (
             <>
+               {refusal ?? statusBadge}
                <Link
                   to={`/applications/${application.id}`}
-                  className={buttonStyles({ variant: "outline", size: "sm" })}
+                  className={`${linkStyles} inline-flex items-center gap-1.5`}
                >
-                  Application: {applicationStatusLabels[application.status]}
+                  {ready ? "Review & send" : "Open"}
+                  <ArrowRightIcon />
                </Link>
                {/* in work, I may send it myself instead; refused, often because I already applied
                    there myself ("Already applied to this job") */}
+               {markSentButton}
+            </>
+         );
+      }
+      // its page said I can't apply here: no Apply, why instead; I may still have applied myself
+      if (refusal) {
+         return (
+            <>
+               {refusal}
                {markSentButton}
             </>
          );
@@ -83,20 +94,18 @@ export function PostingApplyActions({ posting, refusedOnSite }: Props) {
             {posting.externalApplyUrl ? (
                <ExternalApplyLink url={posting.externalApplyUrl} />
             ) : (
-               !refusedOnSite && (
-                  <Button
-                     variant="primary"
-                     size="sm"
-                     onClick={() =>
-                        apply.mutate(posting.id, {
-                           onSuccess: ({ id }) => navigate(`/applications/${id}`),
-                        })
-                     }
-                     loading={apply.isPending}
-                  >
-                     Apply
-                  </Button>
-               )
+               <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() =>
+                     apply.mutate(posting.id, {
+                        onSuccess: ({ id }) => navigate(`/applications/${id}`),
+                     })
+                  }
+                  loading={apply.isPending}
+               >
+                  Apply
+               </Button>
             )}
             {markSentButton}
          </>

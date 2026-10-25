@@ -2,11 +2,15 @@ import type { MatchListItem, MatchPosting } from "@jobpilot/contracts";
 import { Link, useParams } from "react-router";
 import { Button, buttonStyles } from "../../../shared/ui";
 import { useMarkMatch } from "../api/queries";
+import { MarkSentByHandButton } from "./MarkSentByHandButton";
 import { PostingApplyActions } from "./PostingApplyActions";
 
-/** Whether I can still apply through the posting: nothing sent through it, and the site didn't refuse. */
+/**
+ * Whether I can still apply through the posting: nothing sent through it, and its site didn't refuse,
+ * on its page or to an application.
+ */
 const isToApplyThrough = (posting: MatchPosting) =>
-   posting.application?.status !== "submitted" && posting.application?.status !== "cannot_apply";
+   posting.application?.status !== "submitted" && posting.cannotApplyReason === null;
 
 /**
  * What I can do with a vacancy: apply on its job site (one left to apply through) or pick which on its
@@ -20,17 +24,18 @@ export function MatchActions({ match }: { match: MatchListItem }) {
    const toApply = match.postings.filter(isToApplyThrough);
    const appliedOn = match.postings.filter((p) => p.application?.status === "submitted");
    const [onlyToApply] = toApply.length === 1 ? toApply : [];
+   // nowhere left to apply, its one site refused: often because I applied there myself already
+   const refused = match.postings.filter((p) => p.cannotApplyReason !== null);
+   const [onlyRefused] =
+      toApply.length === 0 && appliedOn.length === 0 && refused.length === 1 ? refused : [];
 
    function applyAction() {
       if (onItsPage) return null;
       if (onlyToApply) {
-         return (
-            <PostingApplyActions
-               posting={onlyToApply}
-               refusedOnSite={match.cannotApplyReason !== null}
-            />
-         );
+         return <PostingApplyActions posting={onlyToApply} />;
       }
+      // the reason is on the card already: only the way to say I applied
+      if (onlyRefused) return <MarkSentByHandButton postingId={onlyRefused.id} />;
       if (toApply.length > 1) {
          return (
             <Link

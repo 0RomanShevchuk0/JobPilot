@@ -97,10 +97,20 @@ export type JobPageResult = { status: "gone" } | { status: "ok"; check: JobPageC
  */
 export interface MatchAnalysis {
    prefilter: PrefilterResult;
+   /** every site's answer as one: I can apply if one lets me, can't if every one refuses */
    applyCheck?: ApplyCheck;
+   /**
+    * each site's own answer, by posting id: a vacancy is applied to on each of its sites, one refusing
+    * is one fewer to apply through. A posting whose site wasn't asked (no session) isn't in it.
+    * Absent in evaluations checked before it was kept: applyCheck alone says then
+    */
+   applyChecks?: Record<string, ApplyCheck>;
    salaryFit?: SalaryFit;
    ai?: AiAssessment;
 }
+
+/** What the can-apply check records on an evaluation: the answer as one, each site's, the salary. */
+export type JobPageChecks = Pick<MatchAnalysis, "applyCheck" | "applyChecks" | "salaryFit">;
 
 /**
  * What the user decided about the vacancy as a whole; null = not hidden. Applying is per posting, on
@@ -124,6 +134,11 @@ export interface MatchPosting {
    externalApplyUrl: string | null;
    /** my application through this job site, once started */
    application: MatchApplication | null;
+   /**
+    * why I can't apply through it: its page said so (the can-apply check), or the site refused an
+    * application. Null when I can, or it wasn't asked
+    */
+   cannotApplyReason: string | null;
 }
 
 /** My application through a posting, as a match shows it: JobPilot's, or one I marked as sent. */

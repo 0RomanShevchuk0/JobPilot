@@ -146,7 +146,7 @@ async function confirmSubmission(tabId: number, tab: ApplicationTab): Promise<vo
         }
       : {
            tone: "warning",
-           text: "Sent, but JobPilot didn't get it (is the API running?): mark it Applied in JobPilot.",
+           text: "Sent, but JobPilot didn't get it (is the API running?): Mark applied in JobPilot.",
         };
    await pageInTab.showNotice(tabId, notice);
 }
