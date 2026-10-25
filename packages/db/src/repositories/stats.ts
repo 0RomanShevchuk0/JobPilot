@@ -1,7 +1,7 @@
 import type { Stats } from "@jobpilot/contracts";
-import { and, count, eq, gte, sql, type SQL } from "drizzle-orm";
+import { and, count, eq, gte, not, sql, type SQL } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
-import { applications, vacancies, vacancyMatches } from "../schema.js";
+import { applications, postings, vacancies, vacancyMatches } from "../schema.js";
 import { userSubscribedToVacancySql } from "./subscriptions.js";
 
 export interface StatsOptions {
@@ -27,6 +27,23 @@ export function createStatsRepository(db: Drizzle): StatsRepository {
    const suitable = sql`${verdict} in ('apply', 'stretch')`;
    // absent when the job site wasn't asked: counted as not refused, as the matches list does
    const notRefused = sql`(${vacancyMatches.analysis}->'applyCheck'->>'canApply') is distinct from 'false'`;
+   // refused when preparing an application too, on every job site the vacancy is still on: as
+   // refused as the check's "can't apply", as the matches list shows it. A closed vacancy (no posting
+   // left) isn't refused this way: "every one of none" would count it so
+   const refusedOnEverySite = (userId: string) => {
+      const activePosting = sql`${postings.vacancyId} = ${vacancies.id} and ${postings.goneAt} is null`;
+      // in parentheses: not() puts none around what it negates
+      return sql`(exists (select 1 from ${postings} where ${activePosting})
+         and not exists (
+            select 1 from ${postings}
+            where ${activePosting}
+               and not exists (
+                  select 1 from ${applications}
+                  where ${applications.userId} = ${userId} and ${applications.postingId} = ${postings.id}
+                     and ${applications.status} = 'cannot_apply'
+               )
+         ))`;
+   };
    const userMatch = (userId: string) =>
       and(eq(vacancyMatches.vacancyId, vacancies.id), eq(vacancyMatches.userId, userId));
 
@@ -43,8 +60,14 @@ export function createStatsRepository(db: Drizzle): StatsRepository {
                scored: countWhere(sql`${vacancyMatches.score} is not null`),
                apply: countWhere(sql`${verdict} = 'apply'`),
                stretch: countWhere(sql`${verdict} = 'stretch'`),
-               canApply: countWhere(and(suitable, notRefused)),
-               applied: countWhere(eq(vacancyMatches.status, "applied")),
+               canApply: countWhere(and(suitable, notRefused, not(refusedOnEverySite(userId)))),
+               // sent through any of its postings, by JobPilot or marked by hand
+               applied: countWhere(sql`exists (
+                  select 1 from ${applications}
+                  inner join ${postings} on ${postings.id} = ${applications.postingId}
+                  where ${applications.userId} = ${userId} and ${postings.vacancyId} = ${vacancies.id}
+                     and ${applications.status} = 'submitted'
+               )`),
                hidden: countWhere(eq(vacancyMatches.status, "hidden")),
             })
             .from(vacancies)

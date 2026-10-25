@@ -12,8 +12,9 @@ export interface StatsFunnel {
    stretch: number;
    /** apply + stretch the job site doesn't refuse (or wasn't asked about) */
    canApply: number;
-   /** my marks */
+   /** applied to through at least one of its job sites (by JobPilot or by hand) */
    applied: number;
+   /** hidden by me */
    hidden: number;
 }
 

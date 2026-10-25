@@ -18,7 +18,7 @@ export function StatsFunnel({ funnel }: { funnel: Funnel }) {
          detail: `${funnel.apply} apply · ${funnel.stretch} stretch`,
       },
       { label: "Can apply", value: funnel.canApply },
-      { label: "Marked applied", value: funnel.applied },
+      { label: "Applied", value: funnel.applied },
       { label: "Hidden", value: funnel.hidden },
    ];
 

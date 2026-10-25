@@ -142,11 +142,11 @@ async function confirmSubmission(tabId: number, tab: ApplicationTab): Promise<vo
    const notice: PageNotice = recorded
       ? {
            tone: "success",
-           text: "Sent, and recorded in JobPilot: the vacancy is in Applied. You can close this tab.",
+           text: "Sent and recorded in JobPilot. You can close this tab.",
         }
       : {
            tone: "warning",
-           text: "Sent, but JobPilot didn't get it (is the API running?): mark the vacancy as applied there.",
+           text: "Sent, but JobPilot didn't get it (is the API running?): mark it Applied in JobPilot.",
         };
    await pageInTab.showNotice(tabId, notice);
 }

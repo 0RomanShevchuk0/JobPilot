@@ -1,4 +1,4 @@
-import type { AppliedVacancy, MatchDetails, MatchListPage, MatchStatus } from "@jobpilot/contracts";
+import type { MatchDetails, MatchListPage, MatchStatus } from "@jobpilot/contracts";
 import type { MatchListOptions } from "@jobpilot/db";
 import { Injectable } from "@nestjs/common";
 import { Database } from "../infra/database.js";
@@ -17,11 +17,6 @@ export class MatchesService {
       const page = items.slice(0, PAGE_SIZE);
       const hasMore = items.length > PAGE_SIZE;
       return { items: page, nextCursor: hasMore ? page[PAGE_SIZE - 1]!.vacancyId : null };
-   }
-
-   /** Everything I applied to, the latest first. */
-   listApplied(userId: string): Promise<AppliedVacancy[]> {
-      return this.db.matches.listApplied(userId);
    }
 
    /** Undefined when the vacancy has no evaluation for the user's current profile. */

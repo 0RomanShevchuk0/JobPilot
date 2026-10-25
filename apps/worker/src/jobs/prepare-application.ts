@@ -48,7 +48,8 @@ export async function handlePrepareApplication(
       if (err instanceof SessionExpiredError) {
          await database.sourceSessions.markExpired(application.userId, application.source);
       }
-      // not an error: the job site takes no application here, trying again won't change that
+      // not an error: the job site takes no application here, trying again won't change that. This
+      // posting only: the vacancy's other job sites may well take one (it stays new while one does)
       if (err instanceof CannotApplyError) {
          await database.applications.setCannotApply(applicationId, reason);
          throw new UnrecoverableError(reason);

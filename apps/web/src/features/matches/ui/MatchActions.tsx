@@ -1,51 +1,37 @@
-import type { MatchListItem } from "@jobpilot/contracts";
-import { Link, useNavigate, useParams } from "react-router";
+import type { MatchListItem, MatchPosting } from "@jobpilot/contracts";
+import { Link, useParams } from "react-router";
 import { Button, buttonStyles } from "../../../shared/ui";
-import { applicationStatusLabels, useStartApplication } from "../../applications";
 import { useMarkMatch } from "../api/queries";
-import { ExternalApplyLink } from "./ExternalApplyLink";
+import { PostingApplyActions } from "./PostingApplyActions";
 
-/** What I can do with a vacancy: apply through JobPilot (or open my application), mark it or unmark it. */
+/** Whether I can still apply through the posting: nothing sent through it, and the site didn't refuse. */
+const isToApplyThrough = (posting: MatchPosting) =>
+   posting.application?.status !== "submitted" && posting.application?.status !== "cannot_apply";
+
+/**
+ * What I can do with a vacancy: apply on its job site (one left to apply through) or pick which on its
+ * page (several), hide it or show it again. Applied on some of its sites, it says where is left: each
+ * one gets me seen more.
+ */
 export function MatchActions({ match }: { match: MatchListItem }) {
    const mark = useMarkMatch(match.vacancyId);
-   const apply = useStartApplication();
-   const navigate = useNavigate();
-   // on the vacancy's own page each job site has its Apply, next to its link
+   // on the vacancy's own page each job site has its own actions, next to its link
    const onItsPage = useParams<{ vacancyId: string }>().vacancyId === match.vacancyId;
-   const [onlyPosting] = match.postings.length === 1 ? match.postings : [];
-   const startApplication = (postingId: string) =>
-      apply.mutate(postingId, { onSuccess: ({ id }) => navigate(`/applications/${id}`) });
+   const toApply = match.postings.filter(isToApplyThrough);
+   const appliedOn = match.postings.filter((p) => p.application?.status === "submitted");
+   const [onlyToApply] = toApply.length === 1 ? toApply : [];
 
    function applyAction() {
-      if (match.application) {
+      if (onItsPage) return null;
+      if (onlyToApply) {
          return (
-            <Link
-               to={`/applications/${match.application.id}`}
-               className={buttonStyles({ variant: "outline", size: "sm" })}
-            >
-               Application: {applicationStatusLabels[match.application.status]}
-            </Link>
+            <PostingApplyActions
+               posting={onlyToApply}
+               refusedOnSite={match.cannotApplyReason !== null}
+            />
          );
       }
-      // no job site takes an application: the reason is shown with the vacancy
-      if (match.cannotApplyReason) return null;
-      if (onlyPosting?.externalApplyUrl) {
-         return <ExternalApplyLink url={onlyPosting.externalApplyUrl} />;
-      }
-      if (onlyPosting) {
-         return (
-            <Button
-               variant="primary"
-               size="sm"
-               onClick={() => startApplication(onlyPosting.id)}
-               loading={apply.isPending}
-            >
-               Apply
-            </Button>
-         );
-      }
-      // listed on several job sites: which one to apply through is picked on its page
-      if (match.postings.length > 1 && !onItsPage) {
+      if (toApply.length > 1) {
          return (
             <Link
                to={`/matches/${match.vacancyId}`}
@@ -61,29 +47,17 @@ export function MatchActions({ match }: { match: MatchListItem }) {
    return (
       // relative z-10: above the card's stretched link, so the buttons stay clickable on their own
       <div className="relative z-10 ml-auto flex max-w-xs shrink-0 flex-col items-end gap-2">
-         <div className="flex gap-2">
+         <div className="flex items-start gap-2">
             {applyAction()}
             {match.status === null ? (
-               <>
-                  <Button
-                     variant="outline"
-                     size="sm"
-                     onClick={() => mark.mutate("applied")}
-                     disabled={mark.isPending}
-                     loading={mark.isPending && mark.variables === "applied"}
-                  >
-                     Applied
-                  </Button>
-                  <Button
-                     variant="outline"
-                     size="sm"
-                     onClick={() => mark.mutate("hidden")}
-                     disabled={mark.isPending}
-                     loading={mark.isPending && mark.variables === "hidden"}
-                  >
-                     Hide
-                  </Button>
-               </>
+               <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => mark.mutate("hidden")}
+                  loading={mark.isPending}
+               >
+                  Hide
+               </Button>
             ) : (
                <Button
                   variant="outline"
@@ -95,8 +69,13 @@ export function MatchActions({ match }: { match: MatchListItem }) {
                </Button>
             )}
          </div>
+         {!onItsPage && appliedOn.length > 0 && toApply.length > 0 && (
+            <p className="text-right text-xs text-gray-500">
+               Applied on {appliedOn.map((p) => p.sourceName).join(", ")} ·{" "}
+               {toApply.map((p) => p.sourceName).join(", ")} left
+            </p>
+         )}
          {mark.isError && <p className="text-right text-sm text-red-600">{mark.error.message}</p>}
-         {apply.isError && <p className="text-right text-sm text-red-600">{apply.error.message}</p>}
       </div>
    );
 }

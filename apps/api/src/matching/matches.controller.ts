@@ -6,7 +6,10 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { MatchesService } from "./matches.service.js";
 
 const listQuerySchema = z.object({
-   /** which vacancies: new (not marked yet, the default) or hidden; the applied ones: GET /matches/applied */
+   /**
+    * which vacancies: new (the default: not hidden, with a job site still to apply through) or hidden;
+    * what I applied to is in GET /applications
+    */
    status: z.enum(["new", "hidden"]).default("new"),
    /** new vacancies only: "skipped" adds AI skips, prefilter rejections and the ones waiting for a score */
    include: z.literal("skipped").optional(),
@@ -39,13 +42,6 @@ export class MatchesController {
       });
    }
 
-   /** Everything I applied to, through JobPilot or on my own, the latest first: the history. */
-   // before :vacancyId, which would take "applied" for an id
-   @Get("applied")
-   async listApplied(@CurrentUserId() userId: string) {
-      return this.matches.listApplied(userId);
-   }
-
    /** One vacancy as evaluated for my current profile, with its description and every job site it is on. */
    @Get(":vacancyId")
    async get(
@@ -57,7 +53,7 @@ export class MatchesController {
       return match;
    }
 
-   /** Marks a vacancy as applied or hidden, or clears the mark. */
+   /** Hides a vacancy, or shows it again (null). */
    @Patch(":vacancyId")
    async setStatus(
       @CurrentUserId() userId: string,

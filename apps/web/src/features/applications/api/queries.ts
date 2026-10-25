@@ -1,6 +1,6 @@
-import type { ApplicationListItem, ApplicationView, AppliedVacancy } from "@jobpilot/contracts";
+import type { ApplicationListItem, ApplicationView } from "@jobpilot/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPatch, apiPost } from "../../../shared/api/client";
+import { apiDelete, apiGet, apiPatch, apiPost } from "../../../shared/api/client";
 import { queryKeys } from "../../../shared/api/queryKeys";
 import { fillInExtension, isExtensionInstalled } from "../../../shared/extension/client";
 
@@ -19,17 +19,6 @@ export function useApplications() {
    return useQuery({
       queryKey: queryKeys.applications.list(),
       queryFn: () => apiGet<ApplicationListItem[]>("/applications"),
-   });
-}
-
-/**
- * Every vacancy I applied to, through JobPilot or on my own, the latest first: the history, whatever
- * became of the vacancies since.
- */
-export function useAppliedVacancies() {
-   return useQuery({
-      queryKey: queryKeys.applications.applied(),
-      queryFn: () => apiGet<AppliedVacancy[]>("/matches/applied"),
    });
 }
 
@@ -101,6 +90,32 @@ export function useFillApplication(id: string) {
          if (!answer) throw new Error("The JobPilot extension didn't answer: is it on?");
          if (!answer.ok) throw new Error(answer.reason);
       },
+      onSuccess: refresh,
+   });
+}
+
+/**
+ * I applied through the posting myself (on the employer's site it sends to, or on the job site): it
+ * is marked sent. A vacancy applied to on all its job sites leaves the new ones.
+ */
+export function useMarkSentByHand() {
+   const refresh = useRefreshApplications();
+   return useMutation({
+      mutationFn: (postingId: string) =>
+         apiPost<{ id: string }>("/applications/sent-by-hand", { postingId }),
+      onSuccess: refresh,
+   });
+}
+
+/**
+ * Takes back marking an application sent by hand: the posting is to apply through again, with
+ * JobPilot's answers when it had them.
+ */
+export function useUnmarkSentByHand() {
+   const refresh = useRefreshApplications();
+   return useMutation({
+      mutationFn: (applicationId: string) =>
+         apiDelete(`/applications/${applicationId}/sent-by-hand`),
       onSuccess: refresh,
    });
 }

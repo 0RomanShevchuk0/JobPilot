@@ -84,9 +84,6 @@ export class ApplicationsService {
       switch (report.status) {
          case "submitted":
             await this.db.applications.setSubmitted(applicationId);
-            if (application.vacancyId) {
-               await this.db.matches.setStatus(userId, application.vacancyId, "applied");
-            }
             return true;
          case "cancelled":
             return true;
@@ -157,6 +154,23 @@ export class ApplicationsService {
       // the worker may have answered it anew in the meantime
       if (!saved) throw new ConflictException("The application changed meanwhile: reload it");
       return true;
+   }
+
+   /**
+    * I applied through the posting myself: on the employer's site it sends to, or on the job site.
+    * Undefined when the posting is gone or never was.
+    */
+   async markSentByHand(userId: string, postingId: string): Promise<{ id: string } | undefined> {
+      if (!(await this.db.applications.getPostingToApply(postingId))) return undefined;
+      return this.db.applications.markSentByHand(userId, postingId);
+   }
+
+   /**
+    * Takes back one I marked sent by hand: ready for review again when JobPilot had answered it, gone
+    * otherwise. False when there is no such one.
+    */
+   unmarkSentByHand(userId: string, applicationId: string): Promise<boolean> {
+      return this.db.applications.unmarkSentByHand(userId, applicationId);
    }
 
    list(userId: string): Promise<ApplicationListItem[]> {

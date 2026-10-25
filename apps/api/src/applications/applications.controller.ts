@@ -2,6 +2,7 @@ import { fillReportSchema, type FillReport } from "@jobpilot/contracts";
 import {
    Body,
    Controller,
+   Delete,
    Get,
    HttpCode,
    NotFoundException,
@@ -19,6 +20,11 @@ const prepareBodySchema = z.object({
    postingId: z.uuid(),
    /** read the form on the job site again; by default answering again reuses the questions read before */
    refreshForm: z.boolean().default(false),
+});
+
+const sentByHandBodySchema = z.object({
+   /** the posting I applied through myself */
+   postingId: z.uuid(),
 });
 
 const answersBodySchema = z.object({
@@ -68,6 +74,35 @@ export class ApplicationsController {
    ) {
       if (!(await this.applications.recordFillOutcome(userId, id, report))) {
          throw new NotFoundException("No such application");
+      }
+   }
+
+   /**
+    * I applied through a posting myself (on the employer's site it sends to, or the job site): marked
+    * sent, with no form. One JobPilot was preparing for it is marked sent too.
+    */
+   @Post("sent-by-hand")
+   async markSentByHand(
+      @CurrentUserId() userId: string,
+      @Body(new ZodValidationPipe(sentByHandBodySchema)) body: z.infer<typeof sentByHandBodySchema>,
+   ) {
+      const marked = await this.applications.markSentByHand(userId, body.postingId);
+      if (!marked) throw new NotFoundException("The job is no longer on this site");
+      return marked;
+   }
+
+   /**
+    * Takes back marking an application sent by hand: one JobPilot had answered is ready for review
+    * again, with its answers; one with no form is gone. Ones JobPilot sent can't be taken back.
+    */
+   @Delete(":id/sent-by-hand")
+   @HttpCode(204)
+   async unmarkSentByHand(
+      @CurrentUserId() userId: string,
+      @Param("id", new ZodValidationPipe(z.uuid())) id: string,
+   ) {
+      if (!(await this.applications.unmarkSentByHand(userId, id))) {
+         throw new NotFoundException("No application marked sent by hand with this id");
       }
    }
 

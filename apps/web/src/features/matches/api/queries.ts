@@ -40,7 +40,7 @@ export function useMatch(vacancyId: string) {
    });
 }
 
-/** Marks a vacancy as applied or hidden; null makes it new again. */
+/** Hides a vacancy; null shows it again. Applying is per job site: useMarkSentByHand. */
 export function useMarkMatch(vacancyId: string) {
    const queryClient = useQueryClient();
    return useMutation({
@@ -58,8 +58,6 @@ export function useMarkMatch(vacancyId: string) {
             type: "inactive",
          });
          void queryClient.invalidateQueries({ queryKey: queryKeys.matches.details(vacancyId) });
-         // marked applied, or the mark taken back: the history on Applications changes
-         void queryClient.invalidateQueries({ queryKey: queryKeys.applications.applied() });
       },
    });
 }

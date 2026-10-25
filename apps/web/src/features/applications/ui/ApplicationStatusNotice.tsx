@@ -33,7 +33,8 @@ export function ApplicationStatusNotice({ app }: { app: ApplicationView }) {
          )}
          {app.status === "submitted" && (
             <p className="text-green-700">
-               Sent on {new Date(app.updatedAt).toLocaleDateString()}.
+               Sent on {new Date(app.submittedAt ?? app.updatedAt).toLocaleDateString()}
+               {app.origin === "manual" ? ": you applied yourself and marked it." : "."}
             </p>
          )}
          {app.status === "ready_for_review" && app.filling && (

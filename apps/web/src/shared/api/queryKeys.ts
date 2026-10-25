@@ -13,8 +13,6 @@ export const queryKeys = {
    applications: {
       all: ["applications"] as const,
       list: () => ["applications", "list"] as const,
-      /** the vacancies I applied to (GET /matches/applied): the history on the Applications page */
-      applied: () => ["applications", "applied"] as const,
       details: (id: string) => ["applications", "details", id] as const,
    },
    documents: {

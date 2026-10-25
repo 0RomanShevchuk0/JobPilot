@@ -3,7 +3,10 @@ import { Link } from "react-router";
 import { Badge } from "../../../shared/ui";
 import { applicationStatusLabels, applicationStatusStyles } from "../lib/status";
 
-/** One application in the list: its status, the job, why it failed or can't go, when it last changed. */
+/**
+ * One application in the list: its status, the job and the job site it goes through, why it failed or
+ * can't go, and when it was sent (or last changed, until it is).
+ */
 export function ApplicationRow({ app }: { app: ApplicationListItem }) {
    return (
       <li>
@@ -16,6 +19,10 @@ export function ApplicationRow({ app }: { app: ApplicationListItem }) {
             </Badge>
             <span className="min-w-0 flex-1">
                <span className="block truncate font-medium">{app.title ?? app.postingUrl}</span>
+               <span className="block truncate text-sm text-gray-500">
+                  {app.sourceName}
+                  {app.origin === "manual" && " · marked by hand"}
+               </span>
                {app.status === "failed" && app.failureReason && (
                   <span className="block truncate text-sm text-red-600">{app.failureReason}</span>
                )}
@@ -24,7 +31,7 @@ export function ApplicationRow({ app }: { app: ApplicationListItem }) {
                )}
             </span>
             <span className="shrink-0 text-sm text-gray-500">
-               {new Date(app.updatedAt).toLocaleDateString()}
+               {new Date(app.submittedAt ?? app.updatedAt).toLocaleDateString()}
             </span>
          </Link>
       </li>
