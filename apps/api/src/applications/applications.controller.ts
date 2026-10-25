@@ -1,4 +1,4 @@
-import { fillReportSchema, type FillReport } from "@jobpilot/contracts";
+import { applicationListTabs, fillReportSchema, type FillReport } from "@jobpilot/contracts";
 import {
    Body,
    Controller,
@@ -9,11 +9,19 @@ import {
    Param,
    Patch,
    Post,
+   Query,
 } from "@nestjs/common";
 import { z } from "zod";
 import { CurrentUserId } from "../auth/current-user-id.decorator.js";
 import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { ApplicationsService } from "./applications.service.js";
+
+const listQuerySchema = z.object({
+   /** which list: in progress (the default) or sent */
+   tab: z.enum(applicationListTabs).default("in-progress"),
+   /** the nextCursor of the previous page; absent = the first page */
+   after: z.uuid().optional(),
+});
 
 const prepareBodySchema = z.object({
    /** the vacancy's posting on the job site I apply through */
@@ -106,10 +114,16 @@ export class ApplicationsController {
       }
    }
 
-   /** My applications, the latest activity first. */
+   /**
+    * My applications in one of the lists, a page at a time: in progress the latest activity first,
+    * sent the latest sent first.
+    */
    @Get()
-   async list(@CurrentUserId() userId: string) {
-      return this.applications.list(userId);
+   async list(
+      @CurrentUserId() userId: string,
+      @Query(new ZodValidationPipe(listQuerySchema)) query: z.infer<typeof listQuerySchema>,
+   ) {
+      return this.applications.list(userId, query);
    }
 
    /** Saves my own answers in place of the proposed ones, while the application is up for review. */

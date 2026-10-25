@@ -3,6 +3,7 @@
 export * from "./client.js";
 export { migrateDatabase } from "./migrate.js";
 export type {
+   ApplicationListOptions,
    ApplicationsRepository,
    ApplicationToFill,
    ApplicationToPrepare,

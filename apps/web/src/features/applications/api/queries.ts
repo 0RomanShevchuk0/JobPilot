@@ -1,5 +1,5 @@
-import type { ApplicationListItem, ApplicationView } from "@jobpilot/contracts";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ApplicationListPage, ApplicationListTab, ApplicationView } from "@jobpilot/contracts";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiDelete, apiGet, apiPatch, apiPost } from "../../../shared/api/client";
 import { queryKeys } from "../../../shared/api/queryKeys";
 import { fillInExtension, isExtensionInstalled } from "../../../shared/extension/client";
@@ -14,11 +14,20 @@ export interface AnswerChange {
    value: string;
 }
 
-/** My applications, the latest activity first. */
-export function useApplications() {
-   return useQuery({
-      queryKey: queryKeys.applications.list(),
-      queryFn: () => apiGet<ApplicationListItem[]>("/applications"),
+/**
+ * My applications in one of the lists, a page at a time: in progress the latest activity first, sent
+ * the latest sent first. A refetch reloads every page loaded, from the first.
+ */
+export function useApplications(tab: ApplicationListTab) {
+   return useInfiniteQuery({
+      queryKey: queryKeys.applications.list(tab),
+      queryFn: ({ pageParam }) => {
+         const query = new URLSearchParams({ tab });
+         if (pageParam) query.set("after", pageParam);
+         return apiGet<ApplicationListPage>(`/applications?${query}`);
+      },
+      initialPageParam: null as string | null,
+      getNextPageParam: (page) => page.nextCursor, // null: no next page
    });
 }
 

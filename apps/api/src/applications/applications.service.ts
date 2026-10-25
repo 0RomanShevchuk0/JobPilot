@@ -1,12 +1,14 @@
 import {
    choiceFieldKinds,
    type ApplicationListItem,
+   type ApplicationListPage,
    type ApplicationView,
    type FillAnswer,
    type FillReport,
    type FormField,
    type FormToFill,
 } from "@jobpilot/contracts";
+import type { ApplicationListOptions } from "@jobpilot/db";
 import {
    BadRequestException,
    ConflictException,
@@ -16,6 +18,9 @@ import {
 import { Database } from "../infra/database.js";
 import { RedisService } from "../infra/redis.service.js";
 import { ApplicationQueue } from "./application-queue.service.js";
+
+// applications per page of a list: a row is a line, a page fills a screen or two
+const PAGE_SIZE = 30;
 
 @Injectable()
 export class ApplicationsService {
@@ -173,8 +178,19 @@ export class ApplicationsService {
       return this.db.applications.unmarkSentByHand(userId, applicationId);
    }
 
-   list(userId: string): Promise<ApplicationListItem[]> {
-      return this.db.applications.listForUser(userId);
+   /** A page of one of the lists; the next one starts after its last application. */
+   async list(
+      userId: string,
+      options: Omit<ApplicationListOptions, "limit">,
+   ): Promise<ApplicationListPage> {
+      // one more than a page: whether another one follows
+      const items = await this.db.applications.listForUser(userId, {
+         ...options,
+         limit: PAGE_SIZE + 1,
+      });
+      const page = items.slice(0, PAGE_SIZE);
+      const hasMore = items.length > PAGE_SIZE;
+      return { items: page, nextCursor: hasMore ? page[PAGE_SIZE - 1]!.id : null };
    }
 
    async get(userId: string, applicationId: string): Promise<ApplicationView | undefined> {
