@@ -1,7 +1,7 @@
 import type { ApplicationListItem, ApplicationStatus, FormField } from "@jobpilot/contracts";
 import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
-import { applications, postings, vacancies } from "../schema.js";
+import { applications, postings, sources, vacancies, vacancyMatches } from "../schema.js";
 import { externalApplyUrl } from "./matches.js";
 
 /** An application with its answers, as stored. */
@@ -47,6 +47,16 @@ export interface ApplicationsRepository {
    getToFill(applicationId: string): Promise<ApplicationToFill | undefined>;
    /** The user sent the form. */
    setSubmitted(applicationId: string): Promise<void>;
+   /**
+    * I applied through the posting myself (on the employer's site it sends to, or the job site) and
+    * mark it sent: a new application, or the one JobPilot was preparing. Returns its id.
+    */
+   markSentByHand(userId: string, postingId: string): Promise<{ id: string }>;
+   /**
+    * Takes back an application I marked sent by hand: one JobPilot had answered is ready for review
+    * again, with its answers; one with no form is gone. False when there is no such one of mine.
+    */
+   unmarkSentByHand(userId: string, applicationId: string): Promise<boolean>;
    /** Filling went wrong: the answers stay ready for review, the reason is shown with them. */
    setFillProblem(applicationId: string, reason: string): Promise<void>;
    /** Forgets the last filling's problem: a new one is starting. */
@@ -62,15 +72,31 @@ const listColumns = {
    title: vacancies.title,
    postingId: applications.postingId,
    postingUrl: postings.url,
+   sourceName: sources.name,
    status: applications.status,
+   origin: applications.origin,
    failureReason: applications.failureReason,
+   vacancyStatus: vacancyMatches.status,
+   submittedAt: applications.submittedAt,
    createdAt: applications.createdAt,
    updatedAt: applications.updatedAt,
 };
 
-function withIsoDates<T extends { createdAt: Date; updatedAt: Date }>(row: T) {
+// the worker finishing a preparation leaves alone one I marked sent by hand meanwhile
+const notSentSql = ne(applications.status, "submitted");
+
+// the user's evaluation of the application's vacancy: whether they hid it
+const vacancyOfApplicationSql = and(
+   eq(vacancyMatches.userId, applications.userId),
+   eq(vacancyMatches.vacancyId, postings.vacancyId),
+);
+
+function withIsoDates<T extends { submittedAt: Date | null; createdAt: Date; updatedAt: Date }>(
+   row: T,
+) {
    return {
       ...row,
+      submittedAt: row.submittedAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
    };
@@ -106,6 +132,8 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
             .from(applications)
             .innerJoin(postings, eq(postings.id, applications.postingId))
             .leftJoin(vacancies, eq(vacancies.id, postings.vacancyId))
+            .innerJoin(sources, eq(sources.id, postings.sourceId))
+            .leftJoin(vacancyMatches, vacancyOfApplicationSql)
             .where(eq(applications.userId, userId))
             .orderBy(desc(applications.updatedAt));
          return rows.map(withIsoDates);
@@ -117,6 +145,8 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
             .from(applications)
             .innerJoin(postings, eq(postings.id, applications.postingId))
             .leftJoin(vacancies, eq(vacancies.id, postings.vacancyId))
+            .innerJoin(sources, eq(sources.id, postings.sourceId))
+            .leftJoin(vacancyMatches, vacancyOfApplicationSql)
             .where(and(eq(applications.userId, userId), eq(applications.id, applicationId)));
          return row && withIsoDates(row);
       },
@@ -141,7 +171,7 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
          await db
             .update(applications)
             .set({ status: "ready_for_review", formFields: fields, failureReason: null })
-            .where(eq(applications.id, applicationId));
+            .where(and(eq(applications.id, applicationId), notSentSql));
       },
 
       async getToFill(applicationId) {
@@ -153,6 +183,62 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
             .update(applications)
             .set({ status: "submitted", submittedAt: sql`now()`, failureReason: null })
             .where(eq(applications.id, applicationId));
+      },
+
+      async markSentByHand(userId, postingId) {
+         const [row] = await db
+            .insert(applications)
+            .values({
+               userId,
+               postingId,
+               status: "submitted",
+               origin: "manual",
+               submittedAt: sql`now()`,
+            })
+            // one sent already stays as it was; one JobPilot was on is sent by hand now
+            .onConflictDoUpdate({
+               target: [applications.userId, applications.postingId],
+               set: {
+                  status: "submitted",
+                  origin: "manual",
+                  submittedAt: sql`now()`,
+                  failureReason: null,
+                  updatedAt: sql`now()`,
+               },
+               setWhere: ne(applications.status, "submitted"),
+            })
+            .returning({ id: applications.id });
+         if (row) return row;
+         const [sent] = await db
+            .select({ id: applications.id })
+            .from(applications)
+            .where(and(eq(applications.userId, userId), eq(applications.postingId, postingId)));
+         return sent!;
+      },
+
+      async unmarkSentByHand(userId, applicationId) {
+         const mine = and(
+            eq(applications.id, applicationId),
+            eq(applications.userId, userId),
+            eq(applications.origin, "manual"),
+         );
+         // answered by JobPilot before I marked it: its answers stay, for review again
+         const restored = await db
+            .update(applications)
+            .set({
+               status: "ready_for_review",
+               origin: "jobpilot",
+               submittedAt: null,
+               updatedAt: sql`now()`,
+            })
+            .where(and(mine, sql`jsonb_array_length(${applications.formFields}) > 0`))
+            .returning({ id: applications.id });
+         if (restored.length > 0) return true;
+         const deleted = await db
+            .delete(applications)
+            .where(mine)
+            .returning({ id: applications.id });
+         return deleted.length > 0;
       },
 
       async setFillProblem(applicationId, reason) {
@@ -186,14 +272,14 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
          await db
             .update(applications)
             .set({ status: "failed", failureReason: reason })
-            .where(eq(applications.id, applicationId));
+            .where(and(eq(applications.id, applicationId), notSentSql));
       },
 
       async setCannotApply(applicationId, reason) {
          await db
             .update(applications)
             .set({ status: "cannot_apply", failureReason: reason })
-            .where(eq(applications.id, applicationId));
+            .where(and(eq(applications.id, applicationId), notSentSql));
       },
    };
 }

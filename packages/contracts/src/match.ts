@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ApplicationStatus } from "./application.js";
+import type { ApplicationOrigin, ApplicationStatus } from "./application.js";
 import type { Location, Salary, WorkMode } from "./posting.js";
 
 export type PrefilterCheck =
@@ -102,8 +102,11 @@ export interface MatchAnalysis {
    ai?: AiAssessment;
 }
 
-/** What the user did with a vacancy; null = new, not looked at yet. */
-export const matchStatusSchema = z.enum(["applied", "hidden"]).nullable();
+/**
+ * What the user decided about the vacancy as a whole; null = not hidden. Applying is per posting, on
+ * its application: a vacancy on several job sites is applied to on each.
+ */
+export const matchStatusSchema = z.enum(["hidden"]).nullable();
 export type MatchStatus = z.infer<typeof matchStatusSchema>;
 
 /** Where the vacancy is listed: one active posting on one job site. */
@@ -123,10 +126,13 @@ export interface MatchPosting {
    application: MatchApplication | null;
 }
 
-/** My application to a vacancy through JobPilot, as a match shows it. */
+/** My application through a posting, as a match shows it: JobPilot's, or one I marked as sent. */
 export interface MatchApplication {
    id: string;
    status: ApplicationStatus;
+   origin: ApplicationOrigin;
+   /** when it was sent; null until it is */
+   submittedAt: string | null;
 }
 
 /**
@@ -177,26 +183,4 @@ export interface MatchListPage {
 export interface MatchDetails extends MatchListItem {
    description: string; // markdown
    locations: Location[];
-}
-
-/**
- * One vacancy in GET /matches/applied: what I applied to, through JobPilot or on my own (marked as
- * applied), for the history. Kept whatever became of the vacancy since: closed, its category unpicked,
- * evaluated for an older profile.
- */
-export interface AppliedVacancy {
-   vacancyId: string;
-   title: string;
-   /** null when the employer is hidden */
-   company: string | null;
-   /** when I applied: the application was sent, or I marked it */
-   appliedAt: string;
-   /** the job sites it was listed on, to tell where it was */
-   sourceNames: string[];
-   /** taken down from the job sites since */
-   closed: boolean;
-   /** evaluated for my current profile: its page in Matches opens; not yet after a profile change */
-   evaluated: boolean;
-   /** the JobPilot application it went through; null: applied outside JobPilot */
-   application: MatchApplication | null;
 }

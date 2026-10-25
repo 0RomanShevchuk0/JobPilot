@@ -1,8 +1,8 @@
 import type {
    AiAssessment,
-   AppliedVacancy,
    ApplyCheck,
    JobPageCheck,
+   ApplicationOrigin,
    ApplicationStatus,
    MatchAnalysis,
    MatchApplication,
@@ -11,7 +11,7 @@ import type {
    MatchStatus,
    NormalizedPosting,
 } from "@jobpilot/contracts";
-import { and, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, not, or, sql, type SQL } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import {
    applications,
@@ -52,8 +52,11 @@ export interface Assessment {
 }
 
 export interface MatchListOptions {
-   /** null = new vacancies, best score first; hidden: the latest hidden first. Applied ones: listApplied */
-   status: null | "hidden";
+   /**
+    * null = new: not hidden, with a posting still to apply through, best score first. hidden: the
+    * latest hidden first
+    */
+   status: MatchStatus;
    /** new vacancies only: add AI skips, prefilter rejections and the ones waiting for a score */
    includeSkipped: boolean;
    /** the last vacancy of the previous page: the list goes on after it; absent = from the top */
@@ -69,18 +72,13 @@ export interface MatchesRepository {
     */
    listForUser(userId: string, options: MatchListOptions): Promise<MatchListItem[]>;
    /**
-    * Every vacancy the user applied to, the latest first: the history. Unlike the lists, whatever became
-    * of the vacancy since: closed, its category unpicked, evaluated for an older profile.
-    */
-   listApplied(userId: string): Promise<AppliedVacancy[]>;
-   /**
     * One vacancy evaluated for the user's current profile version, with what only its own page shows;
     * closed ones too. Undefined when there is no such evaluation.
     */
    getDetails(userId: string, vacancyId: string): Promise<MatchDetails | undefined>;
    /**
-    * Marks a vacancy (null clears the mark), now: the history and the hidden list go by when. Returns
-    * false when it has no evaluation for the user.
+    * Hides a vacancy (null shows it again), now: the hidden list goes by when. Returns false when it has
+    * no evaluation for the user.
     */
    setStatus(userId: string, vacancyId: string, status: MatchStatus): Promise<boolean>;
    get(userId: string, vacancyId: string): Promise<StoredMatch | undefined>;
@@ -113,11 +111,38 @@ export interface MatchesRepository {
    ): Promise<boolean>;
 }
 
-/** How a list goes: best score first (the new ones), or the latest marked first (the hidden ones). */
+/** How a list goes: best score first (the new ones), or the latest hidden first (the hidden ones). */
 type MatchOrder = "score" | "marked";
 
-// when the vacancy was marked; the evaluation's date for a mark from before the column was there
+// when the vacancy was hidden; the evaluation's date for one hidden before the column was there
 const markedAtSql = sql`coalesce(${vacancyMatches.statusChangedAt}, ${vacancyMatches.evaluatedAt})`;
+
+/**
+ * Whether the vacancy has a posting the user can still apply through: on its job site, with no
+ * application of theirs sent through it, nor one the site refused. What makes a vacancy new: one on
+ * two sites applied to on one stays new, applying on each gets it seen more.
+ */
+function hasPostingToApplyThroughSql(userId: string) {
+   return sql`exists (
+      select 1 from ${postings}
+      where ${postings.vacancyId} = ${vacancies.id} and ${postings.goneAt} is null
+         and not exists (
+            select 1 from ${applications}
+            where ${applications.userId} = ${userId} and ${applications.postingId} = ${postings.id}
+               and ${applications.status} in ('submitted', 'cannot_apply')
+         )
+   )`;
+}
+
+/** Whether the user sent an application through any of the vacancy's postings, gone ones too. */
+function appliedToVacancySql(userId: string) {
+   return sql`exists (
+      select 1 from ${applications}
+      inner join ${postings} on ${postings.id} = ${applications.postingId}
+      where ${applications.userId} = ${userId} and ${postings.vacancyId} = ${vacancies.id}
+         and ${applications.status} = 'submitted'
+   )`;
+}
 
 export function createMatchesRepository(db: Drizzle): MatchesRepository {
    /** The user's evaluations made for their current profile version that also meet the condition. */
@@ -199,6 +224,9 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
             postingId: applications.postingId,
             id: applications.id,
             status: applications.status,
+            origin: applications.origin,
+            submittedAt: applications.submittedAt,
+            failureReason: applications.failureReason,
          })
          .from(applications)
          .innerJoin(postings, eq(postings.id, applications.postingId))
@@ -226,7 +254,12 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
          matchedSkills: analysis.ai?.matchedSkills ?? [],
          missingSkills: analysis.ai?.missingSkills ?? [],
          rejectedBy: analysis.prefilter.rejectedBy,
-         cannotApplyReason: cannotApplyReason(analysis.applyCheck),
+         cannotApplyReason:
+            cannotApplyReason(analysis.applyCheck) ??
+            refusedOnEverySiteLeft(
+               activePostings.filter((p) => p.vacancyId === r.vacancyId),
+               userApplications.filter((a) => a.vacancyId === r.vacancyId),
+            ),
          salaryFit: analysis.salaryFit ?? null,
          salary:
             salaryCurrency && salaryPeriod && (salaryMin !== null || salaryMax !== null)
@@ -270,6 +303,14 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
                // a category I unpicked hides its vacancies; their evaluations stay for when I pick it again
                userSubscribedToVacancySql(userId),
                status === null ? isNull(vacancyMatches.status) : eq(vacancyMatches.status, status),
+               // new: a site still to apply through. Among the skipped too: one every site refused
+               // and I never applied to, the reason on its card, as one the job site check refused.
+               // Applied to wherever it could be: done with, in neither
+               status === null
+                  ? includeSkipped
+                     ? or(hasPostingToApplyThroughSql(userId), not(appliedToVacancySql(userId)))
+                     : hasPostingToApplyThroughSql(userId)
+                  : undefined,
                status === null && !includeSkipped
                   ? inArray(verdict, ["apply", "stretch"])
                   : undefined,
@@ -280,64 +321,6 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
             order,
          ).limit(limit);
          return toListItems(userId, rows);
-      },
-
-      async listApplied(userId) {
-         const rows = await db
-            .select({
-               vacancyId: vacancies.id,
-               title: vacancies.title,
-               company: companies.name,
-               // a new sql around it: mapWith sets the decoder on the object it is called on
-               appliedAt: sql`${markedAtSql}`.mapWith(vacancyMatches.evaluatedAt),
-               closedAt: vacancies.closedAt,
-               // an evaluation for the current profile version: the vacancy's page shows it
-               currentProfileVersion: profiles.version,
-            })
-            .from(vacancyMatches)
-            .innerJoin(vacancies, eq(vacancies.id, vacancyMatches.vacancyId))
-            .leftJoin(companies, eq(companies.id, vacancies.companyId))
-            .leftJoin(
-               profiles,
-               and(
-                  eq(profiles.userId, vacancyMatches.userId),
-                  eq(profiles.version, vacancyMatches.profileVersion),
-               ),
-            )
-            .where(and(eq(vacancyMatches.userId, userId), eq(vacancyMatches.status, "applied")))
-            .orderBy(desc(markedAtSql), desc(vacancyMatches.vacancyId));
-         if (rows.length === 0) return [];
-
-         const vacancyIds = rows.map((r) => r.vacancyId);
-         // every job site it was on, gone postings too: a closed vacancy has nothing active left
-         const listedOn = await db
-            .selectDistinct({ vacancyId: postings.vacancyId, sourceName: sources.name })
-            .from(postings)
-            .innerJoin(sources, eq(sources.id, postings.sourceId))
-            .where(inArray(postings.vacancyId, vacancyIds))
-            .orderBy(sources.name);
-         const userApplications = await db
-            .select({
-               vacancyId: postings.vacancyId,
-               postingId: applications.postingId,
-               id: applications.id,
-               status: applications.status,
-            })
-            .from(applications)
-            .innerJoin(postings, eq(postings.id, applications.postingId))
-            .where(and(eq(applications.userId, userId), inArray(postings.vacancyId, vacancyIds)))
-            .orderBy(desc(applications.updatedAt));
-
-         return rows.map(({ appliedAt, closedAt, currentProfileVersion, ...r }) => ({
-            ...r,
-            appliedAt: appliedAt.toISOString(),
-            sourceNames: listedOn
-               .filter((l) => l.vacancyId === r.vacancyId)
-               .map((l) => l.sourceName),
-            closed: closedAt !== null,
-            evaluated: currentProfileVersion !== null,
-            application: applicationOf(userApplications, (a) => a.vacancyId === r.vacancyId),
-         }));
       },
 
       async getDetails(userId, vacancyId) {
@@ -432,6 +415,9 @@ interface UserApplication {
    postingId: string;
    id: string;
    status: ApplicationStatus;
+   origin: ApplicationOrigin;
+   submittedAt: Date | null;
+   failureReason: string | null;
 }
 
 /** The latest of the user's applications that matches, as a match shows it. */
@@ -440,7 +426,9 @@ function applicationOf(
    matches: (a: UserApplication) => boolean,
 ): MatchApplication | null {
    const found = userApplications.find(matches);
-   return found ? { id: found.id, status: found.status } : null;
+   if (!found) return null;
+   const { id, status, origin, submittedAt } = found;
+   return { id, status, origin, submittedAt: submittedAt?.toISOString() ?? null };
 }
 
 /** The employer's site the posting sends applicants to; null when they apply on the job site. */
@@ -450,4 +438,22 @@ export function externalApplyUrl(apply: NormalizedPosting["apply"] | null): stri
 
 function cannotApplyReason(applyCheck: ApplyCheck | undefined): string | null {
    return applyCheck && !applyCheck.canApply ? applyCheck.reason : null;
+}
+
+/**
+ * Why there is nowhere to apply: the vacancy was never applied to, and every active posting was
+ * refused when preparing an application ("DOU: you applied already"). Null while one is still open,
+ * or once it was applied to anywhere: then it is done with, not refused.
+ */
+function refusedOnEverySiteLeft(
+   vacancyPostings: { id: string; sourceName: string }[],
+   vacancyApplications: UserApplication[],
+): string | null {
+   if (vacancyApplications.some((a) => a.status === "submitted")) return null;
+   const refusalOf = (postingId: string) =>
+      vacancyApplications.find((a) => a.postingId === postingId && a.status === "cannot_apply");
+   if (vacancyPostings.length === 0 || !vacancyPostings.every((p) => refusalOf(p.id))) return null;
+   return vacancyPostings
+      .map((p) => `${p.sourceName}: ${refusalOf(p.id)?.failureReason ?? "can't apply"}`)
+      .join("; ");
 }

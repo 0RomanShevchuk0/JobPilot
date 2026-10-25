@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { MatchStatus } from "./match.js";
 
 export const applicationStatuses = [
    "draft",
@@ -11,6 +12,14 @@ export const applicationStatuses = [
    "cannot_apply",
 ] as const;
 export type ApplicationStatus = (typeof applicationStatuses)[number];
+
+/**
+ * How the application came about: JobPilot read the form and filled it in, or I applied through the
+ * posting myself (on the employer's site it sends to, or the job site) and marked it: sent at once,
+ * no form.
+ */
+export const applicationOrigins = ["jobpilot", "manual"] as const;
+export type ApplicationOrigin = (typeof applicationOrigins)[number];
 
 export const documentTypes = ["cv", "cover_letter"] as const;
 export type DocumentType = (typeof documentTypes)[number];
@@ -125,9 +134,16 @@ export interface ApplicationListItem {
    /** the job page the application goes through */
    postingId: string;
    postingUrl: string;
+   /** the job site's name, e.g. "Djinni": one vacancy is applied to on each of its sites */
+   sourceName: string;
    status: ApplicationStatus;
+   origin: ApplicationOrigin;
    /** why preparing or submitting failed, or why the job site takes no application */
    failureReason: string | null;
+   /** whether I hid its vacancy: then I'm done with it, sent or not */
+   vacancyStatus: MatchStatus;
+   /** when it was sent; null until it is */
+   submittedAt: string | null;
    createdAt: string;
    updatedAt: string;
 }

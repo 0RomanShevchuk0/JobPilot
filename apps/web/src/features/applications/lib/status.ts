@@ -1,5 +1,16 @@
 import type { ApplicationStatus } from "@jobpilot/contracts";
 
+/**
+ * An application something can still be done with: JobPilot preparing it, me checking it or trying
+ * again. What Applications shows in progress.
+ */
+export const inWorkApplicationStatuses: readonly ApplicationStatus[] = [
+   "draft",
+   "preparing",
+   "ready_for_review",
+   "failed",
+];
+
 /** How an application's status reads in the app. */
 export const applicationStatusLabels: Record<ApplicationStatus, string> = {
    draft: "draft",

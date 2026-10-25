@@ -1,4 +1,5 @@
 import type {
+   ApplicationOrigin,
    ApplicationStatus,
    DocumentType,
    EmploymentType,
@@ -272,10 +273,9 @@ export const vacancyMatches = pgTable(
       model: text("model"),
       promptVersion: integer("prompt_version"),
       evaluatedAt: tstz("evaluated_at").notNull().defaultNow(),
-      // the user's mark (applied / hidden), null = new; re-evaluations keep it
+      // hidden by the user, null = not; re-evaluations keep it. Applying is per posting: applications
       status: text("status").$type<Exclude<MatchStatus, null>>(),
-      // when the status was set: the applied ones' history and the hidden ones go by it, latest first.
-      // Null without a status
+      // when the vacancy was hidden: the hidden list goes by it, latest first. Null when it isn't
       statusChangedAt: tstz("status_changed_at"),
    },
    (t) => [primaryKey({ columns: [t.userId, t.vacancyId] })],
@@ -292,6 +292,7 @@ export const applications = pgTable(
          .notNull()
          .references(() => postings.id),
       status: text("status").$type<ApplicationStatus>().notNull().default("draft"),
+      origin: text("origin").$type<ApplicationOrigin>().notNull().default("jobpilot"),
       failureReason: text("failure_reason"),
       cvDocumentId: uuid("cv_document_id").references(() => documents.id),
       coverLetterDocumentId: uuid("cover_letter_document_id").references(() => documents.id),
