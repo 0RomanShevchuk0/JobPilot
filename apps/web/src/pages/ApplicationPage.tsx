@@ -57,20 +57,20 @@ function Application({ app }: { app: ApplicationView }) {
       <>
          <header className="mt-2 mb-6">
             <h1 className="text-2xl font-semibold">{app.title ?? "Application"}</h1>
-            <p className="flex flex-wrap gap-x-4 text-sm text-gray-500">
+            <p className="flex flex-wrap gap-x-4 text-sm">
                {/* the vacancy's evaluation and its other job sites; gone vacancies have none */}
                {app.vacancyId && (
-                  <Link to={`/matches/${app.vacancyId}`} className="hover:underline">
-                     The vacancy in Matches
+                  <Link to={`/matches/${app.vacancyId}`} className="text-blue-700 hover:underline">
+                     Vacancy in JobPilot →
                   </Link>
                )}
                <a
                   href={app.postingUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="hover:underline"
+                  className="text-blue-700 hover:underline"
                >
-                  {app.postingUrl}
+                  Open on {app.sourceName} ↗
                </a>
             </p>
          </header>
