@@ -15,8 +15,10 @@ services:
       image: redis:8-alpine
       restart: always
       logging: *logging
-      # BullMQ requirements: never evict keys, persist jobs across restarts
-      command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+      # BullMQ requirements: never evict keys, persist jobs across restarts. loglevel warning keeps the
+      # periodic RDB-save notices (BGSAVE, "DB saved on disk") out of Cloud Logging; warnings and errors stay
+      command:
+         ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction", "--loglevel", "warning"]
       volumes:
          - redisdata:/data
       healthcheck:
