@@ -60,12 +60,7 @@ export function StatsPage() {
                   ))}
                </section>
 
-               <section>
-                  <h2 className="mb-2 text-sm text-gray-600">
-                     Found per {period === "day" ? "hour" : "day"}
-                  </h2>
-                  <StatsTimeline timeline={stats.data.timeline} hourly={period === "day"} />
-               </section>
+               <StatsTimeline timeline={stats.data.timeline} hourly={period === "day"} />
             </div>
          )}
       </main>

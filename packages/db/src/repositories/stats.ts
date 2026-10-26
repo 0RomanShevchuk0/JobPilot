@@ -107,11 +107,22 @@ export function createStatsRepository(db: Drizzle): StatsRepository {
             : sql`(select min(${vacancies.createdAt}) from ${vacancies})`;
          const step = `1 ${bucket}`;
          // raw rows keep timestamps as Postgres prints them ("2026-10-10 00:00:00+00")
-         const { rows } = await db.execute<{ start: string; found: number; suitable: number }>(sql`
+         const { rows } = await db.execute<{
+            start: string;
+            found: number;
+            suitable: number;
+            submitted: number;
+         }>(sql`
             select
                b.start,
                count(${vacancies.id})::int as found,
-               count(*) filter (where ${suitable})::int as suitable
+               count(*) filter (where ${suitable})::int as suitable,
+               -- by when it was sent, as the applications counts: not tied to the vacancies joined below
+               (
+                  select count(*) from ${applications}
+                  where ${applications.userId} = ${userId} and ${applications.status} = 'submitted'
+                     and date_trunc(${bucket}, ${applications.submittedAt}, ${timeZone}) = b.start
+               )::int as submitted
             from generate_series(
                date_trunc(${bucket}, ${start}, ${timeZone}),
                now(),
@@ -134,6 +145,7 @@ export function createStatsRepository(db: Drizzle): StatsRepository {
                start: new Date(r.start).toISOString(),
                found: r.found,
                suitable: r.suitable,
+               submitted: r.submitted,
             })),
          };
       },
