@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* `prose`: typography for markdown rendered as HTML (the vacancy's description) */
+@plugin "@tailwindcss/typography";
 
 @theme {
    /* hidden for its delay, then shown at once: a loader for what takes a while, not a flash */
