@@ -29,7 +29,11 @@ import { discoverJobOptions } from "./queues.js";
 import { sources } from "./sources.js";
 
 // error reporting first, so a crash during setup is caught too (no-op without SENTRY_DSN)
-sentry.init();
+const errorReportingOn = sentry.init();
+log(
+   "worker",
+   errorReportingOn ? "error reporting on (Sentry)" : "error reporting off (no SENTRY_DSN)",
+);
 
 // BullMQ workers need maxRetriesPerRequest: null so blocking commands survive Redis reconnects
 const connection = new Redis(config.redisUrl, { maxRetriesPerRequest: null });

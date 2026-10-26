@@ -12,6 +12,7 @@
       "matches:refresh": "tsc && node dist/scripts/refresh-matches.js",
       "sessions:check": "tsc && node dist/scripts/check-sessions.js",
       "queues:status": "tsc && node dist/scripts/queues-status.js",
+      "sentry:test": "tsc && node dist/scripts/sentry-test.js",
       "read-form": "tsc && node dist/scripts/read-form.js",
       "session-keys:generate": "tsc && node dist/scripts/generate-session-keys.js",
       "typecheck": "tsc --noEmit"
