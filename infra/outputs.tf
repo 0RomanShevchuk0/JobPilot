@@ -8,6 +8,11 @@ output "s3_bucket" {
   value       = google_storage_bucket.docs.name
 }
 
+output "s3_region" {
+  description = "S3_REGION for .env"
+  value       = lower(google_storage_bucket.docs.location)
+}
+
 output "s3_access_key_id" {
   description = "S3_ACCESS_KEY_ID for .env"
   value       = google_storage_hmac_key.storage.access_id
