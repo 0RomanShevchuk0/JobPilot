@@ -21,6 +21,7 @@
       "@jobpilot/db": "workspace:*",
       "@jobpilot/llm": "workspace:*",
       "@jobpilot/matching": "workspace:*",
+      "@jobpilot/observability": "workspace:*",
       "@jobpilot/session-crypto": "workspace:*",
       "@jobpilot/sources": "workspace:*",
       "@jobpilot/vacancies": "workspace:*",

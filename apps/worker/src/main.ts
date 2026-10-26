@@ -11,6 +11,7 @@ import {
    type PrepareApplicationJobData,
 } from "@jobpilot/contracts";
 import { createDatabase } from "@jobpilot/db";
+import { sentry } from "@jobpilot/observability";
 import { Queue, UnrecoverableError, Worker } from "bullmq";
 import { Redis } from "ioredis";
 import { config } from "./config.js";
@@ -26,6 +27,9 @@ import { createScoringLlm } from "./llm.js";
 import { log } from "./log.js";
 import { discoverJobOptions } from "./queues.js";
 import { sources } from "./sources.js";
+
+// error reporting first, so a crash during setup is caught too (no-op without SENTRY_DSN)
+sentry.init();
 
 // BullMQ workers need maxRetriesPerRequest: null so blocking commands survive Redis reconnects
 const connection = new Redis(config.redisUrl, { maxRetriesPerRequest: null });
@@ -146,13 +150,28 @@ for (const worker of workers) {
    worker.on("completed", () => completed++);
    worker.on("failed", (job, err) => {
       failed++;
-      const outcome =
-         err instanceof UnrecoverableError
-            ? "not retrying"
-            : job && job.attemptsMade < (job.opts.attempts ?? 1)
-              ? "will retry"
-              : "gave up";
+      const willRetry =
+         !(err instanceof UnrecoverableError) &&
+         job !== undefined &&
+         job.attemptsMade < (job.opts.attempts ?? 1);
+      const outcome = willRetry
+         ? "will retry"
+         : err instanceof UnrecoverableError
+           ? "not retrying"
+           : "gave up";
       log(worker.name, `job ${job?.id} failed (${outcome}): ${err.message}`);
+      // only final failures are incidents: one that will retry may still succeed
+      if (!willRetry) {
+         sentry.reportError(err, {
+            tags: { queue: worker.name },
+            extra: {
+               jobId: job?.id,
+               jobName: job?.name,
+               attemptsMade: job?.attemptsMade,
+               data: job?.data,
+            },
+         });
+      }
    });
    worker.on("drained", () => {
       if (completed + failed === 0) return; // idle: nothing happened since the last summary
@@ -187,6 +206,8 @@ async function shutdown(signal: string) {
    ]);
    await database.close();
    await connection.quit();
+   // let buffered error events reach Sentry before the process goes
+   await sentry.close();
    log("worker", "stopped");
 }
 
