@@ -1,6 +1,12 @@
 import type { MatchDetails } from "@jobpilot/contracts";
 import { useParams } from "react-router";
-import { MatchEvaluation, MatchHeader, PostingLinks, useMatch } from "../features/matches";
+import {
+   MatchEvaluation,
+   MatchHeader,
+   PostingLinks,
+   useMatch,
+   VacancyDescription,
+} from "../features/matches";
 import { BackLink, PageLoader } from "../shared/ui";
 
 /** One vacancy as evaluated for my profile: every job site it is on, the evaluation, the description. */
@@ -30,12 +36,18 @@ function Vacancy({ match }: { match: MatchDetails }) {
          <div className="mt-4">
             <PostingLinks match={match} />
          </div>
-         <div className="mt-6">
+         {/* set apart: what JobPilot thinks of the vacancy, not what the job site says */}
+         <section className="mt-6 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
+            <h2 className="mb-2 text-xs font-semibold tracking-wide text-blue-900 uppercase">
+               AI evaluation
+            </h2>
             <MatchEvaluation match={match} withMatchedSkills />
-         </div>
-         {/* markdown reads fine as plain text; a renderer can come when it's worth a dependency */}
-         <section className="mt-6 border-t border-gray-200 pt-6 text-sm whitespace-pre-wrap">
-            {match.description}
+         </section>
+         <section className="mt-8">
+            <h2 className="mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+               Description
+            </h2>
+            <VacancyDescription markdown={match.description} />
          </section>
       </article>
    );

@@ -3,3 +3,4 @@ export { MatchCard } from "./ui/MatchCard";
 export { MatchEvaluation } from "./ui/MatchEvaluation";
 export { MatchHeader } from "./ui/MatchHeader";
 export { PostingLinks } from "./ui/PostingLinks";
+export { VacancyDescription } from "./ui/VacancyDescription";
