@@ -32,6 +32,8 @@ export interface StatsBucket {
    found: number;
    /** apply + stretch */
    suitable: number;
+   /** applications sent in this hour or day, whenever their vacancy was found */
+   submitted: number;
 }
 
 /** GET /stats?period=week */
