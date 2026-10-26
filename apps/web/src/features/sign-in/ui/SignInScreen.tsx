@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { authClient } from "../../../shared/auth/client";
 import { Button } from "../../../shared/ui";
 
@@ -27,6 +28,11 @@ export function SignInScreen() {
             {starting ? "Opening Google…" : "Sign in with Google"}
          </Button>
          {failed && <p className="mt-4 text-sm text-red-600">Signing in failed: {failed}</p>}
+         {import.meta.env.DEV && (
+            <Link to="/dev" className="mt-6 inline-block text-sm text-gray-400 hover:text-gray-900">
+               Dev sign-in →
+            </Link>
+         )}
       </main>
    );
 }

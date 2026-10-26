@@ -6,6 +6,7 @@ import { fromNodeHeaders } from "better-auth/node";
 import { bearer } from "better-auth/plugins";
 import type { IncomingHttpHeaders } from "node:http";
 import { Database } from "../infra/database.js";
+import { devLoginPlugin } from "./dev-login.plugin.js";
 import { EXTENSION_ORIGINS } from "./extension-origins.js";
 
 /** Where the sign-in routes live (SignInController): under the API's /api, as the browser asks for them. */
@@ -33,6 +34,13 @@ export class SignIn {
 
 function createAuth(config: ConfigService, database: DatabaseClient["authDatabase"]) {
    const webUrl = config.getOrThrow<string>("WEB_URL");
+   // a dev-only sign-in link (dev-login.plugin): never on the server, which runs with NODE_ENV=production,
+   // and only when the secret is set. Left out otherwise, so the route doesn't exist at all
+   const devLoginSecret = config.get<string>("DEV_LOGIN_SECRET");
+   const devLogin =
+      process.env.NODE_ENV !== "production" && devLoginSecret
+         ? [devLoginPlugin({ secret: devLoginSecret, webUrl })]
+         : [];
    return betterAuth({
       // the web's address: the browser signs in there, the API is behind its /api
       baseURL: webUrl,
@@ -49,7 +57,7 @@ function createAuth(config: ConfigService, database: DatabaseClient["authDatabas
       // account of that email: Google vouches for the address, so it joins the existing user
       account: { accountLinking: { enabled: true, trustedProviders: ["google"] } },
       // the extension sends the web's session token as Authorization: Bearer
-      plugins: [bearer()],
+      plugins: [bearer(), ...devLogin],
       trustedOrigins: [webUrl, ...EXTENSION_ORIGINS],
       // ids are the database's own: uuidv7(), like every other table
       advanced: { database: { generateId: false } },
