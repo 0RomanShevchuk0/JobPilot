@@ -13,6 +13,7 @@
       "@jobpilot/contracts": "workspace:*",
       "@jobpilot/db": "workspace:*",
       "@jobpilot/llm": "workspace:*",
+      "@jobpilot/observability": "workspace:*",
       "@jobpilot/matching": "workspace:*",
       "@jobpilot/session-crypto": "workspace:*",
       "@jobpilot/storage": "workspace:*",

@@ -1,0 +1,23 @@
+{
+   "name": "@jobpilot/observability",
+   "private": true,
+   "type": "module",
+   "exports": {
+      ".": {
+         "types": "./dist/index.d.ts",
+         "default": "./dist/index.js"
+      }
+   },
+   "scripts": {
+      "build": "tsc -p tsconfig.build.json",
+      "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+      "typecheck": "tsc"
+   },
+   "dependencies": {
+      "@sentry/node": "^11.9.0"
+   },
+   "devDependencies": {
+      "@types/node": "^24.13.6",
+      "typescript": "~6.0.3"
+   }
+}
