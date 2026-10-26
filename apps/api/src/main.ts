@@ -9,7 +9,11 @@ import { SessionGuard } from "./auth/session.guard.js";
 import { SentryExceptionFilter } from "./observability/sentry-exception.filter.js";
 
 // error reporting first, so a crash during startup is caught too (no-op without SENTRY_DSN)
-sentry.init();
+const errorReportingOn = sentry.init();
+Logger.log(
+   errorReportingOn ? "error reporting on (Sentry)" : "error reporting off (no SENTRY_DSN)",
+   "Bootstrap",
+);
 
 const app = await NestFactory.create(AppModule);
 const config = app.get(ConfigService);
