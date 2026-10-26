@@ -20,3 +20,9 @@ tmp/
 .wxt/
 
 .vscode/
+# Terraform
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/*.tfvars
+infra/crash.log
