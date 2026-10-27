@@ -7,6 +7,7 @@ import {
    matchVerdict,
    salaryFitLabels,
    salaryFitStyles,
+   verdictLabels,
    verdictStyles,
 } from "../lib/display";
 import { MatchApplyAction, MatchMoreMenu } from "./MatchActions";
@@ -33,9 +34,15 @@ export function MatchHeader({ match, title, children }: Props) {
       // wide: the badge and the text span both rows, the date's row takes what's left of their height
       // (1fr), so the date sits right under the actions however long the text is
       <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2 sm:grid-cols-[auto_1fr_auto_auto] sm:grid-rows-[auto_1fr] sm:items-start sm:gap-x-2">
-         <div className="col-start-1 row-start-1 sm:row-span-2 sm:mr-2">
+         {/* relative z-10: above the card's stretched link, so the tooltip shows in the list too */}
+         <div
+            className="relative z-10 col-start-1 row-start-1 sm:row-span-2 sm:mr-2"
+            title="How well the vacancy fits your profile and CV, as the AI scored it"
+         >
             <Badge tone={verdictStyles[verdict]} size="md">
-               {match.score ?? "–"} {verdict}
+               {verdictLabels[verdict]}
+               {/* out of 100, not %: read as a score, not as a chance of being hired */}
+               {match.score !== null && ` · ${match.score}/100`}
             </Badge>
          </div>
          {/* relative z-10: above the card's stretched link, so the tooltip shows in the list too */}
