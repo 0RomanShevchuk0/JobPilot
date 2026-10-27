@@ -64,13 +64,15 @@ function TopBar() {
       <header className="border-b border-gray-200">
          <div className="mx-auto flex max-w-4xl items-center gap-4 px-4 py-2 sm:px-6">
             <span className="font-semibold text-gray-900 sm:hidden">JobPilot</span>
-            <nav className="hidden items-center gap-4 sm:flex">
+            {/* each link a pill, the current one filled: an icon reads as its own word's, not the one
+                before it. -ml-3: the first one's text lines up with the page's left edge */}
+            <nav className="-ml-3 hidden items-center gap-1 sm:flex">
                {pages.map(({ path, title, Icon }) => (
                   <NavLink
                      key={path}
                      to={path}
                      className={({ isActive }) =>
-                        `flex items-center gap-1.5 text-sm ${isActive ? "font-medium text-gray-900" : "text-gray-500 hover:text-gray-900"}`
+                        `flex items-center gap-1.5 rounded px-3 py-1.5 text-sm ${isActive ? "bg-gray-100 font-medium text-gray-900" : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"}`
                      }
                   >
                      <Icon className="size-4" />
