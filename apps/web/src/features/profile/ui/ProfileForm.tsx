@@ -243,9 +243,10 @@ export function ProfileForm({ saved, hasCv }: ProfileFormProps) {
             <textarea {...register("notes")} aria-label="Notes" className={textareaClasses} />
          </Section>
 
-         {/* only while there is something to save: the CV above saves on its own, with no button */}
+         {/* only while there is something to save: the CV above saves on its own, with no button.
+             On a phone above the tab bar */}
          {isDirty && (
-            <div className="sticky bottom-4 flex items-center justify-between gap-4 rounded border border-gray-200 bg-white px-4 py-3 shadow-lg">
+            <div className="sticky bottom-[calc(var(--spacing-tab-bar)+1rem)] flex sm:bottom-4 items-center justify-between gap-4 rounded border border-gray-200 bg-white px-4 py-3 shadow-lg">
                <div className="text-sm">
                   {hasErrors && <p className="text-red-600">Some fields need fixing, see above.</p>}
                   {save.error && <p className="text-red-600">{save.error.message}</p>}
