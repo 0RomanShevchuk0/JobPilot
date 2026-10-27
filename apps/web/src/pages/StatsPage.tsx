@@ -44,7 +44,7 @@ export function StatsPage() {
             <div className="space-y-6">
                <StatsFunnel funnel={stats.data.funnel} />
 
-               <section className="flex gap-4">
+               <section className="grid grid-cols-3 gap-2 sm:gap-4">
                   {[
                      { label: "Applications sent", value: stats.data.applications.submitted },
                      { label: "Applications failed", value: stats.data.applications.failed },
@@ -52,7 +52,7 @@ export function StatsPage() {
                   ].map((card) => (
                      <div
                         key={card.label}
-                        className="flex-1 rounded border border-gray-200 px-4 py-3"
+                        className="min-w-0 rounded border border-gray-200 px-3 py-3 sm:px-4"
                      >
                         <p className="text-sm text-gray-600">{card.label}</p>
                         <p className="text-2xl font-semibold tabular-nums">{card.value}</p>
