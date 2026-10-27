@@ -50,9 +50,10 @@ export function MatchActions({ match }: { match: MatchListItem }) {
    }
 
    return (
-      // relative z-10: above the card's stretched link, so the buttons stay clickable on their own
-      <div className="relative z-10 ml-auto flex shrink-0 flex-col items-end gap-2">
-         <div className="flex items-start gap-2">
+      // relative z-10: above the card's stretched link, so the buttons stay clickable on their own.
+      // On a phone at the left, under the title, wrapping when they don't fit in a row
+      <div className="relative z-10 flex min-w-0 flex-col items-start gap-2 sm:items-end">
+         <div className="flex flex-wrap items-start gap-2 sm:justify-end">
             {applyAction()}
             {match.status === null ? (
                <Button
@@ -75,7 +76,7 @@ export function MatchActions({ match }: { match: MatchListItem }) {
             )}
          </div>
          {mark.isError && (
-            <p className="max-w-xs text-right text-sm text-red-600">{mark.error.message}</p>
+            <p className="max-w-xs text-sm text-red-600 sm:text-right">{mark.error.message}</p>
          )}
       </div>
    );

@@ -20,7 +20,11 @@ export function PostingLinks({ match }: { match: MatchListItem }) {
          </p>
          <ul className="mt-2 space-y-2">
             {postings.map((posting) => (
-               <li key={posting.url} className="flex items-center justify-between gap-3">
+               // on a phone the actions go under the site's link, as on the card
+               <li
+                  key={posting.url}
+                  className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+               >
                   <span className="flex min-w-0 items-center gap-2">
                      <PostingLink posting={posting} />
                      <PostingStatus posting={posting} details />
