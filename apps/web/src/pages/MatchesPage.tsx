@@ -28,7 +28,7 @@ export function MatchesPage() {
    const items = matches.data?.pages.flatMap((page) => page.items);
 
    return (
-      <main className="mx-auto max-w-4xl p-6">
+      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
          <header className="mb-6 flex items-center justify-between">
             <h1 className="text-2xl font-semibold">Matches</h1>
             {tab === "new" && (
