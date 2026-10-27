@@ -1,34 +1,15 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { authClient } from "../../../shared/auth/client";
+import { Menu, menuItemStyles } from "../../../shared/ui";
 
 /**
  * Who is signed in, as their Google picture (the name's first letter without one), and a menu under
- * it: the account, the dev sign-in page (dev only), the way out. A click outside or Esc closes it.
+ * it: the account, the dev sign-in page (dev only), the way out.
  */
 export function UserMenu() {
    const { data: session } = authClient.useSession();
    const queryClient = useQueryClient();
-   const [open, setOpen] = useState(false);
-   const menuRef = useRef<HTMLDivElement>(null);
-
-   useEffect(() => {
-      if (!open) return;
-      const closeOnOutsideClick = (event: PointerEvent) => {
-         if (!menuRef.current?.contains(event.target as Node)) setOpen(false);
-      };
-      const closeOnEscape = (event: KeyboardEvent) => {
-         if (event.key === "Escape") setOpen(false);
-      };
-      document.addEventListener("pointerdown", closeOnOutsideClick);
-      document.addEventListener("keydown", closeOnEscape);
-      return () => {
-         document.removeEventListener("pointerdown", closeOnOutsideClick);
-         document.removeEventListener("keydown", closeOnEscape);
-      };
-   }, [open]);
-
    if (!session) return null;
    const { name, email, image } = session.user;
 
@@ -39,41 +20,24 @@ export function UserMenu() {
    };
 
    return (
-      <div ref={menuRef} className="relative">
-         <button
-            type="button"
-            onClick={() => setOpen(!open)}
-            aria-label="Account"
-            aria-expanded={open}
-            className="flex rounded-full outline-offset-2 hover:opacity-80"
-         >
-            <Avatar name={name || email} image={image} />
-         </button>
-         {open && (
-            <div className="absolute right-0 z-20 mt-2 w-64 rounded border border-gray-200 bg-white py-1 text-sm shadow-lg">
-               <div className="border-b border-gray-200 px-4 py-2">
-                  {name && <p className="truncate font-medium text-gray-900">{name}</p>}
-                  <p className="truncate text-gray-500">{email}</p>
-               </div>
-               {import.meta.env.DEV && (
-                  <Link
-                     to="/dev"
-                     onClick={() => setOpen(false)}
-                     className="block px-4 py-2 text-gray-700 hover:bg-gray-50"
-                  >
-                     Dev sign-in
-                  </Link>
-               )}
-               <button
-                  type="button"
-                  onClick={signOut}
-                  className="block w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-50"
-               >
-                  Sign out
-               </button>
-            </div>
+      <Menu
+         label="Account"
+         trigger={<Avatar name={name || email} image={image} />}
+         triggerClassName="flex rounded-full outline-offset-2 hover:opacity-80"
+      >
+         <div className="mb-1 border-b border-gray-200 px-4 py-2">
+            {name && <p className="truncate font-medium text-gray-900">{name}</p>}
+            <p className="truncate text-gray-500">{email}</p>
+         </div>
+         {import.meta.env.DEV && (
+            <Link to="/dev" className={menuItemStyles}>
+               Dev sign-in
+            </Link>
          )}
-      </div>
+         <button type="button" onClick={signOut} className={menuItemStyles}>
+            Sign out
+         </button>
+      </Menu>
    );
 }
 
