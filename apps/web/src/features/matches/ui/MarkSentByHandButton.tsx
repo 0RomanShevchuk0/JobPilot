@@ -9,7 +9,7 @@ import { useMarkSentByHand } from "../../applications";
 export function MarkSentByHandButton({ postingId }: { postingId: string }) {
    const markSent = useMarkSentByHand();
    return (
-      <span className="flex flex-col items-end gap-1">
+      <span className="flex flex-col items-start gap-1 sm:items-end">
          <Button
             variant="secondary"
             size="sm"
@@ -21,7 +21,7 @@ export function MarkSentByHandButton({ postingId }: { postingId: string }) {
             Mark applied
          </Button>
          {markSent.isError && (
-            <span className="max-w-xs text-right text-sm text-red-600">
+            <span className="max-w-xs text-sm text-red-600 sm:text-right">
                {markSent.error.message}
             </span>
          )}

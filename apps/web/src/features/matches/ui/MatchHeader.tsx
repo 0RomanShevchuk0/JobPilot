@@ -21,37 +21,49 @@ interface Props {
 
 /**
  * The verdict with the score, the title, company · salary · work modes, and on the right what I can do
- * with it and when it was posted.
+ * with it and when it was posted. On a phone (below sm) the actions go under the title, a row of their
+ * own the card's width (beside it they'd squeeze the title to a word a line), the date under the
+ * details.
  */
 export function MatchHeader({ match, title, children }: Props) {
    const verdict = matchVerdict(match);
    const details = matchDetailsLine(match);
 
    return (
-      <div className="flex items-start gap-4">
-         <Badge tone={verdictStyles[verdict]} size="md">
-            {match.score ?? "–"} {verdict}
-         </Badge>
-         <div className="min-w-0">
-            {title}
-            {details && <p className="text-sm text-gray-500">{details}</p>}
-            {children}
-            {match.salaryFit && (
-               <p className={`text-sm ${salaryFitStyles[match.salaryFit]}`}>
-                  {salaryFitLabels[match.salaryFit]}
-               </p>
-            )}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+         <div className="flex min-w-0 items-start gap-3 sm:gap-4">
+            <Badge tone={verdictStyles[verdict]} size="md">
+               {match.score ?? "–"} {verdict}
+            </Badge>
+            <div className="min-w-0">
+               {title}
+               {details && <p className="text-sm text-gray-500">{details}</p>}
+               {children}
+               {match.salaryFit && (
+                  <p className={`text-sm ${salaryFitStyles[match.salaryFit]}`}>
+                     {salaryFitLabels[match.salaryFit]}
+                  </p>
+               )}
+               <PublishedDate match={match} className="sm:hidden" />
+            </div>
          </div>
-         <div className="ml-auto flex shrink-0 flex-col items-end gap-2">
+         <div className="flex flex-col items-start gap-2 sm:ml-auto sm:shrink-0 sm:items-end">
             <MatchActions match={match} />
-            {/* relative z-10: above the card's stretched link, so the tooltip shows in the list too */}
-            <p
-               className="relative z-10 text-sm text-gray-500"
-               title="Posted or last bumped on the job site"
-            >
-               {formatPublishedDate(match)}
-            </p>
+            <PublishedDate match={match} className="hidden sm:block" />
          </div>
       </div>
+   );
+}
+
+/** When the vacancy was posted; className says on which screens, it shows in one place on each. */
+function PublishedDate({ match, className }: { match: MatchListItem; className: string }) {
+   return (
+      // relative z-10: above the card's stretched link, so the tooltip shows in the list too
+      <p
+         className={`relative z-10 text-sm text-gray-500 ${className}`}
+         title="Posted or last bumped on the job site"
+      >
+         {formatPublishedDate(match)}
+      </p>
    );
 }

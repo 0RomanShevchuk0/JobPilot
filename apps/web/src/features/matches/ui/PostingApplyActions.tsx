@@ -78,9 +78,10 @@ export function PostingApplyActions({ posting }: { posting: MatchPosting }) {
    }
 
    return (
-      <div className="flex flex-col items-end gap-1">
-         <div className="flex items-center gap-2">{actions()}</div>
-         {error && <p className="max-w-xs text-right text-sm text-red-600">{error.message}</p>}
+      // on a phone at the left, under what they're for, wrapping when they don't fit in a row
+      <div className="flex flex-col items-start gap-1 sm:items-end">
+         <div className="flex flex-wrap items-center gap-2 sm:justify-end">{actions()}</div>
+         {error && <p className="max-w-xs text-sm text-red-600 sm:text-right">{error.message}</p>}
       </div>
    );
 }
