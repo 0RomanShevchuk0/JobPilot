@@ -15,7 +15,8 @@ export function StatsFunnel({ funnel }: { funnel: Funnel }) {
       {
          label: "Suitable",
          value: funnel.apply + funnel.stretch,
-         detail: `${funnel.apply} apply · ${funnel.stretch} stretch`,
+         // as the matches' badges say it ("Good fit", "Worth a try")
+         detail: `${funnel.apply} good fit · ${funnel.stretch} worth a try`,
       },
       { label: "Can apply", value: funnel.canApply },
       { label: "Applied", value: funnel.applied },

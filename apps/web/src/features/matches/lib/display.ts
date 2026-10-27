@@ -6,6 +6,16 @@ export function matchVerdict(match: MatchListItem): string {
    return match.verdict ?? (rejected ? "rejected" : "pending");
 }
 
+// what each verdict says in words, the AI's three by the score bands it's asked for (scoring.ts):
+// "apply" alone on a badge reads as a button, "stretch" as jargon
+export const verdictLabels: Record<string, string> = {
+   apply: "Good fit",
+   stretch: "Worth a try",
+   skip: "Poor fit",
+   rejected: "Filtered out",
+   pending: "Scoring…",
+};
+
 export const verdictStyles: Record<string, string> = {
    apply: "bg-green-100 text-green-800",
    stretch: "bg-amber-100 text-amber-800",
