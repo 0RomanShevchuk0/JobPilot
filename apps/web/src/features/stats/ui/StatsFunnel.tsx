@@ -28,21 +28,28 @@ export function StatsFunnel({ funnel }: { funnel: Funnel }) {
          {steps.map((step) => {
             const share = funnel.found > 0 ? Math.round((step.value / funnel.found) * 100) : 0;
             return (
-               <li key={step.label} className="flex items-center gap-4 px-4 py-2">
-                  <span className="w-40 text-sm text-gray-600">{step.label}</span>
+               // on a phone the bar and the detail get rows of their own under the numbers: beside them
+               // fixed-width columns leave the bar no room
+               <li
+                  key={step.label}
+                  className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 gap-y-1 px-4 py-2 sm:flex"
+               >
+                  <span className="text-sm text-gray-600 sm:w-40">{step.label}</span>
                   <span className="w-12 text-right text-lg font-semibold tabular-nums">
                      {step.value}
                   </span>
                   <span className="w-10 text-right text-xs text-gray-400 tabular-nums">
                      {share}%
                   </span>
-                  <span className="flex-1">
+                  <span className="col-span-3 sm:flex-1">
                      <span
                         className="block h-2 rounded bg-gray-300"
                         style={{ width: `${share}%` }}
                      />
                   </span>
-                  {step.detail && <span className="text-xs text-gray-500">{step.detail}</span>}
+                  {step.detail && (
+                     <span className="col-span-3 text-xs text-gray-500">{step.detail}</span>
+                  )}
                </li>
             );
          })}
