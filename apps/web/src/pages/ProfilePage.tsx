@@ -12,7 +12,7 @@ export function ProfilePage() {
    const documents = useDocuments();
 
    return (
-      <main className="mx-auto max-w-4xl p-6">
+      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
          <header className="mb-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <h1 className="text-2xl font-semibold">Profile</h1>
             {/* the legend for the mark on sections: what changing them costs */}

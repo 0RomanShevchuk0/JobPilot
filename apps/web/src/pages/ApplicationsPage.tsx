@@ -31,7 +31,7 @@ export function ApplicationsPage() {
    const items = applications.data?.pages.flatMap((page) => page.items);
 
    return (
-      <main className="mx-auto max-w-4xl p-6">
+      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
          <h1 className="mb-6 text-2xl font-semibold">Applications</h1>
 
          <nav className="mb-4 flex gap-2">

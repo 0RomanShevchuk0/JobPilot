@@ -15,7 +15,7 @@ export function VacancyPage() {
    const match = useMatch(vacancyId!);
 
    return (
-      <main className="mx-auto max-w-4xl p-6">
+      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
          <BackLink fallback="/matches" fallbackLabel="Matches" />
          {match.isPending && <PageLoader />}
          {match.isError && <p className="mt-4 text-red-600">{match.error.message}</p>}
