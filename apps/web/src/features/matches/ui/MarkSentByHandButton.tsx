@@ -9,7 +9,8 @@ import { useMarkSentByHand } from "../../applications";
 export function MarkSentByHandButton({ postingId }: { postingId: string }) {
    const markSent = useMarkSentByHand();
    return (
-      <span className="flex flex-col items-start gap-1 sm:items-end">
+      // on a phone the full width it's given, as the buttons beside it
+      <span className="flex flex-col items-stretch gap-1 sm:items-end">
          <Button
             variant="secondary"
             size="sm"

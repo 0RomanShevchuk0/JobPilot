@@ -10,7 +10,7 @@ export function ExternalApplyLink({ url }: { url: string }) {
          href={url}
          target="_blank"
          rel="noreferrer"
-         className={buttonStyles({ variant: "primary", size: "sm" })}
+         className={`${buttonStyles({ variant: "primary", size: "sm" })} text-center`}
       >
          Apply on employer's site ↗
       </a>
