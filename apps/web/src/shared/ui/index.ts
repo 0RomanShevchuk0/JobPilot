@@ -1,9 +1,13 @@
 export { ArrowRightIcon } from "./ArrowRightIcon";
 export { BackLink } from "./BackLink";
 export { Badge, type BadgeSize } from "./Badge";
+export { BriefcaseIcon } from "./BriefcaseIcon";
 export { Button, buttonStyles, type ButtonSize, type ButtonVariant } from "./Button";
+export { ChartIcon } from "./ChartIcon";
 export { CheckIcon } from "./CheckIcon";
 export { LoadMoreTrigger } from "./LoadMoreTrigger";
 export { PageLoader } from "./PageLoader";
 export { ReevaluatesMark } from "./ReevaluatesMark";
+export { SendIcon } from "./SendIcon";
 export { Spinner } from "./Spinner";
+export { UserIcon } from "./UserIcon";

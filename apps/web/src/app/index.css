@@ -5,6 +5,9 @@
 @theme {
    /* hidden for its delay, then shown at once: a loader for what takes a while, not a flash */
    --animate-appear-late: appear 0s 300ms both;
+   /* the phone's tab bar at the bottom, with the home indicator's strip under it (none on most
+      screens): h-tab-bar on the bar, pb-tab-bar on the page it covers */
+   --spacing-tab-bar: calc(3.5rem + env(safe-area-inset-bottom));
 
    @keyframes appear {
       from {

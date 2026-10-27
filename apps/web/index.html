@@ -2,7 +2,9 @@
 <html lang="en">
    <head>
       <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <!-- viewport-fit=cover: on an iPhone the page goes under the home indicator too, the tab bar
+           steps over it by itself (safe-area-inset-bottom) -->
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
       <title>JobPilot</title>
       <!-- the loader before the app's script has loaded (it takes a moment on a slow connection):
            React replaces it, with PageLoader's look in the same place -->
