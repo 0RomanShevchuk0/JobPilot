@@ -32,13 +32,17 @@ export function MatchesPage() {
          <header className="mb-6 flex items-center justify-between">
             <h1 className="text-2xl font-semibold">Matches</h1>
             {tab === "new" && (
-               <label className="flex items-center gap-2 text-sm text-gray-600">
+               // "skipped" read as a verdict of its own: what it adds is in the tooltip
+               <label
+                  className="flex items-center gap-2 text-sm text-gray-600"
+                  title="Poor fits, filtered out, and ones the job site won't let you apply to too"
+               >
                   <input
                      type="checkbox"
                      checked={showSkipped}
                      onChange={(e) => setShowSkipped(e.target.checked)}
                   />
-                  Show skipped
+                  Show all
                </label>
             )}
          </header>
