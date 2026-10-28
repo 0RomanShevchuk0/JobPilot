@@ -33,7 +33,8 @@ export class ApplicationsService {
    /**
     * Starts preparing an application through one of the vacancy's job sites: the worker reads the form
     * and answers it. Preparing the same posting again answers the same questions anew, without opening
-    * the job site; refreshForm reads the form again first.
+    * the job site; refreshForm reads the form again first. Refused before the user's first login on the
+    * site: the worker reads the form with their session, which only the extension sends.
     */
    async prepare(userId: string, postingId: string, refreshForm: boolean): Promise<{ id: string }> {
       const posting = await this.db.applications.getPostingToApply(postingId);
@@ -41,6 +42,13 @@ export class ApplicationsService {
       if (posting.externalApplyUrl) {
          throw new ConflictException(
             `This job is applied to on the employer's site: ${posting.externalApplyUrl}`,
+         );
+      }
+      // no application without the session: it would only fail. An expired one goes on, the worker
+      // finds it out and asks for a new login
+      if (!(await this.db.sourceSessions.getEncryptedSession(userId, posting.sourceId))) {
+         throw new ConflictException(
+            `Applying through JobPilot needs the JobPilot extension: install it in Chrome and log in to ${posting.sourceName} there, then apply again`,
          );
       }
       const application = await this.db.applications.startPreparing(userId, postingId);
