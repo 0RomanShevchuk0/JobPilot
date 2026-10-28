@@ -48,7 +48,7 @@ export class ApplicationsService {
       // finds it out and asks for a new login
       if (!(await this.db.sourceSessions.getEncryptedSession(userId, posting.sourceId))) {
          throw new ConflictException(
-            `Applying through JobPilot needs the JobPilot extension: install it in Chrome and log in to ${posting.sourceName} there, then apply again`,
+            `Install the JobPilot extension and log in to ${posting.sourceName} in Chrome to apply`,
          );
       }
       const application = await this.db.applications.startPreparing(userId, postingId);

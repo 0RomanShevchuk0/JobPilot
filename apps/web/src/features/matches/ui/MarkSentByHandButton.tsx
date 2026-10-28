@@ -1,5 +1,6 @@
 import { Button, CheckIcon } from "../../../shared/ui";
 import { useMarkSentByHand } from "../../applications";
+import { ActionError } from "./ActionError";
 
 /**
  * "Mark applied": I applied through the posting myself (on the employer's site, on the job site, or
@@ -10,7 +11,7 @@ export function MarkSentByHandButton({ postingId }: { postingId: string }) {
    const markSent = useMarkSentByHand();
    return (
       // on a phone the full width it's given, as the buttons beside it
-      <span className="flex flex-col items-stretch gap-1 sm:items-end">
+      <div className="relative flex flex-col items-stretch gap-1 sm:items-end">
          <Button
             variant="secondary"
             size="sm"
@@ -22,10 +23,8 @@ export function MarkSentByHandButton({ postingId }: { postingId: string }) {
             Mark applied
          </Button>
          {markSent.isError && (
-            <span className="max-w-xs text-sm text-red-600 sm:text-right">
-               {markSent.error.message}
-            </span>
+            <ActionError message={markSent.error.message} onClose={() => markSent.reset()} />
          )}
-      </span>
+      </div>
    );
 }

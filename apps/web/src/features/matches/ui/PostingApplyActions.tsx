@@ -2,6 +2,7 @@ import type { MatchPosting } from "@jobpilot/contracts";
 import { Link, useNavigate } from "react-router";
 import { ArrowRightIcon, Button, buttonStyles } from "../../../shared/ui";
 import { useStartApplication, useUnmarkSentByHand } from "../../applications";
+import { ActionError } from "./ActionError";
 import { ExternalApplyLink } from "./ExternalApplyLink";
 import { MarkSentByHandButton } from "./MarkSentByHandButton";
 
@@ -91,11 +92,19 @@ export function PostingApplyActions({
    return (
       // on a phone under what they're for, the full width: side by side they share it, wrapping when
       // they don't fit in a row (grow, not flex-1: a long one takes a row rather than squeeze)
-      <div className="flex flex-col items-stretch gap-1 sm:items-end">
+      <div className="relative flex flex-col items-stretch gap-1 sm:items-end">
          <div className="flex flex-wrap items-center gap-2 *:grow sm:justify-end sm:*:grow-0">
             {actions()}
          </div>
-         {error && <p className="max-w-xs text-sm text-red-600 sm:text-right">{error.message}</p>}
+         {error && (
+            <ActionError
+               message={error.message}
+               onClose={() => {
+                  apply.reset();
+                  unmarkSent.reset();
+               }}
+            />
+         )}
       </div>
    );
 }
