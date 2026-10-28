@@ -14,6 +14,13 @@ export interface StoredApplication extends ApplicationListItem {
    fields: FormField[];
 }
 
+/** A posting to apply through: its job site and where it sends applicants, if elsewhere. */
+export interface PostingToApply {
+   sourceId: string;
+   sourceName: string;
+   externalApplyUrl: string | null;
+}
+
 /** What the worker needs to prepare an application. */
 export interface ApplicationToPrepare {
    userId: string;
@@ -38,10 +45,11 @@ export interface ApplicationListOptions {
 
 export interface ApplicationsRepository {
    /**
-    * The posting to apply through, if it exists and is still on its job site: whether that site sends
-    * applicants to the employer's site instead (externalApplyUrl).
+    * The posting to apply through, if it exists and is still on its job site: its site (sourceId, and
+    * its name to show), and whether that site sends applicants to the employer's site instead
+    * (externalApplyUrl).
     */
-   getPostingToApply(postingId: string): Promise<{ externalApplyUrl: string | null } | undefined>;
+   getPostingToApply(postingId: string): Promise<PostingToApply | undefined>;
    /**
     * Starts preparing the application to a posting: a new one, or the existing one again (its fields
     * stay until new answers replace them). Returns undefined when it was already submitted.
@@ -124,10 +132,21 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
    return {
       async getPostingToApply(postingId) {
          const [row] = await db
-            .select({ parsed: postings.parsed })
+            .select({
+               parsed: postings.parsed,
+               sourceId: postings.sourceId,
+               sourceName: sources.name,
+            })
             .from(postings)
+            .innerJoin(sources, eq(sources.id, postings.sourceId))
             .where(and(eq(postings.id, postingId), isNull(postings.goneAt)));
-         return row && { externalApplyUrl: externalApplyUrl(row.parsed?.apply ?? null) };
+         return (
+            row && {
+               sourceId: row.sourceId,
+               sourceName: row.sourceName,
+               externalApplyUrl: externalApplyUrl(row.parsed?.apply ?? null),
+            }
+         );
       },
 
       async startPreparing(userId, postingId) {
