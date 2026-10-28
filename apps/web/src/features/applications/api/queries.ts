@@ -82,6 +82,19 @@ export function useSaveAnswers(id: string) {
 }
 
 /**
+ * Whether the JobPilot extension is installed and on in this browser: without it (a phone, another
+ * browser) an application can't be opened here to send. Asked once a page load: installing it means a
+ * reload anyway.
+ */
+export function useExtensionInstalled() {
+   return useQuery({
+      queryKey: queryKeys.extension.installed,
+      queryFn: isExtensionInstalled,
+      staleTime: Infinity,
+   });
+}
+
+/**
  * Opens the job page in a tab of this browser, the form filled in there by the extension, for me to
  * send; my unsaved changes are saved first.
  */

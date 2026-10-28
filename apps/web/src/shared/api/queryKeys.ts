@@ -27,4 +27,7 @@ export const queryKeys = {
    stats: {
       period: (period: string) => ["stats", period] as const,
    },
+   extension: {
+      installed: ["extension", "installed"] as const,
+   },
 };

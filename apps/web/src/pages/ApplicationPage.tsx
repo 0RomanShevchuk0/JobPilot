@@ -6,6 +6,7 @@ import {
    FieldAnswer,
    savedValue,
    useApplication,
+   useExtensionInstalled,
    useFillApplication,
    useSaveAnswers,
    useStartApplication,
@@ -36,6 +37,9 @@ function Application({ app }: { app: ApplicationView }) {
    const [drafts, setDrafts] = useState<Record<string, string>>({});
    const save = useSaveAnswers(app.id);
    const fill = useFillApplication(app.id);
+   // false: no extension here to open it in (a phone, another browser); undefined while asking
+   const extensionInstalled = useExtensionInstalled().data;
+   const sendsHere = app.status === "ready_for_review" && extensionInstalled !== false;
    const prepareAgain = useStartApplication();
    // the CV field attaches the base CV as it is when filling: the link opens that one
    const documents = useDocuments();
@@ -105,7 +109,7 @@ function Application({ app }: { app: ApplicationView }) {
             {/* what I changed goes into the form too: it is saved first. While the form is open it
                 brings its tab forward, or opens it again when the tab is lost (the browser or the
                 extension restarted) */}
-            {app.status === "ready_for_review" && (
+            {sendsHere && (
                <Button
                   variant="primary"
                   onClick={() => fill.mutate(changes, { onSuccess: clearDrafts })}
@@ -125,6 +129,12 @@ function Application({ app }: { app: ApplicationView }) {
                </Button>
             )}
          </div>
+         {app.status === "ready_for_review" && !sendsHere && (
+            <p className="mt-3 text-sm text-gray-600">
+               To send it, open this page in Chrome with the JobPilot extension, on a computer. Or
+               apply on {app.sourceName} yourself and mark it applied on the vacancy's page.
+            </p>
+         )}
          {error && <p className="mt-3 text-sm text-red-600">{error.message}</p>}
       </>
    );

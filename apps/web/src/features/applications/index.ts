@@ -1,6 +1,7 @@
 export {
    useApplication,
    useApplications,
+   useExtensionInstalled,
    useFillApplication,
    useMarkSentByHand,
    useSaveAnswers,
