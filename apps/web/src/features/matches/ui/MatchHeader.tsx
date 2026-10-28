@@ -39,7 +39,13 @@ export function MatchHeader({ match, title, children }: Props) {
             className="relative z-10 col-start-1 row-start-1 sm:row-span-2 sm:mr-2"
             title="How well the vacancy fits your profile and CV, as the AI scored it"
          >
-            <Badge tone={verdictStyles[verdict]} size="md">
+            {/* wide: one width for all (the longest, "Worth a try · 50/100"), so the titles of the
+                cards in the list start in a line */}
+            <Badge
+               tone={verdictStyles[verdict]}
+               size="md"
+               className="sm:inline-block sm:min-w-40 sm:text-center"
+            >
                {verdictLabels[verdict]}
                {/* out of 100, not %: read as a score, not as a chance of being hired */}
                {match.score !== null && ` · ${match.score}/100`}

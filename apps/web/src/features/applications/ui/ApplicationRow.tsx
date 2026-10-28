@@ -14,11 +14,13 @@ export function ApplicationRow({ app }: { app: ApplicationListItem }) {
       <li className="relative hover:bg-gray-50">
          {/* the whole row, under the title's link: a link can't hold another one */}
          <Link to={`/applications/${app.id}`} aria-label={title} className="absolute inset-0" />
-         <div className="flex items-center gap-4 px-4 py-3">
+         {/* on a phone the status and the date are a row above the title: beside them it'd be cut
+             to its first word */}
+         <div className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1 px-4 py-3 sm:flex">
             <Badge tone={applicationStatusStyles[app.status]} className="w-24 text-center">
                {applicationStatusLabels[app.status]}
             </Badge>
-            <span className="min-w-0 flex-1">
+            <span className="col-span-2 row-start-2 min-w-0 flex-1">
                <span className="block truncate font-medium">
                   {/* gone vacancies have no page */}
                   {app.vacancyId ? (
@@ -40,7 +42,7 @@ export function ApplicationRow({ app }: { app: ApplicationListItem }) {
                   <span className="block truncate text-sm text-gray-500">{app.failureReason}</span>
                )}
             </span>
-            <span className="shrink-0 text-sm text-gray-500">
+            <span className="col-start-2 row-start-1 shrink-0 justify-self-end text-sm text-gray-500">
                {new Date(app.submittedAt ?? app.updatedAt).toLocaleDateString()}
             </span>
          </div>
