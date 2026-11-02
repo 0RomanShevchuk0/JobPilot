@@ -12,7 +12,8 @@ export const queryKeys = {
    },
    applications: {
       all: ["applications"] as const,
-      list: (tab: string) => ["applications", "list", tab] as const,
+      list: (filter: { tab: string; q: string; source: string | null; origin: string | null }) =>
+         ["applications", "list", filter] as const,
       details: (id: string) => ["applications", "details", id] as const,
    },
    documents: {

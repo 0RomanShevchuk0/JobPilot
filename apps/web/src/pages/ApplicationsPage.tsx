@@ -1,6 +1,16 @@
-import { applicationListTabs, type ApplicationListTab } from "@jobpilot/contracts";
+import {
+   applicationListTabs,
+   applicationOrigins,
+   type ApplicationListTab,
+} from "@jobpilot/contracts";
+import { sourceCatalog } from "@jobpilot/sources/catalog";
 import { useSearchParams } from "react-router";
-import { ApplicationRow, useApplications } from "../features/applications";
+import {
+   ApplicationFilters,
+   ApplicationRow,
+   useApplications,
+   type ApplicationListFilter,
+} from "../features/applications";
 import { Button, LoadMoreTrigger, PageLoader } from "../shared/ui";
 
 const tabLabels: Record<ApplicationListTab, string> = {
@@ -16,19 +26,36 @@ const emptyTabTexts: Record<ApplicationListTab, string> = {
 /**
  * My applications, one per job site I apply through: the ones JobPilot is on or waiting for me with,
  * the latest activity first, and every one sent, by JobPilot or marked by hand, the latest first.
- * The tab is in the address (?tab=sent): back from an application, the list is as I left it.
+ * The tab, the search and the filters are in the address (?tab=sent&q=acme&source=dou&origin=manual):
+ * back from an application, the list is as I left it.
  */
 export function ApplicationsPage() {
    const [params, setParams] = useSearchParams();
    const tab = applicationListTabs.find((t) => t === params.get("tab")) ?? "in-progress";
-   // in place of the address, not a new entry: back leaves the page, it doesn't walk through tabs
-   const setTab = (t: ApplicationListTab) => {
-      const next = new URLSearchParams();
-      if (t !== "in-progress") next.set("tab", t);
-      setParams(next, { replace: true });
+   const filter: ApplicationListFilter = {
+      tab,
+      q: params.get("q") ?? "",
+      source: sourceCatalog.find((s) => s.id === params.get("source"))?.id ?? null,
+      // in progress, every one is JobPilot's
+      origin:
+         tab === "sent"
+            ? (applicationOrigins.find((o) => o === params.get("origin")) ?? null)
+            : null,
    };
-   const applications = useApplications(tab);
+   // in place of the address, not a new entry: back leaves the page, it doesn't walk through tabs
+   const setFilter = (next: ApplicationListFilter) => {
+      const query = new URLSearchParams();
+      if (next.tab !== "in-progress") query.set("tab", next.tab);
+      if (next.q) query.set("q", next.q);
+      if (next.source) query.set("source", next.source);
+      if (next.origin) query.set("origin", next.origin);
+      setParams(query, { replace: true });
+   };
+   // the search and the site stay, how it was sent is Sent's own
+   const setTab = (t: ApplicationListTab) => setFilter({ ...filter, tab: t, origin: null });
+   const applications = useApplications(filter);
    const items = applications.data?.pages.flatMap((page) => page.items);
+   const filtered = !!(filter.q || filter.source || filter.origin);
 
    return (
       <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
@@ -46,11 +73,17 @@ export function ApplicationsPage() {
             ))}
          </nav>
 
+         <ApplicationFilters filter={filter} onChange={setFilter} />
+
          {applications.isPending && <PageLoader />}
          {applications.isError && !applications.isFetchNextPageError && (
             <p className="text-red-600">{applications.error.message}</p>
          )}
-         {items?.length === 0 && <p className="text-sm text-gray-500">{emptyTabTexts[tab]}</p>}
+         {items?.length === 0 && (
+            <p className="text-sm text-gray-500">
+               {filtered ? "Nothing matches." : emptyTabTexts[tab]}
+            </p>
+         )}
          {!!items?.length && (
             <ul className="divide-y divide-gray-200 rounded border border-gray-200">
                {items.map((app) => (

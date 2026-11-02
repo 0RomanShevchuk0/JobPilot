@@ -1,10 +1,11 @@
 import type {
    ApplicationListItem,
    ApplicationListTab,
+   ApplicationOrigin,
    ApplicationStatus,
    FormField,
 } from "@jobpilot/contracts";
-import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import {
    applications,
@@ -45,6 +46,12 @@ export type ApplicationToFill = ApplicationToPrepare;
 
 export interface ApplicationListOptions {
    tab: ApplicationListTab;
+   /** text in the vacancy's title or its company's name, as typed */
+   q?: string;
+   /** only through this job site */
+   source?: string;
+   /** only the ones sent by JobPilot, or only the ones marked by hand */
+   origin?: ApplicationOrigin;
    /** the last application of the previous page: the list goes on after it; absent = from the top */
    after?: string;
    limit: number;
@@ -130,6 +137,13 @@ const vacancyOfApplicationSql = and(
    eq(vacancyMatches.vacancyId, postings.vacancyId),
 );
 
+/** The vacancy's title or its company's name holds the text, in any case; % and _ in it are literal. */
+function titleOrCompanyContainsSql(text: string) {
+   // escapes LIKE's wildcards and its escape char: 50%_off\ → 50\%\_off\\
+   const pattern = `%${text.replace(/[\\%_]/g, "\\$&")}%`;
+   return or(ilike(vacancies.title, pattern), ilike(companies.name, pattern));
+}
+
 function withIsoDates<T extends { submittedAt: Date | null; createdAt: Date; updatedAt: Date }>(
    row: T,
 ) {
@@ -176,7 +190,7 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
          return row;
       },
 
-      async listForUser(userId, { tab, after, limit }) {
+      async listForUser(userId, { tab, q, source, origin, after, limit }) {
          // a sent one always has its date
          const sortedAt = tab === "sent" ? applications.submittedAt : applications.updatedAt;
          const lastShownSortedAt =
@@ -208,6 +222,9 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
                           inArray(applications.status, inWorkStatuses),
                           isNull(vacancyMatches.status),
                        ),
+                  q ? titleOrCompanyContainsSql(q) : undefined,
+                  source ? eq(postings.sourceId, source) : undefined,
+                  origin ? eq(applications.origin, origin) : undefined,
                   after ? belowLastShown : undefined,
                ),
             )
