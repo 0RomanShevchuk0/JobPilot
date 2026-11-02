@@ -9,10 +9,9 @@ import {
 import { picksNewCategories, sameForMatching } from "@jobpilot/matching";
 import { type ReactNode, useState } from "react";
 import { type Control, Controller, type UseFormRegisterReturn, useForm } from "react-hook-form";
-import { Button, ReevaluatesMark } from "../../../shared/ui";
+import { Button, inputClasses, ReevaluatesMark, textareaClasses } from "../../../shared/ui";
 import { useProfileFromCv, useSaveProfile } from "../api/queries";
 import { fillFromCv, fromProfile, type ProfileDraft, profileFormSchema } from "../lib/draft";
-import { inputClasses, textareaClasses } from "./inputs";
 import { JobSites } from "./JobSites";
 import { LanguagesList, LinksList, LocationsList } from "./ListFields";
 import { TagsInput } from "./TagsInput";

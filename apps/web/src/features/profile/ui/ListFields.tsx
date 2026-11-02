@@ -1,9 +1,8 @@
 import { languageLevels, type Profile } from "@jobpilot/contracts";
 import type { ReactNode } from "react";
 import { type FieldError, type UseFormReturn, useFieldArray } from "react-hook-form";
-import { Button } from "../../../shared/ui";
+import { Button, inputClasses } from "../../../shared/ui";
 import type { ProfileDraft } from "../lib/draft";
-import { inputClasses } from "./inputs";
 
 type ProfileFormApi = UseFormReturn<ProfileDraft, unknown, Profile>;
 

@@ -1,4 +1,9 @@
-import type { ApplicationListPage, ApplicationListTab, ApplicationView } from "@jobpilot/contracts";
+import type {
+   ApplicationListPage,
+   ApplicationListTab,
+   ApplicationOrigin,
+   ApplicationView,
+} from "@jobpilot/contracts";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiDelete, apiGet, apiPatch, apiPost } from "../../../shared/api/client";
 import { queryKeys } from "../../../shared/api/queryKeys";
@@ -7,6 +12,17 @@ import { fillInExtension, isExtensionInstalled } from "../../../shared/extension
 // how often to check on the worker: answering takes seconds, sending is up to the user
 const PREPARING_POLL_MS = 3000;
 const FILLING_POLL_MS = 5000;
+
+/** Which applications a list shows: its tab, narrowed by a search and filters. */
+export interface ApplicationListFilter {
+   tab: ApplicationListTab;
+   /** text in the vacancy's title or its company's name; "" = every one */
+   q: string;
+   /** the job site's id; null = every site */
+   source: string | null;
+   /** null = sent either way */
+   origin: ApplicationOrigin | null;
+}
 
 /** An answer I changed, by the form field's name. */
 export interface AnswerChange {
@@ -18,16 +34,23 @@ export interface AnswerChange {
  * My applications in one of the lists, a page at a time: in progress the latest activity first, sent
  * the latest sent first. A refetch reloads every page loaded, from the first.
  */
-export function useApplications(tab: ApplicationListTab) {
+export function useApplications(filter: ApplicationListFilter) {
    return useInfiniteQuery({
-      queryKey: queryKeys.applications.list(tab),
+      queryKey: queryKeys.applications.list(filter),
       queryFn: ({ pageParam }) => {
-         const query = new URLSearchParams({ tab });
+         const query = new URLSearchParams({ tab: filter.tab });
+         if (filter.q) query.set("q", filter.q);
+         if (filter.source) query.set("source", filter.source);
+         if (filter.origin) query.set("origin", filter.origin);
          if (pageParam) query.set("after", pageParam);
          return apiGet<ApplicationListPage>(`/applications?${query}`);
       },
       initialPageParam: null as string | null,
       getNextPageParam: (page) => page.nextCursor, // null: no next page
+      // the list stays while a new search loads: no loader blinking in its place as I type. Not
+      // across tabs: the other tab's rows would show, with its buttons
+      placeholderData: (previous, previousQuery) =>
+         previousQuery?.queryKey[2].tab === filter.tab ? previous : undefined,
    });
 }
 

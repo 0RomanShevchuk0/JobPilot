@@ -1,4 +1,9 @@
-import { applicationListTabs, fillReportSchema, type FillReport } from "@jobpilot/contracts";
+import {
+   applicationListTabs,
+   applicationOrigins,
+   fillReportSchema,
+   type FillReport,
+} from "@jobpilot/contracts";
 import {
    Body,
    Controller,
@@ -19,6 +24,17 @@ import { ApplicationsService } from "./applications.service.js";
 const listQuerySchema = z.object({
    /** which list: in progress (the default) or sent */
    tab: z.enum(applicationListTabs).default("in-progress"),
+   /** words in the vacancy's title or its company's name; absent or blank = every one */
+   q: z
+      .string()
+      .trim()
+      .max(100)
+      .optional()
+      .transform((q) => q || undefined),
+   /** only through this job site, e.g. "djinni" */
+   source: z.string().min(1).optional(),
+   /** only sent by JobPilot, or only marked by hand */
+   origin: z.enum(applicationOrigins).optional(),
    /** the nextCursor of the previous page; absent = the first page */
    after: z.uuid().optional(),
 });
