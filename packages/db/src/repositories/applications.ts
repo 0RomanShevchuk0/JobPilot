@@ -6,7 +6,14 @@ import type {
 } from "@jobpilot/contracts";
 import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
-import { applications, postings, sources, vacancies, vacancyMatches } from "../schema.js";
+import {
+   applications,
+   companies,
+   postings,
+   sources,
+   vacancies,
+   vacancyMatches,
+} from "../schema.js";
 import { externalApplyUrl } from "./matches.js";
 
 /** An application with its answers, as stored. */
@@ -93,6 +100,7 @@ const listColumns = {
    id: applications.id,
    vacancyId: postings.vacancyId,
    title: vacancies.title,
+   company: companies.name,
    postingId: applications.postingId,
    postingUrl: postings.url,
    sourceName: sources.name,
@@ -182,6 +190,7 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
             .from(applications)
             .innerJoin(postings, eq(postings.id, applications.postingId))
             .leftJoin(vacancies, eq(vacancies.id, postings.vacancyId))
+            .leftJoin(companies, eq(companies.id, vacancies.companyId))
             .innerJoin(sources, eq(sources.id, postings.sourceId))
             .leftJoin(vacancyMatches, vacancyOfApplicationSql)
             .where(
@@ -208,6 +217,7 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
             .from(applications)
             .innerJoin(postings, eq(postings.id, applications.postingId))
             .leftJoin(vacancies, eq(vacancies.id, postings.vacancyId))
+            .leftJoin(companies, eq(companies.id, vacancies.companyId))
             .innerJoin(sources, eq(sources.id, postings.sourceId))
             .leftJoin(vacancyMatches, vacancyOfApplicationSql)
             .where(and(eq(applications.userId, userId), eq(applications.id, applicationId)));
