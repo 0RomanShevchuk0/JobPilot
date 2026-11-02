@@ -114,6 +114,18 @@ export class ApplicationsController {
       }
    }
 
+   /** Removes one in progress, its answers with it: the posting is to apply through again. */
+   @Delete(":id")
+   @HttpCode(204)
+   async deleteInProgress(
+      @CurrentUserId() userId: string,
+      @Param("id", new ZodValidationPipe(z.uuid())) id: string,
+   ) {
+      if (!(await this.applications.deleteInProgress(userId, id))) {
+         throw new NotFoundException("No application in progress with this id");
+      }
+   }
+
    /**
     * My applications in one of the lists, a page at a time: in progress the latest activity first,
     * sent the latest sent first.

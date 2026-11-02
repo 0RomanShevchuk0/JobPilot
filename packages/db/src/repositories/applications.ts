@@ -87,6 +87,11 @@ export interface ApplicationsRepository {
     * again, with its answers; one with no form is gone. False when there is no such one of mine.
     */
    unmarkSentByHand(userId: string, applicationId: string): Promise<boolean>;
+   /**
+    * Removes an application of mine still in progress, its answers with it: the posting is to apply
+    * through again. False when there is no such one (sent or the job site refused it).
+    */
+   deleteInProgress(userId: string, applicationId: string): Promise<boolean>;
    /** Filling went wrong: the answers stay ready for review, the reason is shown with them. */
    setFillProblem(applicationId: string, reason: string): Promise<void>;
    /** Forgets the last filling's problem: a new one is starting. */
@@ -310,6 +315,20 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
          const deleted = await db
             .delete(applications)
             .where(mine)
+            .returning({ id: applications.id });
+         return deleted.length > 0;
+      },
+
+      async deleteInProgress(userId, applicationId) {
+         const deleted = await db
+            .delete(applications)
+            .where(
+               and(
+                  eq(applications.id, applicationId),
+                  eq(applications.userId, userId),
+                  inArray(applications.status, inWorkStatuses),
+               ),
+            )
             .returning({ id: applications.id });
          return deleted.length > 0;
       },

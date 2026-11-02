@@ -186,6 +186,18 @@ export class ApplicationsService {
       return this.db.applications.unmarkSentByHand(userId, applicationId);
    }
 
+   /**
+    * Removes one still in progress: I changed my mind about it. Not while its form is open in the
+    * browser: sending it there would be lost. A preparation under way finds it gone and writes nothing.
+    * False when there is no such one.
+    */
+   async deleteInProgress(userId: string, applicationId: string): Promise<boolean> {
+      if (await this.isFilling(applicationId)) {
+         throw new ConflictException("The form is open in your browser: close its tab first");
+      }
+      return this.db.applications.deleteInProgress(userId, applicationId);
+   }
+
    /** A page of one of the lists; the next one starts after its last application. */
    async list(
       userId: string,
