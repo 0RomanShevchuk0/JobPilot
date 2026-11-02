@@ -54,7 +54,7 @@ export function ApplicationsPage() {
          {!!items?.length && (
             <ul className="divide-y divide-gray-200 rounded border border-gray-200">
                {items.map((app) => (
-                  <ApplicationRow key={app.id} app={app} />
+                  <ApplicationRow key={app.id} app={app} removable={tab === "in-progress"} />
                ))}
             </ul>
          )}

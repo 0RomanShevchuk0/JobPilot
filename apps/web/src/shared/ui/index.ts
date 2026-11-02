@@ -13,5 +13,6 @@ export { PageLoader } from "./PageLoader";
 export { ReevaluatesMark } from "./ReevaluatesMark";
 export { SendIcon } from "./SendIcon";
 export { Spinner } from "./Spinner";
+export { TrashIcon } from "./TrashIcon";
 export { UndoIcon } from "./UndoIcon";
 export { UserIcon } from "./UserIcon";

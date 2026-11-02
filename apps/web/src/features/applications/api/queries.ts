@@ -141,3 +141,12 @@ export function useUnmarkSentByHand() {
       onSuccess: refresh,
    });
 }
+
+/** Removes an application in progress, its answers with it: the posting is to apply through again. */
+export function useDeleteApplication() {
+   const refresh = useRefreshApplications();
+   return useMutation({
+      mutationFn: (applicationId: string) => apiDelete(`/applications/${applicationId}`),
+      onSuccess: refresh,
+   });
+}
