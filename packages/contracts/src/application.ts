@@ -131,6 +131,8 @@ export interface ApplicationListItem {
    vacancyId: string | null;
    /** the vacancy's title; null when the vacancy is gone */
    title: string | null;
+   /** the employer; null when it's hidden or the vacancy is gone */
+   company: string | null;
    /** the job page the application goes through */
    postingId: string;
    postingUrl: string;
