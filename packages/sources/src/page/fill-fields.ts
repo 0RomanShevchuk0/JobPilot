@@ -15,7 +15,7 @@ const STEP_PAUSE_MS = 200;
 /** Puts the values into the form one by one, with a pause between them for the user to follow. */
 export async function fillFields(form: HTMLFormElement, values: PageFillValue[]): Promise<void> {
    for (const value of values) {
-      fillField(form, value);
+      await fillField(form, value);
       await new Promise((resolve) => setTimeout(resolve, STEP_PAUSE_MS));
    }
 }
@@ -25,7 +25,10 @@ export async function fillFields(form: HTMLFormElement, values: PageFillValue[])
  * a file attached. Each change is announced with the events a person's typing or clicking fires, so the
  * site's own scripts (counters, validation) see it.
  */
-function fillField(form: HTMLFormElement, { name, kind, value }: PageFillValue): void {
+async function fillField(
+   form: HTMLFormElement,
+   { name, kind, value }: PageFillValue,
+): Promise<void> {
    const inputs = [...form.querySelectorAll<HTMLInputElement>(`[name="${CSS.escape(name)}"]`)];
    const first = inputs[0];
    if (!first) throw new Error(`No field "${name}" in the form`);
@@ -33,14 +36,14 @@ function fillField(form: HTMLFormElement, { name, kind, value }: PageFillValue):
       case "text":
       case "textarea":
       case "number":
-         first.scrollIntoView({ block: "center" });
+         await scrollToField(first);
          setValue(first, String(value));
          return;
       case "select": {
          const select = first as unknown as HTMLSelectElement;
          const option = [...select.options].find((o) => o.text.trim() === value);
          if (!option) throw new Error(`No option "${String(value)}" in the form for "${name}"`);
-         select.scrollIntoView({ block: "center" });
+         await scrollToField(select);
          select.value = option.value;
          select.dispatchEvent(new Event("change", { bubbles: true }));
          return;
@@ -49,7 +52,7 @@ function fillField(form: HTMLFormElement, { name, kind, value }: PageFillValue):
          // the options of a group share the name: the one to check is the one labelled with the value
          const option = inputs.find((input) => cleanText(input.labels?.[0]?.textContent) === value);
          if (!option) throw new Error(`No option "${String(value)}" in the form for "${name}"`);
-         option.scrollIntoView({ block: "center" });
+         await scrollToField(option);
          option.click();
          return;
       }
@@ -64,6 +67,26 @@ function fillField(form: HTMLFormElement, { name, kind, value }: PageFillValue):
       default:
          throw new Error(`Filling a ${kind} field is not supported yet ("${name}")`);
    }
+}
+
+// room kept between a field being filled and the screen's edges: a site's fixed header covers the top
+const FIELD_EDGE_ROOM_PX = 80;
+// the longest a smooth scroll is waited for, in case its scrollend never comes
+const SCROLL_WAIT_MAX_MS = 1000;
+
+/**
+ * Scrolls smoothly to the field about to be filled and waits for the scroll to end, for the user to see
+ * it filled; a field already in view stays where it is, so a form that fits the screen doesn't move.
+ */
+async function scrollToField(field: Element): Promise<void> {
+   const { top, bottom } = field.getBoundingClientRect();
+   if (top >= FIELD_EDGE_ROOM_PX && bottom <= window.innerHeight - FIELD_EDGE_ROOM_PX) return;
+   const scrolled = new Promise((resolve) => {
+      window.addEventListener("scrollend", resolve, { once: true });
+      setTimeout(resolve, SCROLL_WAIT_MAX_MS);
+   });
+   field.scrollIntoView({ block: "center", behavior: "smooth" });
+   await scrolled;
 }
 
 /**
@@ -81,18 +104,19 @@ function setValue(input: HTMLInputElement | HTMLTextAreaElement, value: string):
 // runs of whitespace → one space: "\n   Так  " → "Так"
 const cleanText = (text: string | null | undefined) => (text ?? "").replace(/\s+/g, " ").trim();
 
-// room for a site's header fixed over the top of the page
-const HEADER_ROOM_PX = 80;
+// the form's send button: a submit one, or a <button> without a type, which submits too (DOU's "Відправити")
+const SEND_BUTTON_SELECTOR = 'button[type="submit"], button:not([type]), input[type="submit"]';
+
+// room under the send button down to the screen's bottom edge, as a share of the screen's height
+const SEND_BUTTON_BOTTOM_ROOM = 0.15;
 
 /**
- * Brings the filled-in form into view for the user to check it: the whole form centered when it fits
- * the screen, its start at the top when it doesn't, to read it down to the send button.
+ * Scrolls the page so the form's send button sits near the bottom of the screen, the fields above it in
+ * view: the user checks them there, then sends. Without a send button found, the form's end goes there.
  */
-export function scrollFormIntoView(form: HTMLFormElement): void {
-   const { top, height } = form.getBoundingClientRect();
-   if (height <= window.innerHeight - HEADER_ROOM_PX) {
-      form.scrollIntoView({ block: "center" });
-      return;
-   }
-   window.scrollBy({ top: top - HEADER_ROOM_PX });
+export function scrollSendButtonIntoView(form: HTMLFormElement): void {
+   const target = form.querySelector(SEND_BUTTON_SELECTOR) ?? form;
+   const { bottom } = target.getBoundingClientRect();
+   const targetBottom = window.innerHeight * (1 - SEND_BUTTON_BOTTOM_ROOM);
+   window.scrollBy({ top: bottom - targetBottom, behavior: "smooth" });
 }

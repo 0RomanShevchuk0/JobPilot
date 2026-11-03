@@ -1,4 +1,4 @@
-import { fillFields, scrollFormIntoView, type PageFillValue } from "@jobpilot/sources/page";
+import { fillFields, scrollSendButtonIntoView, type PageFillValue } from "@jobpilot/sources/page";
 import {
    findSitePage,
    type FileToAttach,
@@ -18,7 +18,7 @@ export async function fillOnPage({ source, answers }: FillOnPage): Promise<FillO
    try {
       const form = await page.openForm(document);
       await fillFields(form, answers.map(toPageValue));
-      scrollFormIntoView(form);
+      scrollSendButtonIntoView(form);
       return { ok: true };
    } catch (err) {
       return { ok: false, reason: (err as Error).message };
