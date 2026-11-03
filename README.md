@@ -3,6 +3,8 @@
 Finds jobs on Djinni and DOU, scores them against your profile and CV with an LLM, and fills in
 applications for you to review and send.
 
+https://github.com/user-attachments/assets/6e093809-4ae4-4bf2-bcfc-c88e31fa8fac
+
 ## Usage
 
 1. Sign in with Google, fill in your profile and upload a CV in the web app.
