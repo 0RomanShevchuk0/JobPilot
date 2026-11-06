@@ -10,6 +10,7 @@ import type { Drizzle } from "../drizzle.js";
 import {
    applications,
    companies,
+   jobAttempts,
    postings,
    sources,
    vacancies,
@@ -43,6 +44,12 @@ export interface ApplicationToPrepare {
 
 /** What the worker needs to fill an application into the form. */
 export type ApplicationToFill = ApplicationToPrepare;
+
+/**
+ * How taking back an application marked sent by hand ended. attempt_changed: it is the only one of an
+ * attempt whose stage, status or notes I changed, so nothing was taken back.
+ */
+export type UnmarkSentByHandOutcome = "undone" | "not_found" | "attempt_changed";
 
 export interface ApplicationListOptions {
    tab: ApplicationListTab;
@@ -82,18 +89,20 @@ export interface ApplicationsRepository {
    /** The job site takes no application to this job through JobPilot; reason says why. */
    setCannotApply(applicationId: string, reason: string): Promise<void>;
    getToFill(applicationId: string): Promise<ApplicationToFill | undefined>;
-   /** The user sent the form. */
+   /** The user sent the form: it joins the tracker, unless it is sent already. */
    setSubmitted(applicationId: string): Promise<void>;
    /**
     * I applied through the posting myself (on the employer's site it sends to, or the job site) and
-    * mark it sent: a new application, or the one JobPilot was preparing. Returns its id.
+    * mark it sent: a new application, or the one JobPilot was preparing. It joins the tracker, unless
+    * it is sent already. Returns its id.
     */
    markSentByHand(userId: string, postingId: string): Promise<{ id: string }>;
    /**
     * Takes back an application I marked sent by hand: one JobPilot had answered is ready for review
-    * again, with its answers; one with no form is gone. False when there is no such one of mine.
+    * again, with its answers; one with no form is gone. It leaves its attempt, and the attempt goes with
+    * its last application.
     */
-   unmarkSentByHand(userId: string, applicationId: string): Promise<boolean>;
+   unmarkSentByHand(userId: string, applicationId: string): Promise<UnmarkSentByHandOutcome>;
    /**
     * Removes an application of mine still in progress, its answers with it: the posting is to apply
     * through again. False when there is no such one (sent or the job site refused it).
@@ -125,6 +134,8 @@ const listColumns = {
    updatedAt: applications.updatedAt,
 };
 
+type Transaction = Parameters<Parameters<Drizzle["transaction"]>[0]>[0];
+
 // the worker finishing a preparation leaves alone one I marked sent by hand meanwhile
 const notSentSql = ne(applications.status, "submitted");
 
@@ -153,6 +164,35 @@ function withIsoDates<T extends { submittedAt: Date | null; createdAt: Date; upd
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
    };
+}
+
+/** Puts a sent application into the attempt at its vacancy, starting one with the first application. */
+async function addToAttempt(tx: Transaction, applicationId: string): Promise<void> {
+   const [application] = await tx
+      .select({
+         userId: applications.userId,
+         vacancyId: vacancies.id,
+         companyId: vacancies.companyId,
+      })
+      .from(applications)
+      .innerJoin(postings, eq(postings.id, applications.postingId))
+      .innerJoin(vacancies, eq(vacancies.id, postings.vacancyId))
+      .where(eq(applications.id, applicationId));
+   // applying goes through a vacancy's match, so its posting always has one
+   if (!application) throw new Error(`application ${applicationId} has no vacancy`);
+   const [attempt] = await tx
+      .insert(jobAttempts)
+      .values(application)
+      .onConflictDoUpdate({
+         target: [jobAttempts.userId, jobAttempts.vacancyId],
+         // changes nothing: returns the row and locks it against taking back the last application
+         set: { vacancyId: sql`excluded.vacancy_id` },
+      })
+      .returning({ id: jobAttempts.id });
+   await tx
+      .update(applications)
+      .set({ attemptId: attempt!.id })
+      .where(eq(applications.id, applicationId));
 }
 
 export function createApplicationsRepository(db: Drizzle): ApplicationsRepository {
@@ -274,66 +314,105 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
       },
 
       async setSubmitted(applicationId) {
-         await db
-            .update(applications)
-            .set({ status: "submitted", submittedAt: sql`now()`, failureReason: null })
-            .where(eq(applications.id, applicationId));
+         await db.transaction(async (tx) => {
+            const sent = await tx
+               .update(applications)
+               .set({ status: "submitted", submittedAt: sql`now()`, failureReason: null })
+               .where(and(eq(applications.id, applicationId), notSentSql))
+               .returning({ id: applications.id });
+            if (sent.length > 0) await addToAttempt(tx, applicationId);
+         });
       },
 
       async markSentByHand(userId, postingId) {
-         const [row] = await db
-            .insert(applications)
-            .values({
-               userId,
-               postingId,
-               status: "submitted",
-               origin: "manual",
-               submittedAt: sql`now()`,
-            })
-            // one sent already stays as it was; one JobPilot was on is sent by hand now
-            .onConflictDoUpdate({
-               target: [applications.userId, applications.postingId],
-               set: {
+         return db.transaction(async (tx) => {
+            const [row] = await tx
+               .insert(applications)
+               .values({
+                  userId,
+                  postingId,
                   status: "submitted",
                   origin: "manual",
                   submittedAt: sql`now()`,
-                  failureReason: null,
-                  updatedAt: sql`now()`,
-               },
-               setWhere: ne(applications.status, "submitted"),
-            })
-            .returning({ id: applications.id });
-         if (row) return row;
-         const [sent] = await db
-            .select({ id: applications.id })
-            .from(applications)
-            .where(and(eq(applications.userId, userId), eq(applications.postingId, postingId)));
-         return sent!;
+               })
+               // one sent already stays as it was; one JobPilot was on is sent by hand now
+               .onConflictDoUpdate({
+                  target: [applications.userId, applications.postingId],
+                  set: {
+                     status: "submitted",
+                     origin: "manual",
+                     submittedAt: sql`now()`,
+                     failureReason: null,
+                     updatedAt: sql`now()`,
+                  },
+                  setWhere: ne(applications.status, "submitted"),
+               })
+               .returning({ id: applications.id });
+            if (row) {
+               await addToAttempt(tx, row.id);
+               return row;
+            }
+            const [sent] = await tx
+               .select({ id: applications.id })
+               .from(applications)
+               .where(and(eq(applications.userId, userId), eq(applications.postingId, postingId)));
+            return sent!;
+         });
       },
 
       async unmarkSentByHand(userId, applicationId) {
-         const mine = and(
-            eq(applications.id, applicationId),
-            eq(applications.userId, userId),
-            eq(applications.origin, "manual"),
-         );
-         // answered by JobPilot before I marked it: its answers stay, for review again
-         const restored = await db
-            .update(applications)
-            .set({
-               status: "ready_for_review",
-               origin: "jobpilot",
-               submittedAt: null,
-               updatedAt: sql`now()`,
-            })
-            .where(and(mine, sql`jsonb_array_length(${applications.formFields}) > 0`))
-            .returning({ id: applications.id });
-         if (restored.length > 0) return true;
-         const deleted = await db
-            .delete(applications)
-            .where(mine)
-            .returning({ id: applications.id });
-         return deleted.length > 0;
+         return db.transaction(async (tx) => {
+            const mine = and(
+               eq(applications.id, applicationId),
+               eq(applications.userId, userId),
+               eq(applications.origin, "manual"),
+            );
+            const [application] = await tx
+               .select({ attemptId: applications.attemptId })
+               .from(applications)
+               .where(mine)
+               .for("update");
+            if (!application) return "not_found";
+
+            const { attemptId } = application;
+            let attemptEnds = false;
+            if (attemptId) {
+               const [attempt] = await tx
+                  .select({
+                     progressChangedAt: jobAttempts.progressChangedAt,
+                     notes: jobAttempts.notes,
+                  })
+                  .from(jobAttempts)
+                  .where(eq(jobAttempts.id, attemptId))
+                  .for("update");
+               const [otherApplication] = await tx
+                  .select({ id: applications.id })
+                  .from(applications)
+                  .where(
+                     and(eq(applications.attemptId, attemptId), ne(applications.id, applicationId)),
+                  )
+                  .limit(1);
+               const changed = attempt!.progressChangedAt !== null || attempt!.notes !== "";
+               if (!otherApplication && changed) return "attempt_changed";
+               attemptEnds = !otherApplication;
+            }
+
+            // answered by JobPilot before I marked it: its answers stay, for review again
+            const restored = await tx
+               .update(applications)
+               .set({
+                  status: "ready_for_review",
+                  origin: "jobpilot",
+                  attemptId: null,
+                  submittedAt: null,
+                  updatedAt: sql`now()`,
+               })
+               .where(and(mine, sql`jsonb_array_length(${applications.formFields}) > 0`))
+               .returning({ id: applications.id });
+            if (restored.length === 0) await tx.delete(applications).where(mine);
+            if (attemptEnds) await tx.delete(jobAttempts).where(eq(jobAttempts.id, attemptId!));
+            return "undone";
+         });
       },
 
       async deleteInProgress(userId, applicationId) {
