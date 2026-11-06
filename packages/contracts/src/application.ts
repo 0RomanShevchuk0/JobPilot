@@ -21,20 +21,6 @@ export type ApplicationStatus = (typeof applicationStatuses)[number];
 export const applicationOrigins = ["jobpilot", "manual"] as const;
 export type ApplicationOrigin = (typeof applicationOrigins)[number];
 
-/** How far an attempt got, in the order they usually go; the order isn't enforced. */
-export const jobAttemptStages = [
-   "applied",
-   "hr",
-   "tech_interview",
-   "test_task",
-   "final",
-   "offer",
-] as const;
-export type JobAttemptStage = (typeof jobAttemptStages)[number];
-
-export const jobAttemptStatuses = ["active", "hold", "rejected", "withdrew", "accepted"] as const;
-export type JobAttemptStatus = (typeof jobAttemptStatuses)[number];
-
 export const documentTypes = ["cv", "cover_letter"] as const;
 export type DocumentType = (typeof documentTypes)[number];
 

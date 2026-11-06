@@ -34,6 +34,10 @@ export class Database implements OnApplicationShutdown {
       return this.client.applications;
    }
 
+   get jobAttempts() {
+      return this.client.jobAttempts;
+   }
+
    get stats() {
       return this.client.stats;
    }

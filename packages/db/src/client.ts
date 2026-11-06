@@ -5,6 +5,10 @@ import {
    createApplicationsRepository,
    type ApplicationsRepository,
 } from "./repositories/applications.js";
+import {
+   createJobAttemptsRepository,
+   type JobAttemptsRepository,
+} from "./repositories/job-attempts.js";
 import { createDocumentsRepository, type DocumentsRepository } from "./repositories/documents.js";
 import { createMatchesRepository, type MatchesRepository } from "./repositories/matches.js";
 import { createPostingsRepository, type PostingsRepository } from "./repositories/postings.js";
@@ -33,6 +37,7 @@ export interface DatabaseClient {
    readonly matches: MatchesRepository;
    readonly documents: DocumentsRepository;
    readonly applications: ApplicationsRepository;
+   readonly jobAttempts: JobAttemptsRepository;
    readonly stats: StatsRepository;
    /** Where sign-in (Better Auth) keeps its users, sessions and accounts: these tables, through Drizzle. */
    readonly authDatabase: ReturnType<typeof drizzleAdapter>;
@@ -57,6 +62,7 @@ export function createDatabase(connectionString: string): DatabaseClient {
       matches: createMatchesRepository(db),
       documents: createDocumentsRepository(db),
       applications: createApplicationsRepository(db),
+      jobAttempts: createJobAttemptsRepository(db),
       stats: createStatsRepository(db),
       authDatabase: drizzleAdapter(db, {
          provider: "pg",
