@@ -5,6 +5,8 @@ import type {
    EmploymentType,
    FormField,
    HardFilters,
+   JobAttemptStage,
+   JobAttemptStatus,
    Language,
    Location,
    MatchAnalysis,
@@ -281,6 +283,27 @@ export const vacancyMatches = pgTable(
    (t) => [primaryKey({ columns: [t.userId, t.vacancyId] })],
 );
 
+/** One attempt to get a job, a row of the tracker: every application to a vacancy shares it. */
+export const jobAttempts = pgTable(
+   "job_attempts",
+   {
+      id: id(),
+      userId: uuid("user_id")
+         .notNull()
+         .references(() => users.id, { onDelete: "cascade" }), // deleting a user deletes their data
+      vacancyId: uuid("vacancy_id").references(() => vacancies.id), // null = added by hand
+      companyId: uuid("company_id").references(() => companies.id), // null = not known
+      stage: text("stage").$type<JobAttemptStage>().notNull().default("applied"),
+      status: text("status").$type<JobAttemptStatus>().notNull().default("active"),
+      notes: text("notes").notNull().default(""),
+      appliedAt: tstz("applied_at").notNull().defaultNow(),
+      // the last change of the stage or status, null = never changed
+      progressChangedAt: tstz("progress_changed_at"),
+   },
+   // one attempt per vacancy; nulls differ, so rows added by hand are not limited
+   (t) => [unique("job_attempts_user_vacancy_uq").on(t.userId, t.vacancyId)],
+);
+
 export const applications = pgTable(
    "applications",
    {
@@ -291,6 +314,8 @@ export const applications = pgTable(
       postingId: uuid("posting_id")
          .notNull()
          .references(() => postings.id),
+      // null until sent, or once its tracker row is deleted
+      attemptId: uuid("attempt_id").references(() => jobAttempts.id, { onDelete: "set null" }),
       status: text("status").$type<ApplicationStatus>().notNull().default("draft"),
       origin: text("origin").$type<ApplicationOrigin>().notNull().default("jobpilot"),
       failureReason: text("failure_reason"),

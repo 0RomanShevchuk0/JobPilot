@@ -8,6 +8,7 @@ export type {
    ApplicationToFill,
    ApplicationToPrepare,
    StoredApplication,
+   UnmarkSentByHandOutcome,
 } from "./repositories/applications.js";
 export type { DocumentsRepository, StoredDocumentFile } from "./repositories/documents.js";
 export type {
