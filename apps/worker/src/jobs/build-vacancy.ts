@@ -1,13 +1,19 @@
 import type { BuildVacancyJobData, MatchVacancyJobData } from "@jobpilot/contracts";
 import type { DatabaseClient } from "@jobpilot/db";
-import { mergeVacancy, normalizeCompanyName, vacancyFingerprint } from "@jobpilot/vacancies";
+import {
+   findSameVacancy,
+   mergeVacancy,
+   normalizeCompanyName,
+   vacancyFingerprint,
+} from "@jobpilot/vacancies";
 import type { Job, Queue } from "bullmq";
 import { log } from "../log.js";
 import { matchVacancyJobOptions } from "../queues.js";
 
 /**
- * Posting → its vacancy (found by fingerprint or created) → vacancy fields rebuilt from all its postings
- * → an open vacancy is queued for evaluation for every user; match-vacancy skips what is up to date.
+ * Posting → its vacancy (found among the open ones with its fingerprint, or created) → vacancy fields
+ * rebuilt from all its postings → an open vacancy is queued for evaluation for every user;
+ * match-vacancy skips what is up to date.
  */
 export async function handleBuildVacancy(
    job: Job<BuildVacancyJobData>,
@@ -21,6 +27,7 @@ export async function handleBuildVacancy(
    const vacancyId = await database.vacancies.linkPosting({
       postingId,
       fingerprint: vacancyFingerprint({ postingId, parsed }),
+      pickVacancy: (openPostings) => findSameVacancy(parsed, openPostings),
       company: parsed.company && {
          name: parsed.company.name,
          normalizedName: normalizeCompanyName(parsed.company.name),

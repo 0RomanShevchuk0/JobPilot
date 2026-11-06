@@ -16,11 +16,18 @@ import { profilePickedPostingCategorySql } from "./subscriptions.js";
 export interface LinkPostingInput {
    postingId: string;
    fingerprint: string;
+   /** picks its vacancy among the postings of the open ones with the fingerprint; undefined for a new one */
+   pickVacancy: (openPostings: PostingOfOpenVacancy[]) => string | undefined;
    /** undefined when the employer is hidden */
    company?: { name: string; normalizedName: string; website?: string };
    // a new vacancy starts from its first posting; mergeVacancy fills in the rest
    title: string;
    description: string;
+}
+
+export interface PostingOfOpenVacancy {
+   vacancyId: string;
+   parsed: NormalizedPosting;
 }
 
 export interface VacancyPosting {
@@ -52,8 +59,9 @@ export interface VacancyForMatching {
 
 export interface VacanciesRepository {
    /**
-    * Attaches a posting to its vacancy: the one it is already linked to, else an open vacancy with
-    * the same fingerprint, else a new one. Returns the vacancy id.
+    * Attaches a posting to its vacancy: the one it is already linked to, else the one pickVacancy
+    * finds among the open ones with the fingerprint (there can be several), else a new one. Returns
+    * the vacancy id.
     */
    linkPosting(input: LinkPostingInput): Promise<string>;
    /** All parsed postings of a vacancy, to merge its fields from. */
@@ -67,7 +75,7 @@ export interface VacanciesRepository {
 
 export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
    return {
-      async linkPosting({ postingId, fingerprint, company, title, description }) {
+      async linkPosting({ postingId, fingerprint, pickVacancy, company, title, description }) {
          return db.transaction(async (tx) => {
             let companyId: string | null = null;
             if (company) {
@@ -90,14 +98,21 @@ export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
             if (!posting) throw new Error(`posting ${postingId} not found`);
             if (posting.vacancyId) return posting.vacancyId;
 
-            const [open] = await tx
-               .select({ id: vacancies.id })
-               .from(vacancies)
-               .where(and(eq(vacancies.fingerprint, fingerprint), isNull(vacancies.closedAt)))
-               .limit(1);
-
+            // after the company's row is locked above: of two postings of one company at once, the
+            // second waits for the first and sees the vacancy it made
+            const openPostings = await tx
+               .select({ vacancyId: vacancies.id, parsed: postings.parsed })
+               .from(postings)
+               .innerJoin(vacancies, eq(vacancies.id, postings.vacancyId))
+               .where(
+                  and(
+                     eq(vacancies.fingerprint, fingerprint),
+                     isNull(vacancies.closedAt),
+                     isNotNull(postings.parsed),
+                  ),
+               );
             const vacancyId =
-               open?.id ??
+               pickVacancy(openPostings.map((p) => ({ ...p, parsed: p.parsed! }))) ??
                (
                   await tx
                      .insert(vacancies)

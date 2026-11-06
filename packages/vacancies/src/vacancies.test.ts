@@ -1,6 +1,7 @@
 import type { NormalizedPosting } from "@jobpilot/contracts";
 import { describe, expect, it } from "vitest";
 import {
+   findSameVacancy,
    mergeVacancy,
    normalizeCompanyName,
    normalizeSkills,
@@ -112,6 +113,101 @@ describe("vacancyFingerprint", () => {
       const a = posting("1", { company: undefined }, "2026-09-01");
       const b = posting("2", { company: undefined }, "2026-09-01");
       expect(vacancyFingerprint(a)).not.toBe(vacancyFingerprint(b));
+   });
+});
+
+describe("findSameVacancy", () => {
+   const text = "senior engineer builds payment services with node typescript postgres kafka redis";
+   const europe = { kind: "candidate", raw: "Europe" } as const;
+   const ukraine = { kind: "candidate", raw: "UA", country: "UA" } as const;
+   const wordList = (prefix: string, count: number) =>
+      Array.from({ length: count }, (_, i) => `${prefix}${i}`).join(" ");
+   const open = (vacancyId: string, fields: Partial<NormalizedPosting>) => ({
+      vacancyId,
+      parsed: posting(vacancyId, { source: "djinni", description: text, ...fields }, "2026-09-01")
+         .parsed,
+   });
+   const incoming = (fields: Partial<NormalizedPosting>) =>
+      posting("new", { source: "djinni", description: text, ...fields }, "2026-09-02").parsed;
+
+   it("joins a vacancy with the same text", () => {
+      expect(findSameVacancy(incoming({}), [open("a", {})])).toBe("a");
+   });
+
+   it("joins the same text for different places: one job posted twice", () => {
+      const found = findSameVacancy(incoming({ locations: [ukraine] }), [
+         open("a", { locations: [europe] }),
+      ]);
+      expect(found).toBe("a");
+   });
+
+   it("starts a new vacancy when there is no open one", () => {
+      expect(findSameVacancy(incoming({}), [])).toBeUndefined();
+   });
+
+   it("joins at exactly 60% of shared words", () => {
+      const found = findSameVacancy(incoming({ description: "alpha bravo charlie delta" }), [
+         open("a", { description: "alpha bravo charlie echo" }),
+      ]);
+      expect(found).toBe("a");
+   });
+
+   it("keeps apart just under 60% of shared words", () => {
+      // 10 shared of 17 in all: 58.8%
+      const description = `${wordList("shared", 10)} ${wordList("mine", 3)}`;
+      const other = `${wordList("shared", 10)} ${wordList("theirs", 4)}`;
+      expect(
+         findSameVacancy(incoming({ description }), [open("a", { description: other })]),
+      ).toBeUndefined();
+   });
+
+   it("compares words in any case and any alphabet, ignoring those under 3 letters", () => {
+      const ukrainian = "старший інженер будує платіжні сервіси";
+      expect(
+         findSameVacancy(incoming({ description: ukrainian }), [
+            open("a", { description: ukrainian.toUpperCase() }),
+         ]),
+      ).toBe("a");
+      expect(
+         findSameVacancy(incoming({ description: `${text} a b c d e f g h i j k l` }), [
+            open("a", { description: `${text} m n o p q r s t u v w x` }),
+         ]),
+      ).toBe("a");
+      expect(
+         findSameVacancy(incoming({ description: ukrainian }), [
+            open("a", { description: "аналітик пише маркетингові звіти щомісяця" }),
+         ]),
+      ).toBeUndefined();
+   });
+
+   it("keeps apart empty texts: nothing says they are one position", () => {
+      expect(
+         findSameVacancy(incoming({ description: "" }), [open("a", { description: "" })]),
+      ).toBeUndefined();
+   });
+
+   it("keeps apart texts too different to be one position, across sites too", () => {
+      const other = "analyst writes marketing reports about campaigns budgets audiences";
+      expect(findSameVacancy(incoming({}), [open("a", { description: other })])).toBeUndefined();
+      expect(
+         findSameVacancy(incoming({}), [open("a", { source: "dou", description: other })]),
+      ).toBeUndefined();
+   });
+
+   it("keeps a translation apart: nothing tells it from a different job", () => {
+      const translated = "старший інженер будує платіжні сервіси на node typescript";
+      expect(
+         findSameVacancy(incoming({}), [open("a", { source: "dou", description: translated })]),
+      ).toBeUndefined();
+   });
+
+   it("picks the vacancy with the most similar posting", () => {
+      const rewritten = `${text} docker terraform`;
+      const found = findSameVacancy(incoming({}), [
+         open("rewritten", { description: rewritten }),
+         open("same", { description: text }),
+      ]);
+      expect(found).toBe("same");
    });
 });
 
