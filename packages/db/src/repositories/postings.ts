@@ -7,14 +7,23 @@ import { postingRaw, postings } from "../schema.js";
 export interface PostingToFetch {
    postingId: string;
    ref: PostingRef;
+   /** we had marked it gone and the source lists it again */
+   cameBack?: boolean;
 }
 
 export interface PostingsRepository {
    /**
-    * Records what discover() found on a source. Returns the postings worth fetching:
-    * never fetched before, or bumped on the source after the last fetch.
+    * Records what discover() found on a source. Returns the postings worth fetching: never fetched
+    * before, bumped on the source after the last fetch, or back after we had marked them gone: their
+    * vacancy has to learn of it.
     */
    markSeen(sourceId: string, refs: PostingRef[]): Promise<PostingToFetch[]>;
+   /**
+    * Postings of a source we take for active, with neither a sighting in its listings nor a look at
+    * their page since this moment, the longest unseen first. Only their page tells whether they are
+    * closed: the listings show the latest jobs, an open one drops out of them too.
+    */
+   listLongUnseen(sourceId: string, since: Date, limit: number): Promise<PostingToFetch[]>;
    /** Stores the latest raw page and its parsed form. */
    saveFetched(
       postingId: string,
@@ -48,6 +57,21 @@ export function createPostingsRepository(db: Drizzle): PostingsRepository {
          const unique = [...byExternalId.values()];
          if (unique.length === 0) return [];
 
+         const goneBefore = await db
+            .select({ externalId: postings.externalId })
+            .from(postings)
+            .where(
+               and(
+                  eq(postings.sourceId, sourceId),
+                  isNotNull(postings.goneAt),
+                  inArray(
+                     postings.externalId,
+                     unique.map((r) => r.externalId),
+                  ),
+               ),
+            );
+         const goneExternalIds = new Set(goneBefore.map((p) => p.externalId));
+
          const rows = await db
             .insert(postings)
             .values(unique.map((r) => ({ sourceId, externalId: r.externalId, url: r.url })))
@@ -73,9 +97,35 @@ export function createPostingsRepository(db: Drizzle): PostingsRepository {
          return rows.flatMap(({ id, externalId }) => {
             const ref = refByExternalId.get(externalId)!;
             const last = lastFetchedAt.get(id);
-            const needsFetch = !last || (ref.updatedAt !== undefined && ref.updatedAt > last);
-            return needsFetch ? [{ postingId: id, ref }] : [];
+            const cameBack = goneExternalIds.has(externalId);
+            const bumped = last && ref.updatedAt !== undefined && ref.updatedAt > last;
+            return !last || bumped || cameBack ? [{ postingId: id, ref, cameBack }] : [];
          });
+      },
+
+      async listLongUnseen(sourceId, since, limit) {
+         const rows = await db
+            .select({
+               postingId: postings.id,
+               externalId: postings.externalId,
+               url: postings.url,
+            })
+            .from(postings)
+            .innerJoin(postingRaw, eq(postingRaw.postingId, postings.id))
+            .where(
+               and(
+                  eq(postings.sourceId, sourceId),
+                  isNull(postings.goneAt),
+                  lt(postings.lastSeenAt, since),
+                  lt(postingRaw.fetchedAt, since),
+               ),
+            )
+            .orderBy(postings.lastSeenAt)
+            .limit(limit);
+         return rows.map(({ postingId, externalId, url }) => ({
+            postingId,
+            ref: { externalId, url },
+         }));
       },
 
       async saveFetched(postingId, raw, parsed, parserVersion) {

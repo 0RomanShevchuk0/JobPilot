@@ -1,7 +1,8 @@
 // Every queue of the system and the data its jobs carry, in pipeline order:
 //
 //   discover → fetch-<source> → build-vacancy → match-vacancy → check-can-apply → score-vacancy
-//                                                  ↑
+//                 ↑                                ↑
+//   detect-closed-postings                         │
 //   match-user (profile changed) ──────────────────┘
 //
 //   prepare-application (the user asked to apply): read the form on the job site, answer it
@@ -13,6 +14,8 @@
 export const QueueNames = {
    /** Finds new and bumped postings on a source. One queue for all sources: a few requests per run. */
    discover: "discover",
+   /** Sends postings long gone from a source's listings to fetch, to learn whether they are closed. */
+   detectClosedPostings: "detect-closed-postings",
    /** Builds or updates the vacancy of a stored posting. */
    buildVacancy: "build-vacancy",
    /** Evaluates one vacancy for one user with the prefilter; what passes goes to check-can-apply. */
@@ -36,6 +39,10 @@ export const fetchQueueName = (source: string) => `fetch-${source}`;
 
 /** What to look for there is read when the job runs: the users' categories on the source. */
 export interface DiscoverJobData {
+   source: string;
+}
+
+export interface DetectClosedPostingsJobData {
    source: string;
 }
 
