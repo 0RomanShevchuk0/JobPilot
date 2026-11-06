@@ -12,6 +12,11 @@ export type {
 } from "./repositories/applications.js";
 export type { DocumentsRepository, StoredDocumentFile } from "./repositories/documents.js";
 export type {
+   JobAttemptListOptions,
+   JobAttemptsRepository,
+   StoredJobAttempt,
+} from "./repositories/job-attempts.js";
+export type {
    Assessment,
    MatchListOptions,
    MatchesRepository,

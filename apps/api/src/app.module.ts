@@ -5,6 +5,7 @@ import { AuthModule } from "./auth/auth.module.js";
 import { DocumentsModule } from "./documents/documents.module.js";
 import { HealthController } from "./health/health.controller.js";
 import { InfraModule } from "./infra/infra.module.js";
+import { JobAttemptsModule } from "./job-attempts/job-attempts.module.js";
 import { ProfileModule } from "./profile/profile.module.js";
 import { SourcesModule } from "./sources/sources.module.js";
 import { StatsModule } from "./stats/stats.module.js";
@@ -19,6 +20,7 @@ import { StatsModule } from "./stats/stats.module.js";
       SourcesModule,
       DocumentsModule,
       ApplicationsModule,
+      JobAttemptsModule,
       StatsModule,
    ],
    controllers: [HealthController],
