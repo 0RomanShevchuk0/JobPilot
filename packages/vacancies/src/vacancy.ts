@@ -10,8 +10,18 @@ export interface PostingForMerge {
    goneAt: Date | null;
 }
 
+/** A posting of an open vacancy, for a new posting with the same fingerprint to compare itself with. */
+export interface OpenVacancyPosting {
+   vacancyId: string;
+   parsed: NormalizedPosting;
+}
+
+// The share of two texts' words they must have in common to be one position. Lower is not safe: at
+// 50% a company's boilerplate alone joins 3% of its plainly different jobs, at 60% about 0.5%.
+const MIN_SHARED_WORDS = 0.6;
+
 /**
- * Key that identifies the same vacancy across postings: employer + title.
+ * Key of the postings that may be one vacancy: employer + title; findSameVacancy tells whether they are.
  * Location is left out on purpose: sources write it too differently ("Kyiv", "Київ", "Remote, Ukraine").
  * With a hidden employer there is nothing reliable to match on, so the posting gets a key of its own.
  */
@@ -19,6 +29,39 @@ export function vacancyFingerprint(posting: Pick<PostingForMerge, "postingId" | 
    const company = posting.parsed.company;
    if (!company) return `posting:${posting.postingId}`;
    return `${normalizeCompanyName(company.name)}|${normalizeTitle(posting.parsed.title)}`;
+}
+
+/**
+ * The vacancy a posting belongs to among the postings of open vacancies with its fingerprint: the
+ * one with the most similar posting, or undefined for a vacancy of its own. An extra card is better
+ * than two jobs in one vacancy, so when in doubt the postings stay apart: a translation does too.
+ * Places don't count: the same text for UA and for Europe is one job posted twice.
+ */
+export function findSameVacancy(
+   posting: NormalizedPosting,
+   openPostings: OpenVacancyPosting[],
+): string | undefined {
+   const words = wordsOf(posting.description);
+   const samePosition = openPostings
+      .map((open) => ({
+         vacancyId: open.vacancyId,
+         shared: shareOfCommonWords(words, wordsOf(open.parsed.description)),
+      }))
+      .filter((open) => open.shared >= MIN_SHARED_WORDS);
+   const [mostSimilar] = samePosition.sort((a, b) => b.shared - a.shared);
+   return mostSimilar?.vacancyId;
+}
+
+/** A text's distinct words of 3+ letters or digits, any alphabet: "Node.js & C#, UI" → node. */
+function wordsOf(text: string): Set<string> {
+   return new Set(text.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu)); // runs of 3+ letters or digits
+}
+
+/** The share of all the words of two texts that both have: 1 for the same words, 0 for none. */
+function shareOfCommonWords(a: Set<string>, b: Set<string>): number {
+   const shared = [...a].filter((word) => b.has(word)).length;
+   const all = a.size + b.size - shared;
+   return all === 0 ? 0 : shared / all;
 }
 
 /**
