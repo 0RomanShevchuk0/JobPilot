@@ -16,6 +16,9 @@ export const queryKeys = {
          ["applications", "list", filter] as const,
       details: (id: string) => ["applications", "details", id] as const,
    },
+   jobAttempts: {
+      all: ["job-attempts"] as const,
+   },
    documents: {
       all: ["documents"] as const,
    },

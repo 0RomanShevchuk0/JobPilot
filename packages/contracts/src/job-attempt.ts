@@ -1,8 +1,12 @@
 import { z } from "zod";
 
-/** How far an attempt got, in the order they usually go; the order isn't enforced. */
+/**
+ * How far an attempt got, in the order they usually go; the order isn't enforced. replied: the company
+ * answered, with no interview (yet): that and everything after it counts as having got an answer.
+ */
 export const jobAttemptStages = [
    "applied",
+   "replied",
    "hr",
    "tech_interview",
    "test_task",
@@ -11,7 +15,7 @@ export const jobAttemptStages = [
 ] as const;
 export type JobAttemptStage = (typeof jobAttemptStages)[number];
 
-export const jobAttemptStatuses = ["active", "hold", "rejected", "withdrew", "accepted"] as const;
+export const jobAttemptStatuses = ["active", "hold", "rejected", "declined", "accepted"] as const;
 export type JobAttemptStatus = (typeof jobAttemptStatuses)[number];
 
 /**

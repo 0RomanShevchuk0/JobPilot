@@ -70,14 +70,15 @@ export function useApplication(id: string) {
 }
 
 /**
- * Refreshes what an application's change shows in: the application, the list, and the vacancy's card
- * and page in Matches.
+ * Refreshes what an application's change shows in: the application, the list, the tracker, and the
+ * vacancy's card and page in Matches.
  */
 function useRefreshApplications() {
    const queryClient = useQueryClient();
    return () =>
       Promise.all([
          queryClient.invalidateQueries({ queryKey: queryKeys.applications.all }),
+         queryClient.invalidateQueries({ queryKey: queryKeys.jobAttempts.all }),
          queryClient.invalidateQueries({ queryKey: queryKeys.matches.all }),
       ]);
 }

@@ -19,7 +19,7 @@ describe("jobAttemptSilence", () => {
       expect(jobAttemptSilence(attempt, now)).toBe("no_answer");
    });
 
-   it.each(["hr", "tech_interview", "test_task", "final"] as const)(
+   it.each(["replied", "hr", "tech_interview", "test_task", "final"] as const)(
       "calls an active attempt at the %s stage ghosted",
       (stage) => {
          expect(jobAttemptSilence({ ...attempt, stage }, now)).toBe("ghosted");
