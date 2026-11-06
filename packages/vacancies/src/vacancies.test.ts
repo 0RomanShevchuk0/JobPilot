@@ -122,13 +122,16 @@ describe("findSameVacancy", () => {
    const ukraine = { kind: "candidate", raw: "UA", country: "UA" } as const;
    const wordList = (prefix: string, count: number) =>
       Array.from({ length: count }, (_, i) => `${prefix}${i}`).join(" ");
-   const open = (vacancyId: string, fields: Partial<NormalizedPosting>) => ({
+   const open = (
+      vacancyId: string,
+      fields: Partial<NormalizedPosting>,
+      firstSeenAt = "2026-09-01",
+   ) => ({
       vacancyId,
-      parsed: posting(vacancyId, { source: "djinni", description: text, ...fields }, "2026-09-01")
-         .parsed,
+      ...posting(vacancyId, { source: "djinni", description: text, ...fields }, firstSeenAt),
    });
-   const incoming = (fields: Partial<NormalizedPosting>) =>
-      posting("new", { source: "djinni", description: text, ...fields }, "2026-09-02").parsed;
+   const incoming = (fields: Partial<NormalizedPosting>, firstSeenAt = "2026-09-02") =>
+      posting("new", { source: "djinni", description: text, ...fields }, firstSeenAt);
 
    it("joins a vacancy with the same text", () => {
       expect(findSameVacancy(incoming({}), [open("a", {})])).toBe("a");
@@ -143,6 +146,56 @@ describe("findSameVacancy", () => {
 
    it("starts a new vacancy when there is no open one", () => {
       expect(findSameVacancy(incoming({}), [])).toBeUndefined();
+   });
+
+   const postedOn = (publishedAt: string) => [{ publishedAt }, publishedAt] as const;
+
+   it("joins a posting 30 days after the vacancy's first one", () => {
+      const found = findSameVacancy(incoming(...postedOn("2026-10-01T10:00:00Z")), [
+         open("a", ...postedOn("2026-09-01T10:00:00Z")),
+      ]);
+      expect(found).toBe("a");
+   });
+
+   it("keeps apart a posting over 30 days after, the first one still up: a new attempt", () => {
+      const found = findSameVacancy(incoming(...postedOn("2026-10-01T10:00:01Z")), [
+         open("a", ...postedOn("2026-09-01T10:00:00Z")),
+      ]);
+      expect(found).toBeUndefined();
+   });
+
+   it("counts from the vacancy's first posting: reposts don't go on forever", () => {
+      const found = findSameVacancy(incoming(...postedOn("2026-10-10T10:00:00Z")), [
+         open("a", ...postedOn("2026-09-25T10:00:00Z")),
+         open("a", ...postedOn("2026-09-01T10:00:00Z")),
+      ]);
+      expect(found).toBeUndefined();
+   });
+
+   it("joins a recent vacancy when an older one with the fingerprint is too far back", () => {
+      const found = findSameVacancy(incoming(...postedOn("2026-10-10T10:00:00Z")), [
+         open("old", ...postedOn("2026-09-01T10:00:00Z")),
+         open("recent", ...postedOn("2026-10-05T10:00:00Z")),
+      ]);
+      expect(found).toBe("recent");
+   });
+
+   it("doesn't let a bump move the vacancy's start forward", () => {
+      const bumped = open("a", { publishedAt: "2026-10-05T10:00:00Z" }, "2026-09-01T10:00:00Z");
+      const found = findSameVacancy(incoming(...postedOn("2026-10-10T10:00:00Z")), [bumped]);
+      expect(found).toBeUndefined();
+   });
+
+   it("takes the site's date when it is before we first saw the posting", () => {
+      const seenLate = open("a", { publishedAt: "2026-09-01T10:00:00Z" }, "2026-09-20T10:00:00Z");
+      const found = findSameVacancy(incoming(...postedOn("2026-10-10T10:00:00Z")), [seenLate]);
+      expect(found).toBeUndefined();
+   });
+
+   it("takes when a posting was first seen when its site gives no date", () => {
+      const old = open("a", {}, "2026-09-01");
+      expect(findSameVacancy(incoming({}, "2026-10-01"), [old])).toBe("a");
+      expect(findSameVacancy(incoming({}, "2026-10-02"), [old])).toBeUndefined();
    });
 
    it("joins at exactly 60% of shared words", () => {

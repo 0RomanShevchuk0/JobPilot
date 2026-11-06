@@ -27,7 +27,8 @@ export async function handleBuildVacancy(
    const vacancyId = await database.vacancies.linkPosting({
       postingId,
       fingerprint: vacancyFingerprint({ postingId, parsed }),
-      pickVacancy: (openPostings) => findSameVacancy(parsed, openPostings),
+      pickVacancy: (openPostings, firstSeenAt) =>
+         findSameVacancy({ parsed, firstSeenAt }, openPostings),
       company: parsed.company && {
          name: parsed.company.name,
          normalizedName: normalizeCompanyName(parsed.company.name),

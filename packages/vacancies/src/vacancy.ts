@@ -11,14 +11,16 @@ export interface PostingForMerge {
 }
 
 /** A posting of an open vacancy, for a new posting with the same fingerprint to compare itself with. */
-export interface OpenVacancyPosting {
+export interface OpenVacancyPosting extends Pick<PostingForMerge, "parsed" | "firstSeenAt"> {
    vacancyId: string;
-   parsed: NormalizedPosting;
 }
 
 // The share of two texts' words they must have in common to be one position. Lower is not safe: at
 // 50% a company's boilerplate alone joins 3% of its plainly different jobs, at 60% about 0.5%.
 const MIN_SHARED_WORDS = 0.6;
+// A posting this long after the vacancy's first one is the job posted anew, a new attempt to apply,
+// even with the first one still up. Counted from the first: reposts every few weeks would go on forever.
+const MAX_VACANCY_SPAN_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * Key of the postings that may be one vacancy: employer + title; findSameVacancy tells whether they are.
@@ -38,11 +40,17 @@ export function vacancyFingerprint(posting: Pick<PostingForMerge, "postingId" | 
  * Places don't count: the same text for UA and for Europe is one job posted twice.
  */
 export function findSameVacancy(
-   posting: NormalizedPosting,
+   posting: Pick<PostingForMerge, "parsed" | "firstSeenAt">,
    openPostings: OpenVacancyPosting[],
 ): string | undefined {
-   const words = wordsOf(posting.description);
+   const postedTime = postedAt(posting);
+   const firstPostedTimes = firstPostedTimeByVacancy(openPostings);
+   const words = wordsOf(posting.parsed.description);
    const samePosition = openPostings
+      .filter((open) => {
+         const firstPostedTime = firstPostedTimes.get(open.vacancyId)!;
+         return Math.abs(postedTime - firstPostedTime) <= MAX_VACANCY_SPAN_MS;
+      })
       .map((open) => ({
          vacancyId: open.vacancyId,
          shared: shareOfCommonWords(words, wordsOf(open.parsed.description)),
@@ -50,6 +58,29 @@ export function findSameVacancy(
       .filter((open) => open.shared >= MIN_SHARED_WORDS);
    const [mostSimilar] = samePosition.sort((a, b) => b.shared - a.shared);
    return mostSimilar?.vacancyId;
+}
+
+/**
+ * When a posting came out, as a time: the earlier of its site's date and our first sighting. A bump
+ * rewrites the site's date forward: the sighting keeps the start from moving with it.
+ */
+function postedAt({
+   parsed,
+   firstSeenAt,
+}: Pick<PostingForMerge, "parsed" | "firstSeenAt">): number {
+   const seenTime = firstSeenAt.getTime();
+   if (!parsed.publishedAt) return seenTime;
+   return Math.min(new Date(parsed.publishedAt).getTime(), seenTime);
+}
+
+function firstPostedTimeByVacancy(openPostings: OpenVacancyPosting[]): Map<string, number> {
+   const firstPostedTimes = new Map<string, number>();
+   for (const open of openPostings) {
+      const postedTime = postedAt(open);
+      const earliest = firstPostedTimes.get(open.vacancyId) ?? postedTime;
+      firstPostedTimes.set(open.vacancyId, Math.min(earliest, postedTime));
+   }
+   return firstPostedTimes;
 }
 
 /** A text's distinct words of 3+ letters or digits, any alphabet: "Node.js & C#, UI" → node. */
