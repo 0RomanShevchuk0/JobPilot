@@ -6,12 +6,14 @@ import { DevLoginPage } from "../pages/DevLoginPage";
 import { MatchesPage } from "../pages/MatchesPage";
 import { ProfilePage } from "../pages/ProfilePage";
 import { StatsPage } from "../pages/StatsPage";
+import { TrackerPage } from "../pages/TrackerPage";
 import { VacancyPage } from "../pages/VacancyPage";
-import { BriefcaseIcon, ChartIcon, SendIcon, UserIcon } from "../shared/ui";
+import { BriefcaseIcon, ChartIcon, ListChecksIcon, SendIcon, UserIcon } from "../shared/ui";
 
 const pages = [
    { path: "/matches", title: "Matches", Icon: BriefcaseIcon },
    { path: "/applications", title: "Applications", Icon: SendIcon },
+   { path: "/tracker", title: "Tracker", Icon: ListChecksIcon },
    { path: "/profile", title: "Profile", Icon: UserIcon },
    { path: "/stats", title: "Stats", Icon: ChartIcon },
 ];
@@ -45,6 +47,7 @@ function SignedInApp() {
                <Route path="/matches/:vacancyId" element={<VacancyPage />} />
                <Route path="/applications" element={<ApplicationsPage />} />
                <Route path="/applications/:id" element={<ApplicationPage />} />
+               <Route path="/tracker" element={<TrackerPage />} />
                <Route path="/profile" element={<ProfilePage />} />
                <Route path="/stats" element={<StatsPage />} />
                <Route path="*" element={<Navigate to="/matches" replace />} />

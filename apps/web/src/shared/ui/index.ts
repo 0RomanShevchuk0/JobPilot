@@ -8,6 +8,7 @@ export { CheckIcon } from "./CheckIcon";
 export { EllipsisIcon } from "./EllipsisIcon";
 export { EyeOffIcon } from "./EyeOffIcon";
 export { inputClasses, textareaClasses } from "./inputs";
+export { ListChecksIcon } from "./ListChecksIcon";
 export { LoadMoreTrigger } from "./LoadMoreTrigger";
 export { Menu, menuItemStyles } from "./Menu";
 export { PageLoader } from "./PageLoader";
