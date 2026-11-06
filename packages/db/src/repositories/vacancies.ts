@@ -16,8 +16,11 @@ import { profilePickedPostingCategorySql } from "./subscriptions.js";
 export interface LinkPostingInput {
    postingId: string;
    fingerprint: string;
-   /** picks its vacancy among the postings of the open ones with the fingerprint; undefined for a new one */
-   pickVacancy: (openPostings: PostingOfOpenVacancy[]) => string | undefined;
+   /**
+    * Picks its vacancy among the postings of the open ones with the fingerprint, knowing when the
+    * posting was first seen; undefined for a new one.
+    */
+   pickVacancy: (openPostings: PostingOfOpenVacancy[], firstSeenAt: Date) => string | undefined;
    /** undefined when the employer is hidden */
    company?: { name: string; normalizedName: string; website?: string };
    // a new vacancy starts from its first posting; mergeVacancy fills in the rest
@@ -28,6 +31,7 @@ export interface LinkPostingInput {
 export interface PostingOfOpenVacancy {
    vacancyId: string;
    parsed: NormalizedPosting;
+   firstSeenAt: Date;
 }
 
 export interface VacancyPosting {
@@ -92,7 +96,7 @@ export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
             }
 
             const [posting] = await tx
-               .select({ vacancyId: postings.vacancyId })
+               .select({ vacancyId: postings.vacancyId, firstSeenAt: postings.firstSeenAt })
                .from(postings)
                .where(eq(postings.id, postingId));
             if (!posting) throw new Error(`posting ${postingId} not found`);
@@ -101,7 +105,11 @@ export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
             // after the company's row is locked above: of two postings of one company at once, the
             // second waits for the first and sees the vacancy it made
             const openPostings = await tx
-               .select({ vacancyId: vacancies.id, parsed: postings.parsed })
+               .select({
+                  vacancyId: vacancies.id,
+                  parsed: postings.parsed,
+                  firstSeenAt: postings.firstSeenAt,
+               })
                .from(postings)
                .innerJoin(vacancies, eq(vacancies.id, postings.vacancyId))
                .where(
@@ -111,8 +119,9 @@ export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
                      isNotNull(postings.parsed),
                   ),
                );
+            const parsedPostings = openPostings.map((p) => ({ ...p, parsed: p.parsed! }));
             const vacancyId =
-               pickVacancy(openPostings.map((p) => ({ ...p, parsed: p.parsed! }))) ??
+               pickVacancy(parsedPostings, posting.firstSeenAt) ??
                (
                   await tx
                      .insert(vacancies)
