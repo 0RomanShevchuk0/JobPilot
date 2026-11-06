@@ -1,6 +1,7 @@
 import {
    QueueNames,
    type DiscoverJobData,
+   type DetectClosedPostingsJobData,
    fetchQueueName,
    type FetchJobData,
    type BuildVacancyJobData,
@@ -16,6 +17,10 @@ import { Queue, UnrecoverableError, Worker } from "bullmq";
 import { Redis } from "ioredis";
 import { config } from "./config.js";
 import { handleDiscover } from "./jobs/discover.js";
+import {
+   handleDetectClosedPostings,
+   DETECT_CLOSED_EVERY_MS,
+} from "./jobs/detect-closed-postings.js";
 import { handleFetch } from "./jobs/fetch.js";
 import { handleBuildVacancy } from "./jobs/build-vacancy.js";
 import { handleMatchUser } from "./jobs/match-user.js";
@@ -25,7 +30,7 @@ import { handleScoreVacancy } from "./jobs/score-vacancy.js";
 import { handlePrepareApplication } from "./jobs/prepare-application.js";
 import { createScoringLlm } from "./llm.js";
 import { log } from "./log.js";
-import { discoverJobOptions } from "./queues.js";
+import { discoverJobOptions, detectClosedPostingsJobOptions } from "./queues.js";
 import { sources } from "./sources.js";
 
 // error reporting first, so a crash during setup is caught too (no-op without SENTRY_DSN)
@@ -41,6 +46,12 @@ const database = createDatabase(config.databaseUrl);
 const scoring = createScoringLlm();
 
 const discoverQueue = new Queue<DiscoverJobData>(QueueNames.discover, { connection });
+const detectClosedPostingsQueue = new Queue<DetectClosedPostingsJobData>(
+   QueueNames.detectClosedPostings,
+   {
+      connection,
+   },
+);
 const fetchQueues = new Map(
    sources.map((s) => [
       s.adapter.source,
@@ -66,6 +77,7 @@ for (const entry of sources) {
    if (!collectsVacancies) {
       // one an earlier run left in this Redis would keep queueing discovers nobody takes
       await discoverQueue.removeJobScheduler(`discover-${source}`);
+      await detectClosedPostingsQueue.removeJobScheduler(`detect-closed-postings-${source}`);
       continue;
    }
 
@@ -77,6 +89,15 @@ for (const entry of sources) {
          name: "discover",
          data: { source },
          opts: discoverJobOptions,
+      },
+   );
+   await detectClosedPostingsQueue.upsertJobScheduler(
+      `detect-closed-postings-${source}`,
+      { every: DETECT_CLOSED_EVERY_MS },
+      {
+         name: "detect-closed-postings",
+         data: { source },
+         opts: detectClosedPostingsJobOptions,
       },
    );
 
@@ -95,6 +116,11 @@ if (collectsVacancies) {
       new Worker<DiscoverJobData>(
          QueueNames.discover,
          (job) => handleDiscover(job, database, fetchQueues),
+         { connection, concurrency: 1 },
+      ),
+      new Worker<DetectClosedPostingsJobData>(
+         QueueNames.detectClosedPostings,
+         (job) => handleDetectClosedPostings(job, database, fetchQueues),
          { connection, concurrency: 1 },
       ),
    );
@@ -202,6 +228,7 @@ async function shutdown(signal: string) {
    await Promise.all(workers.map((w) => w.close()));
    await Promise.all([
       discoverQueue.close(),
+      detectClosedPostingsQueue.close(),
       buildVacancyQueue.close(),
       matchVacancyQueue.close(),
       checkCanApplyQueue.close(),
