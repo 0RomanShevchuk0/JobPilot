@@ -13,9 +13,10 @@ import { stageLabels, stageStyles, statusLabels, statusStyles } from "../lib/lab
 /** The tracker's columns from sm up; on a phone a row stacks. Shared with the table's header. */
 export const rowGridClasses = "sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_8.5rem_7.5rem_4.5rem]";
 
-// a Badge's look, a button: the arrow says it opens, the color alone wouldn't
+// a Badge's look, a button: the arrow says it opens, the color alone wouldn't. On a phone it's a
+// finger's target: taller, with its own room around it; in the table a badge's size
 const pickerClasses =
-   "flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap hover:brightness-95";
+   "flex items-center gap-1 rounded px-2.5 py-1.5 text-sm font-medium whitespace-nowrap hover:brightness-95 sm:px-2 sm:py-0.5 sm:text-xs";
 
 // the attempts that ended without a job fade, their text only: a faded badge would be hard to read
 const fadedStatuses: JobAttemptStatus[] = ["rejected", "declined"];
@@ -63,7 +64,7 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
             className="absolute inset-0"
          />
          <div
-            className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-2 ${rowGridClasses}`}
+            className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-3 sm:py-2 ${rowGridClasses}`}
          >
             <span
                className={`truncate text-sm font-medium ${faded ? "text-gray-500" : "text-gray-900"}`}
@@ -75,9 +76,11 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
             >
                {title}
             </span>
-            {/* on a phone the pair is a line, at the right: a menu opens leftwards from its button */}
-            <div className="col-span-2 row-start-3 flex justify-end gap-1 sm:contents">
+            {/* on a phone the pair is a line of its own under the text, read after it: from the left,
+                its menus open rightwards */}
+            <div className="col-span-2 row-start-3 mt-2 flex gap-2 sm:contents">
                <Menu
+                  align="start"
                   label={`Stage: ${stageLabels[stage]}`}
                   triggerClassName={`${pickerClasses} ${stageStyles[stage]}`}
                   trigger={
@@ -100,6 +103,7 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
                   ))}
                </Menu>
                <Menu
+                  align="start"
                   label={`Status: ${statusLabels[status]}`}
                   triggerClassName={`${pickerClasses} ${statusStyles[status]}`}
                   trigger={
