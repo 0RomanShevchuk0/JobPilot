@@ -4,30 +4,17 @@ import { Button } from "../../../shared/ui";
 import { useUpdateJobAttempt } from "../api/queries";
 import {
    JobAttemptFields,
-   localDate,
+   jobAttemptFieldValues,
    readJobAttemptFields,
    type JobAttemptFieldValues,
 } from "./JobAttemptFields";
-
-/** What a row's fields start from: what it shows. */
-function fieldValuesOf(attempt: JobAttemptListItem): JobAttemptFieldValues {
-   return {
-      company: attempt.company ?? "",
-      title: attempt.title ?? "",
-      url: attempt.url ?? "",
-      appliedAt: localDate(new Date(attempt.appliedAt)),
-      stage: attempt.stage,
-      status: attempt.status,
-      notes: attempt.notes,
-   };
-}
 
 /**
  * What I changed in the fields, only that: the rest isn't sent, so Undo doesn't see it as changed. An
  * emptied company is not known any more, an emptied role is the vacancy's again.
  */
 function changesIn(attempt: JobAttemptListItem, fields: JobAttemptFieldValues): JobAttemptChanges {
-   const shown = fieldValuesOf(attempt);
+   const shown = jobAttemptFieldValues(attempt);
    const changes: JobAttemptChanges = {};
    if (fields.company !== shown.company) changes.companyName = fields.company || null;
    if (fields.title !== shown.title) changes.title = fields.title || null;
@@ -62,7 +49,7 @@ export function EditJobAttemptForm({
    return (
       <form onSubmit={submit} className="flex flex-col gap-4">
          <JobAttemptFields
-            values={fieldValuesOf(attempt)}
+            values={jobAttemptFieldValues(attempt)}
             titleRequired={addedByHand}
             withLink={addedByHand}
          />

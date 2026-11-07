@@ -4,11 +4,12 @@ import { Link } from "react-router";
 import { Button, TrashIcon } from "../../../shared/ui";
 import { useDeleteJobAttempt } from "../api/queries";
 import { EditJobAttemptForm } from "./EditJobAttemptForm";
+import { fieldGridClasses, JobAttemptFields, jobAttemptFieldValues } from "./JobAttemptFields";
 import { TrackerPanel } from "./TrackerPanel";
 
 /**
- * A tracker row's details: the job, its company, the answers of each application and the notes; Edit
- * changes any of them, and a row made by mistake can be removed. Shown for one row: another one opens
+ * A tracker row's details: its fields, laid out as the form that changes them (Edit), the answers of
+ * each application, and the way to remove a row made by mistake. Shown for one row: another one opens
  * a new panel.
  */
 export function JobAttemptPanel({
@@ -20,6 +21,7 @@ export function JobAttemptPanel({
 }) {
    const title = attempt.title ?? "Untitled job";
    const [editing, setEditing] = useState(false);
+   const addedByHand = attempt.vacancyId === null;
    const remove = useDeleteJobAttempt(onClose);
    // what I wrote goes with it: asked first
    const confirmAndRemove = () => {
@@ -53,30 +55,17 @@ export function JobAttemptPanel({
             <EditJobAttemptForm attempt={attempt} onDone={() => setEditing(false)} />
          ) : (
             <>
-               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                  <dt className="text-gray-500">Applied</dt>
-                  <dd className="text-gray-900">
-                     {new Date(attempt.appliedAt).toLocaleDateString()}
-                  </dd>
-                  {attempt.url && (
-                     <>
-                        <dt className="text-gray-500">Link</dt>
-                        <dd className="min-w-0 truncate">
-                           <a
-                              href={attempt.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-gray-900 underline hover:text-gray-600"
-                           >
-                              {new URL(attempt.url).hostname}
-                           </a>
-                        </dd>
-                     </>
-                  )}
+               <div className="flex flex-col gap-4">
+                  <JobAttemptFields
+                     values={jobAttemptFieldValues(attempt)}
+                     editing={false}
+                     titleRequired={addedByHand}
+                     withLink={addedByHand}
+                  />
                   {attempt.applications.length > 0 && (
-                     <>
-                        <dt className="text-gray-500">Answers</dt>
-                        <dd className="flex flex-wrap gap-x-3">
+                     <div className={fieldGridClasses}>
+                        <span className="text-gray-500">Answers</span>
+                        <div className="flex flex-wrap gap-x-3">
                            {attempt.applications.map((application) => (
                               <Link
                                  key={application.id}
@@ -86,24 +75,13 @@ export function JobAttemptPanel({
                                  {application.sourceName}
                               </Link>
                            ))}
-                        </dd>
-                     </>
+                        </div>
+                     </div>
                   )}
-               </dl>
-
-               {attempt.notes && (
+                  {/* where the form has Save and Cancel */}
                   <div>
-                     <h3 className="mb-1 text-sm text-gray-500">Notes</h3>
-                     <p className="text-sm break-words whitespace-pre-wrap text-gray-900">
-                        {attempt.notes}
-                     </p>
+                     <Button onClick={() => setEditing(true)}>Edit</Button>
                   </div>
-               )}
-
-               <div>
-                  <Button size="sm" onClick={() => setEditing(true)}>
-                     Edit
-                  </Button>
                </div>
 
                <div className="mt-auto">
