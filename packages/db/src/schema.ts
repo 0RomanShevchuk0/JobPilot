@@ -299,7 +299,8 @@ export const jobAttempts = pgTable(
       status: text("status").$type<JobAttemptStatus>().notNull().default("active"),
       notes: text("notes").notNull().default(""),
       appliedAt: tstz("applied_at").notNull().defaultNow(),
-      // the last change of the stage or status, null = never changed
+      // the silence counts from it: the last change of the stage or status; a row added by hand has
+      // it from the start, an old date of applying doesn't make it long silent. null = never changed
       progressChangedAt: tstz("progress_changed_at"),
    },
    // one attempt per vacancy; nulls differ, so rows added by hand are not limited
