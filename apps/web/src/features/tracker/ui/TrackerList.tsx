@@ -4,13 +4,14 @@ import { Button, LoadMoreTrigger, PageLoader } from "../../../shared/ui";
 import { useJobAttempts } from "../api/queries";
 import { JobAttemptPanel } from "./JobAttemptPanel";
 import { JobAttemptRow, rowGridClasses } from "./JobAttemptRow";
+import { NewJobAttemptPanel } from "./NewJobAttemptPanel";
 
 const columns = ["Company", "Role", "Stage", "Status", "Applied"];
 
 /**
- * Every attempt to get a job, the latest applied first, a page at a time as I scroll. The row open in
- * the panel is in the address (?attempt=…): back from its answers, it's open again. Only a row of the
- * pages loaded opens.
+ * Every attempt to get a job, the latest applied first, a page at a time as I scroll. What the panel
+ * shows is in the address: a row (?attempt=…: back from its answers, it's open again; only a row of
+ * the pages loaded opens) or the form to add one (?add).
  */
 export function TrackerList() {
    const attempts = useJobAttempts();
@@ -29,7 +30,7 @@ export function TrackerList() {
          {items?.length === 0 && (
             <p className="text-sm text-gray-500">
                Nothing yet: what you send through JobPilot, or Mark applied on a job site in
-               Matches, shows here.
+               Matches, shows here. Jobs from elsewhere go in with Add.
             </p>
          )}
          {!!items?.length && (
@@ -65,6 +66,7 @@ export function TrackerList() {
             }
          />
          {openAttempt && <JobAttemptPanel attempt={openAttempt} onClose={closePanel} />}
+         {params.has("add") && <NewJobAttemptPanel onClose={closePanel} />}
       </>
    );
 }

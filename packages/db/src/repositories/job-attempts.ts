@@ -15,9 +15,21 @@ export interface JobAttemptListOptions {
    limit: number;
 }
 
+/** A row added by hand. */
+export interface NewStoredJobAttempt {
+   title: string;
+   url?: string;
+   /** absent = not known */
+   company?: { name: string; normalizedName: string };
+   /** absent = now */
+   appliedAt?: Date;
+}
+
 export interface JobAttemptsRepository {
    /** My tracker a page at a time, the latest applied first. */
    listForUser(userId: string, options: JobAttemptListOptions): Promise<StoredJobAttempt[]>;
+   /** Adds a row by hand; its company is found by the normalized name, or made. */
+   create(userId: string, attempt: NewStoredJobAttempt): Promise<{ id: string }>;
    /**
     * Changes a row of mine. The silence is counted anew by a stage or status that really changes, and
     * by active even on a row already active: the company answered, the stage stays. Notes and the same
@@ -26,6 +38,25 @@ export interface JobAttemptsRepository {
    update(userId: string, attemptId: string, changes: JobAttemptChanges): Promise<boolean>;
    /** Removes a row of mine; its applications stay sent. False when there is no such row. */
    delete(userId: string, attemptId: string): Promise<boolean>;
+}
+
+type Transaction = Parameters<Parameters<Drizzle["transaction"]>[0]>[0];
+
+/** The company with this normalized name; the first name seen stays, a new one is made. */
+async function findOrCreateCompany(
+   tx: Transaction,
+   company: { name: string; normalizedName: string },
+): Promise<string> {
+   const [row] = await tx
+      .insert(companies)
+      .values(company)
+      .onConflictDoUpdate({
+         target: companies.normalizedName,
+         // changes nothing: only so the existing row is returned
+         set: { normalizedName: sql`excluded.normalized_name` },
+      })
+      .returning({ id: companies.id });
+   return row!.id;
 }
 
 export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository {
@@ -44,8 +75,9 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
             .select({
                id: jobAttempts.id,
                vacancyId: jobAttempts.vacancyId,
-               title: vacancies.title,
+               title: sql<string | null>`coalesce(${jobAttempts.title}, ${vacancies.title})`,
                company: companies.name,
+               url: jobAttempts.url,
                stage: jobAttempts.stage,
                status: jobAttempts.status,
                notes: jobAttempts.notes,
@@ -80,6 +112,17 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
                .filter((application) => application.attemptId === row.id)
                .map(({ id, sourceName }) => ({ id, sourceName })),
          }));
+      },
+
+      async create(userId, { title, url, company, appliedAt }) {
+         return db.transaction(async (tx) => {
+            const companyId = company ? await findOrCreateCompany(tx, company) : null;
+            const [row] = await tx
+               .insert(jobAttempts)
+               .values({ userId, companyId, title, url, appliedAt })
+               .returning({ id: jobAttempts.id });
+            return row!;
+         });
       },
 
       async update(userId, attemptId, changes) {

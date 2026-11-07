@@ -293,6 +293,8 @@ export const jobAttempts = pgTable(
          .references(() => users.id, { onDelete: "cascade" }), // deleting a user deletes their data
       vacancyId: uuid("vacancy_id").references(() => vacancies.id), // null = added by hand
       companyId: uuid("company_id").references(() => companies.id), // null = not known
+      title: text("title"), // added by hand; otherwise the vacancy's
+      url: text("url"), // added by hand
       stage: text("stage").$type<JobAttemptStage>().notNull().default("applied"),
       status: text("status").$type<JobAttemptStatus>().notNull().default("active"),
       notes: text("notes").notNull().default(""),

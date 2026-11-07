@@ -202,6 +202,9 @@ importers:
       '@jobpilot/storage':
         specifier: workspace:*
         version: link:../../packages/storage
+      '@jobpilot/vacancies':
+        specifier: workspace:*
+        version: link:../../packages/vacancies
       '@nestjs/common':
         specifier: ^12.1.0
         version: 12.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2)

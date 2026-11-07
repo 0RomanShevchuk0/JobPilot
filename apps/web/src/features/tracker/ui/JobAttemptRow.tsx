@@ -50,7 +50,7 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
    // once I say Active, the silence is over: no need to wait for the list
    const silence = picked?.status ? null : attempt.silence;
    const title = attempt.title ?? "Untitled job";
-   const company = attempt.company ?? "Company hidden";
+   const company = attempt.company ?? "Company unknown";
 
    const pickStage = (next: JobAttemptStage) => {
       if (next !== attempt.stage) update.mutate({ stage: next });

@@ -35,10 +35,12 @@ export interface JobAttemptApplication {
 export interface JobAttemptListItem {
    id: string;
    vacancyId: string | null;
-   /** the vacancy's title */
+   /** the job's title: the vacancy's, or what I wrote on a row added by hand */
    title: string | null;
    /** the employer; null when it isn't known */
    company: string | null;
+   /** the job's page, on a row added by hand */
+   url: string | null;
    stage: JobAttemptStage;
    status: JobAttemptStatus;
    notes: string;
@@ -55,6 +57,20 @@ export interface JobAttemptListPage {
    /** null on the last page */
    nextCursor: string | null;
 }
+
+/** A row added by hand in POST /job-attempts: a job JobPilot doesn't know about. */
+export const newJobAttemptSchema = z.object({
+   title: z.string().trim().min(1).max(200),
+   company: z.string().trim().min(1).max(200).optional(),
+   // web pages only: "https://x.com", not "javascript:alert(1)", which a link would run
+   url: z
+      .url({ protocol: /^https?$/ })
+      .max(2000)
+      .optional(),
+   /** "2026-11-01"; absent = now */
+   appliedAt: z.iso.date().optional(),
+});
+export type NewJobAttempt = z.infer<typeof newJobAttemptSchema>;
 
 /** What PATCH /job-attempts/:id changes: at least one of them. */
 export const jobAttemptChangesSchema = z
