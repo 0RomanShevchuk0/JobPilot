@@ -47,7 +47,8 @@ export type ApplicationToFill = ApplicationToPrepare;
 
 /**
  * How taking back an application marked sent by hand ended. attempt_changed: it is the only one of an
- * attempt whose stage, status or notes I changed, so nothing was taken back.
+ * attempt whose stage, status or notes I changed, and taking it back wasn't asked to remove that row
+ * too, so nothing was taken back.
  */
 export type UnmarkSentByHandOutcome = "undone" | "not_found" | "attempt_changed";
 
@@ -100,9 +101,13 @@ export interface ApplicationsRepository {
    /**
     * Takes back an application I marked sent by hand: one JobPilot had answered is ready for review
     * again, with its answers; one with no form is gone. It leaves its attempt, and the attempt goes with
-    * its last application.
+    * its last application; one I changed only when withChangedAttempt says so.
     */
-   unmarkSentByHand(userId: string, applicationId: string): Promise<UnmarkSentByHandOutcome>;
+   unmarkSentByHand(
+      userId: string,
+      applicationId: string,
+      withChangedAttempt: boolean,
+   ): Promise<UnmarkSentByHandOutcome>;
    /**
     * Removes an application of mine still in progress, its answers with it: the posting is to apply
     * through again. False when there is no such one (sent or the job site refused it).
@@ -360,7 +365,7 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
          });
       },
 
-      async unmarkSentByHand(userId, applicationId) {
+      async unmarkSentByHand(userId, applicationId, withChangedAttempt) {
          return db.transaction(async (tx) => {
             const mine = and(
                eq(applications.id, applicationId),
@@ -393,7 +398,7 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
                   )
                   .limit(1);
                const changed = attempt!.progressChangedAt !== null || attempt!.notes !== "";
-               if (!otherApplication && changed) return "attempt_changed";
+               if (!otherApplication && changed && !withChangedAttempt) return "attempt_changed";
                attemptEnds = !otherApplication;
             }
 

@@ -1,5 +1,15 @@
 import { authClient } from "../auth/client";
 
+/** A request the API refused: its message to show, and its status to tell one refusal from another. */
+export class ApiError extends Error {
+   constructor(
+      message: string,
+      readonly status: number,
+   ) {
+      super(message);
+   }
+}
+
 /**
  * Every request to the API goes through here. The session's cookie goes along by itself (the API is on
  * this same origin, under /api): the API answers for the signed-in user, nothing else in the app has to
@@ -18,7 +28,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
    if (response.status === 401) authClient.$store.notify("$sessionSignal");
    if (!response.ok) {
       const message = await errorMessage(response, `${method} ${path}`);
-      throw new Error(message);
+      throw new ApiError(message, response.status);
    }
    // 204 and some 202s come with no body
    const text = await response.text();

@@ -180,14 +180,22 @@ export class ApplicationsService {
 
    /**
     * Takes back one I marked sent by hand: ready for review again when JobPilot had answered it, gone
-    * otherwise. Refused when it is the only one of an attempt I already changed in the tracker: what I
-    * wrote there would go with it. False when there is no such one.
+    * otherwise. When it is the only one of a tracker row I already changed, what I wrote there goes
+    * with it: refused unless withTrackerRow says I agreed. False when there is no such one.
     */
-   async unmarkSentByHand(userId: string, applicationId: string): Promise<boolean> {
-      const outcome = await this.db.applications.unmarkSentByHand(userId, applicationId);
+   async unmarkSentByHand(
+      userId: string,
+      applicationId: string,
+      withTrackerRow: boolean,
+   ): Promise<boolean> {
+      const outcome = await this.db.applications.unmarkSentByHand(
+         userId,
+         applicationId,
+         withTrackerRow,
+      );
       if (outcome === "attempt_changed") {
          throw new ConflictException(
-            "This application was already updated in the tracker: delete its row there instead",
+            "Its tracker row was changed: taking it back removes the row, with its stage, status and notes",
          );
       }
       return outcome === "undone";

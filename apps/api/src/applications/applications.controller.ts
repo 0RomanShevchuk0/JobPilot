@@ -51,6 +51,11 @@ const sentByHandBodySchema = z.object({
    postingId: z.uuid(),
 });
 
+const unmarkQuerySchema = z.object({
+   /** also the tracker row I changed, when this is its only application: refused (409) otherwise */
+   withTrackerRow: z.stringbool().default(false),
+});
+
 const answersBodySchema = z.object({
    /** only the changed fields, by their name in the form */
    values: z.array(z.object({ name: z.string().min(1), value: z.string() })).min(1),
@@ -117,15 +122,17 @@ export class ApplicationsController {
 
    /**
     * Takes back marking an application sent by hand: one JobPilot had answered is ready for review
-    * again, with its answers; one with no form is gone. Ones JobPilot sent can't be taken back.
+    * again, with its answers; one with no form is gone. Ones JobPilot sent can't be taken back. The only
+    * one of a tracker row I changed takes the row with it, with ?withTrackerRow=true only: 409 without.
     */
    @Delete(":id/sent-by-hand")
    @HttpCode(204)
    async unmarkSentByHand(
       @CurrentUserId() userId: string,
       @Param("id", new ZodValidationPipe(z.uuid())) id: string,
+      @Query(new ZodValidationPipe(unmarkQuerySchema)) query: z.infer<typeof unmarkQuerySchema>,
    ) {
-      if (!(await this.applications.unmarkSentByHand(userId, id))) {
+      if (!(await this.applications.unmarkSentByHand(userId, id, query.withTrackerRow))) {
          throw new NotFoundException("No application marked sent by hand with this id");
       }
    }
