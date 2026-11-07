@@ -1,4 +1,5 @@
-import type { JobAttemptChanges, JobAttemptListPage } from "@jobpilot/contracts";
+import type { JobAttemptChanges, JobAttemptListPage, NewJobAttempt } from "@jobpilot/contracts";
+import { normalizeCompanyName } from "@jobpilot/vacancies";
 import { Injectable } from "@nestjs/common";
 import { Database } from "../infra/database.js";
 import { jobAttemptSilence } from "./job-attempt-silence.js";
@@ -21,6 +22,24 @@ export class JobAttemptsService {
       }));
       const hasMore = rows.length > PAGE_SIZE;
       return { items, nextCursor: hasMore ? items[PAGE_SIZE - 1]!.id : null };
+   }
+
+   /**
+    * Adds a job JobPilot doesn't know about. The date is taken at noon UTC: it stays that day in any
+    * time zone people look at it from.
+    */
+   create(
+      userId: string,
+      { title, url, company, appliedAt }: NewJobAttempt,
+   ): Promise<{ id: string }> {
+      const normalizedName = company && normalizeCompanyName(company);
+      return this.db.jobAttempts.create(userId, {
+         title,
+         url,
+         // a name of legal forms only ("LLC") normalizes to nothing: no company to link to
+         company: normalizedName ? { name: company!, normalizedName } : undefined,
+         appliedAt: appliedAt ? new Date(`${appliedAt}T12:00:00.000Z`) : undefined,
+      });
    }
 
    /** Changes a row of mine. False when there is no such row. */

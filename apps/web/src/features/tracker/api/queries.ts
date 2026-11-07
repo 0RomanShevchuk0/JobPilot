@@ -1,6 +1,6 @@
-import type { JobAttemptChanges, JobAttemptListPage } from "@jobpilot/contracts";
+import type { JobAttemptChanges, JobAttemptListPage, NewJobAttempt } from "@jobpilot/contracts";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiDelete, apiGet, apiPatch } from "../../../shared/api/client";
+import { apiDelete, apiGet, apiPatch, apiPost } from "../../../shared/api/client";
 import { queryKeys } from "../../../shared/api/queryKeys";
 
 /** My tracker a page at a time, the latest applied first. A refetch reloads every page loaded. */
@@ -13,6 +13,18 @@ export function useJobAttempts() {
       },
       initialPageParam: null as string | null,
       getNextPageParam: (page) => page.nextCursor, // null: no next page
+   });
+}
+
+/** Adds a job JobPilot doesn't know about. onCreated runs once the list has it. */
+export function useCreateJobAttempt(onCreated: () => void) {
+   const queryClient = useQueryClient();
+   return useMutation({
+      mutationFn: (attempt: NewJobAttempt) => apiPost<{ id: string }>("/job-attempts", attempt),
+      onSuccess: async () => {
+         await queryClient.invalidateQueries({ queryKey: queryKeys.jobAttempts.all });
+         onCreated();
+      },
    });
 }
 

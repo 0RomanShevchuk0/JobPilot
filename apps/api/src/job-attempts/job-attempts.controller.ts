@@ -1,4 +1,9 @@
-import { jobAttemptChangesSchema, type JobAttemptChanges } from "@jobpilot/contracts";
+import {
+   jobAttemptChangesSchema,
+   newJobAttemptSchema,
+   type JobAttemptChanges,
+   type NewJobAttempt,
+} from "@jobpilot/contracts";
 import {
    Body,
    Controller,
@@ -8,6 +13,7 @@ import {
    NotFoundException,
    Param,
    Patch,
+   Post,
    Query,
 } from "@nestjs/common";
 import { z } from "zod";
@@ -31,6 +37,15 @@ export class JobAttemptsController {
       @Query(new ZodValidationPipe(listQuerySchema)) query: z.infer<typeof listQuerySchema>,
    ) {
       return this.jobAttempts.list(userId, query.after);
+   }
+
+   /** Adds a job JobPilot doesn't know about: LinkedIn, a referral, a company's site. */
+   @Post()
+   create(
+      @CurrentUserId() userId: string,
+      @Body(new ZodValidationPipe(newJobAttemptSchema)) attempt: NewJobAttempt,
+   ) {
+      return this.jobAttempts.create(userId, attempt);
    }
 
    /** Changes a row's stage, status or notes. */

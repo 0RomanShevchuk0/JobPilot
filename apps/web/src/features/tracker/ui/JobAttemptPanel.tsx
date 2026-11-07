@@ -3,10 +3,11 @@ import { useEffect, useRef } from "react";
 import { Link } from "react-router";
 import { Button, textareaClasses, TrashIcon } from "../../../shared/ui";
 import { useDeleteJobAttempt, useUpdateJobAttempt } from "../api/queries";
+import { TrackerPanel } from "./TrackerPanel";
 
 /**
- * A tracker row's details, at the screen's right edge (the whole screen on a phone): the job, the
- * answers of each application, the notes, and the way to remove a row made by mistake. Esc closes it.
+ * A tracker row's details: the job, the answers of each application, the notes, and the way to remove
+ * a row made by mistake.
  */
 export function JobAttemptPanel({
    attempt,
@@ -15,14 +16,6 @@ export function JobAttemptPanel({
    attempt: JobAttemptListItem;
    onClose: () => void;
 }) {
-   useEffect(() => {
-      const closeOnEscape = (event: KeyboardEvent) => {
-         if (event.key === "Escape") onClose();
-      };
-      document.addEventListener("keydown", closeOnEscape);
-      return () => document.removeEventListener("keydown", closeOnEscape);
-   }, [onClose]);
-
    const title = attempt.title ?? "Untitled job";
    const remove = useDeleteJobAttempt(onClose);
    // what I wrote goes with it: asked first
@@ -33,14 +26,12 @@ export function JobAttemptPanel({
    };
 
    return (
-      <aside
-         role="dialog"
-         aria-label={title}
-         className="fixed inset-0 z-30 flex flex-col gap-5 overflow-y-auto bg-white p-5 shadow-xl sm:left-auto sm:w-96 sm:border-l sm:border-gray-200"
-      >
-         <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-               <p className="text-sm text-gray-600">{attempt.company ?? "Company hidden"}</p>
+      <TrackerPanel
+         label={title}
+         onClose={onClose}
+         heading={
+            <>
+               <p className="text-sm text-gray-600">{attempt.company ?? "Company unknown"}</p>
                <h2 className="font-semibold text-gray-900">
                   {attempt.vacancyId ? (
                      <Link to={`/matches/${attempt.vacancyId}`} className="hover:underline">
@@ -50,20 +41,27 @@ export function JobAttemptPanel({
                      title
                   )}
                </h2>
-            </div>
-            <button
-               type="button"
-               aria-label="Close"
-               onClick={onClose}
-               className="rounded px-2 py-0.5 text-lg leading-none text-gray-500 hover:bg-gray-100"
-            >
-               ×
-            </button>
-         </div>
-
+            </>
+         }
+      >
          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
             <dt className="text-gray-500">Applied</dt>
             <dd className="text-gray-900">{new Date(attempt.appliedAt).toLocaleDateString()}</dd>
+            {attempt.url && (
+               <>
+                  <dt className="text-gray-500">Link</dt>
+                  <dd className="min-w-0 truncate">
+                     <a
+                        href={attempt.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-gray-900 underline hover:text-gray-600"
+                     >
+                        {new URL(attempt.url).hostname}
+                     </a>
+                  </dd>
+               </>
+            )}
             {attempt.applications.length > 0 && (
                <>
                   <dt className="text-gray-500">Answers</dt>
@@ -98,7 +96,7 @@ export function JobAttemptPanel({
             </Button>
             {remove.isError && <p className="mt-1 text-sm text-red-600">{remove.error.message}</p>}
          </div>
-      </aside>
+      </TrackerPanel>
    );
 }
 
