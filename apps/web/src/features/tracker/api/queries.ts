@@ -28,7 +28,7 @@ export function useCreateJobAttempt(onCreated: () => void) {
    });
 }
 
-/** Changes a row's stage, status or notes. Under way until the list shows the change. */
+/** Changes a row: any of its fields. Under way until the list shows the change. */
 export function useUpdateJobAttempt(attemptId: string) {
    const queryClient = useQueryClient();
    return useMutation({

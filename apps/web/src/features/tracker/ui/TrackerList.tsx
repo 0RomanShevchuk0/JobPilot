@@ -65,7 +65,10 @@ export function TrackerList() {
                !attempts.hasNextPage || attempts.isFetchingNextPage || attempts.isFetchNextPageError
             }
          />
-         {openAttempt && <JobAttemptPanel attempt={openAttempt} onClose={closePanel} />}
+         {/* a new panel for each row: one being edited doesn't carry over to the next */}
+         {openAttempt && (
+            <JobAttemptPanel key={openAttempt.id} attempt={openAttempt} onClose={closePanel} />
+         )}
          {params.has("add") && <NewJobAttemptPanel onClose={closePanel} />}
       </>
    );
