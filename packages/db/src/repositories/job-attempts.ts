@@ -36,7 +36,10 @@ export interface StoredJobAttemptChanges extends Omit<JobAttemptChanges, "compan
 export interface JobAttemptsRepository {
    /** My tracker a page at a time, the latest applied first. */
    listForUser(userId: string, options: JobAttemptListOptions): Promise<JobAttemptListItem[]>;
-   /** Adds a row by hand; its company is found by the normalized name, or made. */
+   /**
+    * Adds a row by hand; its company is found by the normalized name, or made. Its silence counts from
+    * now, whatever date it was applied on.
+    */
    create(userId: string, attempt: NewStoredJobAttempt): Promise<{ id: string }>;
    /**
     * Changes a row of mine. A stage or status that really changes counts the silence anew, and a new
@@ -134,7 +137,8 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
             const companyId = company ? await findOrCreateCompany(tx, company) : null;
             const [row] = await tx
                .insert(jobAttempts)
-               .values({ ...attempt, userId, companyId })
+               // the silence counts from now: an old date goes in as it stands, not as long silent
+               .values({ ...attempt, userId, companyId, progressChangedAt: sql`now()` })
                .returning({ id: jobAttempts.id });
             return row!;
          });
