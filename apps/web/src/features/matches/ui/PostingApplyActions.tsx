@@ -1,5 +1,6 @@
 import type { MatchPosting } from "@jobpilot/contracts";
 import { Link, useNavigate } from "react-router";
+import { ApiError } from "../../../shared/api/client";
 import { ArrowRightIcon, Button, buttonStyles } from "../../../shared/ui";
 import { useStartApplication, useUnmarkSentByHand } from "../../applications";
 import { ActionError } from "./ActionError";
@@ -31,6 +32,22 @@ export function PostingApplyActions({
    const markSentButton = <MarkSentByHandButton postingId={posting.id} />;
    const markSentBesideApply = withMarkApplied && markSentButton;
 
+   // the only application of a tracker row I changed (409): what I wrote there goes too, asked first
+   const undoMarkSent = (applicationId: string) =>
+      unmarkSent.mutate(
+         { applicationId },
+         {
+            onError: (refusal) => {
+               if (!(refusal instanceof ApiError && refusal.status === 409)) return;
+               const removesRow = window.confirm(
+                  "Its row in the Tracker goes too, with the stage, status and notes. Undo anyway?",
+               );
+               if (removesRow) unmarkSent.mutate({ applicationId, withTrackerRow: true });
+               else unmarkSent.reset();
+            },
+         },
+      );
+
    function actions() {
       if (application?.status === "submitted") {
          if (application.origin !== "manual") return null;
@@ -38,7 +55,7 @@ export function PostingApplyActions({
             <Button
                variant="outline"
                size="sm"
-               onClick={() => unmarkSent.mutate(application.id)}
+               onClick={() => undoMarkSent(application.id)}
                loading={unmarkSent.isPending}
             >
                Undo

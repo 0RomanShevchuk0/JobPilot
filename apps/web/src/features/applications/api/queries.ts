@@ -24,6 +24,11 @@ export interface ApplicationListFilter {
    origin: ApplicationOrigin | null;
 }
 
+export interface UnmarkSentByHand {
+   applicationId: string;
+   withTrackerRow?: boolean;
+}
+
 /** An answer I changed, by the form field's name. */
 export interface AnswerChange {
    name: string;
@@ -155,13 +160,16 @@ export function useMarkSentByHand() {
 
 /**
  * Takes back marking an application sent by hand: the posting is to apply through again, with
- * JobPilot's answers when it had them.
+ * JobPilot's answers when it had them. withTrackerRow: its tracker row I changed goes too; without it
+ * such a one is refused with 409.
  */
 export function useUnmarkSentByHand() {
    const refresh = useRefreshApplications();
    return useMutation({
-      mutationFn: (applicationId: string) =>
-         apiDelete(`/applications/${applicationId}/sent-by-hand`),
+      mutationFn: ({ applicationId, withTrackerRow = false }: UnmarkSentByHand) => {
+         const query = withTrackerRow ? "?withTrackerRow=true" : "";
+         return apiDelete(`/applications/${applicationId}/sent-by-hand${query}`);
+      },
       onSuccess: refresh,
    });
 }
