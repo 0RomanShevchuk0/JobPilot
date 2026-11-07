@@ -1,4 +1,9 @@
-import type { JobAttemptChanges, JobAttemptListItem } from "@jobpilot/contracts";
+import type {
+   JobAttemptChanges,
+   JobAttemptListItem,
+   JobAttemptStage,
+   JobAttemptStatus,
+} from "@jobpilot/contracts";
 import { and, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { applications, companies, jobAttempts, postings, sources, vacancies } from "../schema.js";
@@ -23,6 +28,15 @@ export interface NewStoredJobAttempt {
    company?: { name: string; normalizedName: string };
    /** absent = now */
    appliedAt?: Date;
+   /** absent = just applied */
+   stage?: JobAttemptStage;
+   status?: JobAttemptStatus;
+   notes?: string;
+}
+
+/** What changes on a row: the company is found by the normalized name, or made. */
+export interface StoredJobAttemptChanges extends Omit<JobAttemptChanges, "companyName"> {
+   company?: { name: string; normalizedName: string };
 }
 
 export interface JobAttemptsRepository {
@@ -33,9 +47,10 @@ export interface JobAttemptsRepository {
    /**
     * Changes a row of mine. The silence is counted anew by a stage or status that really changes, and
     * by active even on a row already active: the company answered, the stage stays. Notes and the same
-    * value again leave it. False when there is no such row.
+    * value again leave it, and so does a company, set only on a row with none. False when there is no
+    * such row.
     */
-   update(userId: string, attemptId: string, changes: JobAttemptChanges): Promise<boolean>;
+   update(userId: string, attemptId: string, changes: StoredJobAttemptChanges): Promise<boolean>;
    /** Removes a row of mine; its applications stay sent. False when there is no such row. */
    delete(userId: string, attemptId: string): Promise<boolean>;
 }
@@ -114,34 +129,47 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
          }));
       },
 
-      async create(userId, { title, url, company, appliedAt }) {
+      async create(userId, { company, ...attempt }) {
          return db.transaction(async (tx) => {
             const companyId = company ? await findOrCreateCompany(tx, company) : null;
             const [row] = await tx
                .insert(jobAttempts)
-               .values({ userId, companyId, title, url, appliedAt })
+               .values({ ...attempt, userId, companyId })
                .returning({ id: jobAttempts.id });
             return row!;
          });
       },
 
-      async update(userId, attemptId, changes) {
+      async update(userId, attemptId, { company, ...changes }) {
          const stageChanges = changes.stage && ne(jobAttempts.stage, changes.stage);
          const statusChanges =
             changes.status &&
             (changes.status === "active" ? sql`true` : ne(jobAttempts.status, changes.status));
          const progressChanges = or(stageChanges, statusChanges);
-         const updated = await db
-            .update(jobAttempts)
-            .set({
+         return db.transaction(async (tx) => {
+            const mine = and(eq(jobAttempts.id, attemptId), eq(jobAttempts.userId, userId));
+            const [row] = await tx
+               .select({ companyId: jobAttempts.companyId })
+               .from(jobAttempts)
+               .where(mine)
+               .for("update");
+            if (!row) return false;
+
+            // made only for a row that takes it: no company left in the table linked to nothing
+            const companyId =
+               company && !row.companyId ? await findOrCreateCompany(tx, company) : undefined;
+            const fields = {
                ...changes,
+               ...(companyId && { companyId }),
                ...(progressChanges && {
                   progressChangedAt: sql`case when ${progressChanges} then now() else ${jobAttempts.progressChangedAt} end`,
                }),
-            })
-            .where(and(eq(jobAttempts.id, attemptId), eq(jobAttempts.userId, userId)))
-            .returning({ id: jobAttempts.id });
-         return updated.length > 0;
+            };
+            // a company on a row that has one, alone: nothing to write
+            if (Object.keys(fields).length > 0)
+               await tx.update(jobAttempts).set(fields).where(mine);
+            return true;
+         });
       },
 
       async delete(userId, attemptId) {

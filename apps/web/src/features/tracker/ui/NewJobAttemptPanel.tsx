@@ -1,6 +1,13 @@
+import {
+   jobAttemptStages,
+   jobAttemptStatuses,
+   type JobAttemptStage,
+   type JobAttemptStatus,
+} from "@jobpilot/contracts";
 import type { FormEvent } from "react";
-import { Button, inputClasses } from "../../../shared/ui";
+import { Button, inputClasses, textareaClasses } from "../../../shared/ui";
 import { useCreateJobAttempt } from "../api/queries";
+import { stageLabels, statusLabels } from "../lib/labels";
 import { TrackerPanel } from "./TrackerPanel";
 
 /** Today in my time zone, as a date input takes it; the en-CA locale writes dates as 2026-11-07. */
@@ -8,7 +15,20 @@ function today(): string {
    return new Date().toLocaleDateString("en-CA");
 }
 
-/** Adds a job JobPilot doesn't know about. Only the role is needed; the date is today unless changed. */
+/** A field's name, with a star when it can't stay empty. */
+function FieldLabel({ name, required = false }: { name: string; required?: boolean }) {
+   return (
+      <span className="mb-1 block text-sm text-gray-500">
+         {name}
+         {required && <span className="text-red-600"> *</span>}
+      </span>
+   );
+}
+
+/**
+ * Adds a job JobPilot doesn't know about. The date is today unless changed; the stage and status start
+ * as just applied, one already under way goes in as it stands.
+ */
 export function NewJobAttemptPanel({ onClose }: { onClose: () => void }) {
    const create = useCreateJobAttempt(onClose);
 
@@ -22,6 +42,9 @@ export function NewJobAttemptPanel({ onClose }: { onClose: () => void }) {
          company: text("company"),
          url: text("url"),
          appliedAt: appliedAt === today() ? undefined : appliedAt,
+         stage: form.get("stage") as JobAttemptStage,
+         status: form.get("status") as JobAttemptStatus,
+         notes: text("notes"),
       });
    };
 
@@ -33,15 +56,15 @@ export function NewJobAttemptPanel({ onClose }: { onClose: () => void }) {
       >
          <form onSubmit={submit} className="flex flex-col gap-4">
             <label className="block">
-               <span className="mb-1 block text-sm text-gray-500">Role</span>
-               <input name="title" required maxLength={200} autoFocus className={inputClasses} />
+               <FieldLabel name="Company" />
+               <input name="company" maxLength={200} autoFocus className={inputClasses} />
             </label>
             <label className="block">
-               <span className="mb-1 block text-sm text-gray-500">Company</span>
-               <input name="company" maxLength={200} className={inputClasses} />
+               <FieldLabel name="Role" required />
+               <input name="title" required maxLength={200} className={inputClasses} />
             </label>
             <label className="block">
-               <span className="mb-1 block text-sm text-gray-500">Link</span>
+               <FieldLabel name="Link" />
                <input
                   name="url"
                   type="url"
@@ -51,7 +74,7 @@ export function NewJobAttemptPanel({ onClose }: { onClose: () => void }) {
                />
             </label>
             <label className="block">
-               <span className="mb-1 block text-sm text-gray-500">Applied</span>
+               <FieldLabel name="Applied" required />
                <input
                   name="appliedAt"
                   type="date"
@@ -60,6 +83,32 @@ export function NewJobAttemptPanel({ onClose }: { onClose: () => void }) {
                   max={today()}
                   className={inputClasses}
                />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+               <label className="block">
+                  <FieldLabel name="Stage" required />
+                  <select name="stage" className={inputClasses}>
+                     {jobAttemptStages.map((stage) => (
+                        <option key={stage} value={stage}>
+                           {stageLabels[stage]}
+                        </option>
+                     ))}
+                  </select>
+               </label>
+               <label className="block">
+                  <FieldLabel name="Status" required />
+                  <select name="status" className={inputClasses}>
+                     {jobAttemptStatuses.map((status) => (
+                        <option key={status} value={status}>
+                           {statusLabels[status]}
+                        </option>
+                     ))}
+                  </select>
+               </label>
+            </div>
+            <label className="block">
+               <FieldLabel name="Notes" />
+               <textarea name="notes" maxLength={10_000} className={textareaClasses} />
             </label>
             <Button type="submit" variant="primary" loading={create.isPending}>
                Add

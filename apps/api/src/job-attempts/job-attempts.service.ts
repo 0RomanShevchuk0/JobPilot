@@ -1,6 +1,6 @@
 import type { JobAttemptChanges, JobAttemptListPage, NewJobAttempt } from "@jobpilot/contracts";
 import { normalizeCompanyName } from "@jobpilot/vacancies";
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { Database } from "../infra/database.js";
 import { jobAttemptSilence } from "./job-attempt-silence.js";
 
@@ -30,21 +30,28 @@ export class JobAttemptsService {
     */
    create(
       userId: string,
-      { title, url, company, appliedAt }: NewJobAttempt,
+      { company, appliedAt, ...attempt }: NewJobAttempt,
    ): Promise<{ id: string }> {
       const normalizedName = company && normalizeCompanyName(company);
       return this.db.jobAttempts.create(userId, {
-         title,
-         url,
-         // a name of legal forms only ("LLC") normalizes to nothing: no company to link to
+         ...attempt,
+         // a name with no letter or digit ("...") normalizes to nothing: no company to link to
          company: normalizedName ? { name: company!, normalizedName } : undefined,
          appliedAt: appliedAt ? new Date(`${appliedAt}T12:00:00.000Z`) : undefined,
       });
    }
 
    /** Changes a row of mine. False when there is no such row. */
-   update(userId: string, attemptId: string, changes: JobAttemptChanges): Promise<boolean> {
-      return this.db.jobAttempts.update(userId, attemptId, changes);
+   update(
+      userId: string,
+      attemptId: string,
+      { companyName, ...changes }: JobAttemptChanges,
+   ): Promise<boolean> {
+      if (!companyName) return this.db.jobAttempts.update(userId, attemptId, changes);
+      const normalizedName = normalizeCompanyName(companyName);
+      if (!normalizedName) throw new BadRequestException(`"${companyName}" is not a company name`);
+      const company = { name: companyName, normalizedName };
+      return this.db.jobAttempts.update(userId, attemptId, { ...changes, company });
    }
 
    /** Removes a row of mine; its applications stay sent. False when there is no such row. */

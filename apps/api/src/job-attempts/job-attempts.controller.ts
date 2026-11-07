@@ -48,7 +48,7 @@ export class JobAttemptsController {
       return this.jobAttempts.create(userId, attempt);
    }
 
-   /** Changes a row's stage, status or notes. */
+   /** Changes a row's stage, status or notes, or names its company when it has none. */
    @Patch(":id")
    @HttpCode(204)
    async update(
