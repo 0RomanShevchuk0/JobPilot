@@ -63,32 +63,42 @@ export interface JobAttemptListPage {
    nextCursor: string | null;
 }
 
+// a job's title, as I write it
+const titleSchema = z.string().trim().min(1).max(200);
+// a company's name, as I write it
+const companyNameSchema = z.string().trim().min(1).max(200);
+// web pages only: "https://x.com", not "javascript:alert(1)", which a link would run
+const jobUrlSchema = z.url({ protocol: /^https?$/ }).max(2000);
+const notesSchema = z.string().max(10_000);
+
 /** A row added by hand in POST /job-attempts: a job JobPilot doesn't know about. */
 export const newJobAttemptSchema = z.object({
-   title: z.string().trim().min(1).max(200),
-   company: z.string().trim().min(1).max(200).optional(),
-   // web pages only: "https://x.com", not "javascript:alert(1)", which a link would run
-   url: z
-      .url({ protocol: /^https?$/ })
-      .max(2000)
-      .optional(),
+   title: titleSchema,
+   company: companyNameSchema.optional(),
+   url: jobUrlSchema.optional(),
    /** "2026-11-01"; absent = now */
    appliedAt: z.iso.date().optional(),
    /** an attempt already under way goes in as it stands; absent = just applied */
    stage: z.enum(jobAttemptStages).optional(),
    status: z.enum(jobAttemptStatuses).optional(),
-   notes: z.string().max(10_000).optional(),
+   notes: notesSchema.optional(),
 });
 export type NewJobAttempt = z.infer<typeof newJobAttemptSchema>;
 
 /** What PATCH /job-attempts/:id changes: at least one of them. */
 export const jobAttemptChangesSchema = z
    .object({
+      /** null: the vacancy's title again; a row added by hand can't be left without one */
+      title: titleSchema.nullable(),
+      /** null: the company isn't known; another name links the row to that company */
+      companyName: companyNameSchema.nullable(),
+      /** on a row added by hand only: one from JobPilot links to its vacancy. null = no link */
+      url: jobUrlSchema.nullable(),
+      /** "2026-11-01" */
+      appliedAt: z.iso.date(),
       stage: z.enum(jobAttemptStages),
       status: z.enum(jobAttemptStatuses),
-      notes: z.string().max(10_000),
-      /** on a row with no company; a company it already has stays */
-      companyName: z.string().trim().min(1).max(200),
+      notes: notesSchema,
    })
    .partial()
    .refine((changes) => Object.keys(changes).length > 0, "Nothing to change");

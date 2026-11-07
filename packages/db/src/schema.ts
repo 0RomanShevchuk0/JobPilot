@@ -302,6 +302,9 @@ export const jobAttempts = pgTable(
       // the silence counts from it: the last change of the stage or status; a row added by hand has
       // it from the start, an old date of applying doesn't make it long silent. null = never changed
       progressChangedAt: tstz("progress_changed_at"),
+      // the last change I made to the rest: the company, title, link, date or notes; to Undo, a row
+      // with something of mine in it. null = never changed
+      editedAt: tstz("edited_at"),
    },
    // one attempt per vacancy; nulls differ, so rows added by hand are not limited
    (t) => [unique("job_attempts_user_vacancy_uq").on(t.userId, t.vacancyId)],

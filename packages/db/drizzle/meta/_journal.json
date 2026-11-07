@@ -141,6 +141,13 @@
       "when": 1794015110899,
       "tag": "0019_job_attempt_silent_statuses",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794092646480,
+      "tag": "0020_job_attempt_edited_at",
+      "breakpoints": true
     }
   ]
 }

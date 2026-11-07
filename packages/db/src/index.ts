@@ -14,6 +14,7 @@ export type { DocumentsRepository, StoredDocumentFile } from "./repositories/doc
 export type {
    JobAttemptListOptions,
    JobAttemptsRepository,
+   JobAttemptUpdateOutcome,
    NewStoredJobAttempt,
    StoredJobAttemptChanges,
 } from "./repositories/job-attempts.js";

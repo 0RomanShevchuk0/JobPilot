@@ -40,7 +40,7 @@ export function PostingApplyActions({
             onError: (refusal) => {
                if (!(refusal instanceof ApiError && refusal.status === 409)) return;
                const removesRow = window.confirm(
-                  "Its row in the Tracker goes too, with the stage, status and notes. Undo anyway?",
+                  "Its row in the Tracker goes too, with what you changed in it. Undo anyway?",
                );
                if (removesRow) unmarkSent.mutate({ applicationId, withTrackerRow: true });
                else unmarkSent.reset();

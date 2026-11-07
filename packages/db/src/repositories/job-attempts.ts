@@ -4,7 +4,19 @@ import type {
    JobAttemptStage,
    JobAttemptStatus,
 } from "@jobpilot/contracts";
-import { and, desc, eq, inArray, lte, ne, or, sql } from "drizzle-orm";
+import {
+   and,
+   bindIfParam,
+   desc,
+   eq,
+   inArray,
+   lte,
+   ne,
+   or,
+   sql,
+   type Column,
+   type GetColumnData,
+} from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { applications, companies, jobAttempts, postings, sources, vacancies } from "../schema.js";
 
@@ -29,9 +41,21 @@ export interface NewStoredJobAttempt {
 }
 
 /** What changes on a row: the company is found by the normalized name, or made. */
-export interface StoredJobAttemptChanges extends Omit<JobAttemptChanges, "companyName"> {
-   company?: { name: string; normalizedName: string };
+export interface StoredJobAttemptChanges extends Omit<
+   JobAttemptChanges,
+   "companyName" | "appliedAt"
+> {
+   /** null = not known */
+   company?: { name: string; normalizedName: string } | null;
+   appliedAt?: Date;
 }
+
+/**
+ * How changing a row ended. title_required: a row added by hand has no vacancy's title to fall back
+ * on. url_not_allowed: a row from JobPilot links to its vacancy, not to a page of its own.
+ */
+export type JobAttemptUpdateOutcome =
+   "updated" | "not_found" | "title_required" | "url_not_allowed";
 
 export interface JobAttemptsRepository {
    /** My tracker a page at a time, the latest applied first. */
@@ -43,10 +67,15 @@ export interface JobAttemptsRepository {
    create(userId: string, attempt: NewStoredJobAttempt): Promise<{ id: string }>;
    /**
     * Changes a row of mine. A stage or status that really changes counts the silence anew, and a new
-    * stage ends a no_answer or ghosted: the company is clearly there. Notes, a company (set only on a
-    * row with none) and the same value again leave them. False when there is no such row.
+    * stage ends a no_answer or ghosted: the company is clearly there. The rest that really changes
+    * marks the row edited, for Undo. The same value again changes neither. A company found anew is
+    * linked; the old one stays, even with nothing linked to it.
     */
-   update(userId: string, attemptId: string, changes: StoredJobAttemptChanges): Promise<boolean>;
+   update(
+      userId: string,
+      attemptId: string,
+      changes: StoredJobAttemptChanges,
+   ): Promise<JobAttemptUpdateOutcome>;
    /** Removes a row of mine; its applications stay sent. False when there is no such row. */
    delete(userId: string, attemptId: string): Promise<boolean>;
    /**
@@ -61,6 +90,14 @@ type Transaction = Parameters<Parameters<Drizzle["transaction"]>[0]>[0];
 
 // the statuses the worker sets, when a company goes quiet
 const silentStatuses: JobAttemptStatus[] = ["no_answer", "ghosted"];
+
+/** column is distinct from value: unlike <>, a null against a value counts as a change too. */
+function distinctFromSql<TColumn extends Column>(
+   column: TColumn,
+   value: GetColumnData<TColumn, "query">,
+) {
+   return sql`${column} is distinct from ${bindIfParam(value, column)}`;
+}
 
 /** The company with this normalized name; the first name seen stays, a new one is made. */
 async function findOrCreateCompany(
@@ -145,36 +182,51 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
       },
 
       async update(userId, attemptId, { company, ...changes }) {
-         const stageChanges = changes.stage && ne(jobAttempts.stage, changes.stage);
-         const statusChanges = changes.status && ne(jobAttempts.status, changes.status);
+         const { stage, status, title, url, appliedAt, notes } = changes;
+         const stageChanges = stage && ne(jobAttempts.stage, stage);
+         const statusChanges = status && ne(jobAttempts.status, status);
          const progressChanges = or(stageChanges, statusChanges);
          return db.transaction(async (tx) => {
             const mine = and(eq(jobAttempts.id, attemptId), eq(jobAttempts.userId, userId));
             const [row] = await tx
-               .select({ companyId: jobAttempts.companyId })
+               .select({ vacancyId: jobAttempts.vacancyId })
                .from(jobAttempts)
                .where(mine)
                .for("update");
-            if (!row) return false;
+            if (!row) return "not_found";
+            const addedByHand = row.vacancyId === null;
+            if (addedByHand && title === null) return "title_required";
+            if (!addedByHand && url !== undefined) return "url_not_allowed";
 
-            // made only for a row that takes it: no company left in the table linked to nothing
-            const companyId =
-               company && !row.companyId ? await findOrCreateCompany(tx, company) : undefined;
-            const fields = {
-               ...changes,
-               ...(companyId && { companyId }),
-               ...(stageChanges &&
-                  !changes.status && {
-                     status: sql<JobAttemptStatus>`case when ${and(stageChanges, inArray(jobAttempts.status, silentStatuses))} then 'active' else ${jobAttempts.status} end`,
+            // null: not known any more
+            const companyId = company && (await findOrCreateCompany(tx, company));
+            const edits = or(
+               title !== undefined ? distinctFromSql(jobAttempts.title, title) : undefined,
+               url !== undefined ? distinctFromSql(jobAttempts.url, url) : undefined,
+               appliedAt && ne(jobAttempts.appliedAt, appliedAt),
+               notes !== undefined ? ne(jobAttempts.notes, notes) : undefined,
+               companyId !== undefined
+                  ? distinctFromSql(jobAttempts.companyId, companyId)
+                  : undefined,
+            );
+            await tx
+               .update(jobAttempts)
+               .set({
+                  ...changes,
+                  ...(companyId !== undefined && { companyId }),
+                  ...(stageChanges &&
+                     !status && {
+                        status: sql<JobAttemptStatus>`case when ${and(stageChanges, inArray(jobAttempts.status, silentStatuses))} then 'active' else ${jobAttempts.status} end`,
+                     }),
+                  ...(progressChanges && {
+                     progressChangedAt: sql`case when ${progressChanges} then now() else ${jobAttempts.progressChangedAt} end`,
                   }),
-               ...(progressChanges && {
-                  progressChangedAt: sql`case when ${progressChanges} then now() else ${jobAttempts.progressChangedAt} end`,
-               }),
-            };
-            // a company on a row that has one, alone: nothing to write
-            if (Object.keys(fields).length > 0)
-               await tx.update(jobAttempts).set(fields).where(mine);
-            return true;
+                  ...(edits && {
+                     editedAt: sql`case when ${edits} then now() else ${jobAttempts.editedAt} end`,
+                  }),
+               })
+               .where(mine);
+            return "updated";
          });
       },
 

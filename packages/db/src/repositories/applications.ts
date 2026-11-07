@@ -47,7 +47,7 @@ export type ApplicationToFill = ApplicationToPrepare;
 
 /**
  * How taking back an application marked sent by hand ended. attempt_changed: it is the only one of an
- * attempt whose stage, status or notes I changed, and taking it back wasn't asked to remove that row
+ * attempt I changed something in, and taking it back wasn't asked to remove that row
  * too, so nothing was taken back.
  */
 export type UnmarkSentByHandOutcome = "undone" | "not_found" | "attempt_changed";
@@ -385,7 +385,7 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
                const [attempt] = await tx
                   .select({
                      progressChangedAt: jobAttempts.progressChangedAt,
-                     notes: jobAttempts.notes,
+                     editedAt: jobAttempts.editedAt,
                   })
                   .from(jobAttempts)
                   .where(eq(jobAttempts.id, attemptId))
@@ -397,7 +397,7 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
                      and(eq(applications.attemptId, attemptId), ne(applications.id, applicationId)),
                   )
                   .limit(1);
-               const changed = attempt!.progressChangedAt !== null || attempt!.notes !== "";
+               const changed = attempt!.progressChangedAt !== null || attempt!.editedAt !== null;
                if (!otherApplication && changed && !withChangedAttempt) return "attempt_changed";
                attemptEnds = !otherApplication;
             }

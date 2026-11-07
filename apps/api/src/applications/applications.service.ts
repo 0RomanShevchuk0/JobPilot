@@ -195,7 +195,7 @@ export class ApplicationsService {
       );
       if (outcome === "attempt_changed") {
          throw new ConflictException(
-            "Its tracker row was changed: taking it back removes the row, with its stage, status and notes",
+            "Its tracker row was changed: taking it back removes the row, with what was changed in it",
          );
       }
       return outcome === "undone";
