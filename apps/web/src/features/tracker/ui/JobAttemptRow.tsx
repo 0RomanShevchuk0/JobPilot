@@ -6,23 +6,25 @@ import {
    type JobAttemptStatus,
 } from "@jobpilot/contracts";
 import { Link } from "react-router";
-import { CheckIcon, Menu, menuItemStyles } from "../../../shared/ui";
+import { Badge, CheckIcon, Menu, menuItemStyles } from "../../../shared/ui";
 import { useUpdateJobAttempt } from "../api/queries";
 import {
-   silenceDotStyles,
    silenceLabels,
+   silenceStyles,
    stageLabels,
-   statusDotStyles,
+   stageStyles,
    statusLabels,
+   statusStyles,
 } from "../lib/labels";
 
 /** The tracker's columns from sm up; on a phone a row stacks. Shared with the table's header. */
 export const rowGridClasses = "sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_8.5rem_7.5rem_4.5rem]";
 
+// a Badge's look, a button: the arrow says it opens, the color alone wouldn't
 const pickerClasses =
-   "flex items-center gap-1.5 rounded px-1.5 py-0.5 text-sm whitespace-nowrap text-gray-700 hover:bg-gray-200/70 sm:-ml-1.5";
+   "flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap hover:brightness-95";
 
-// the attempts that ended without a job fade: the ones still going, and a job taken, stand out
+// the attempts that ended without a job fade, their text only: a faded badge would be hard to read
 const fadedStatuses: JobAttemptStatus[] = ["rejected", "declined"];
 
 /** "7 Nov", with the year only when it isn't this one's. */
@@ -51,6 +53,7 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
    const silence = picked?.status ? null : attempt.silence;
    const title = attempt.title ?? "Untitled job";
    const company = attempt.company ?? "Company unknown";
+   const faded = fadedStatuses.includes(status);
 
    const pickStage = (next: JobAttemptStage) => {
       if (next !== attempt.stage) update.mutate({ stage: next });
@@ -63,9 +66,7 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
    };
 
    return (
-      <li
-         className={`relative hover:bg-gray-50 ${fadedStatuses.includes(status) ? "opacity-60" : ""}`}
-      >
+      <li className="relative hover:bg-gray-50">
          {/* the whole row, under the pickers: a menu's button can't sit in a link */}
          <Link
             to={{ search: `?attempt=${attempt.id}` }}
@@ -75,19 +76,25 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
          <div
             className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-2 ${rowGridClasses}`}
          >
-            <span className="truncate text-sm font-medium text-gray-900">{company}</span>
-            <span className="col-span-2 row-start-2 truncate text-sm text-gray-600 sm:col-span-1 sm:row-start-auto">
+            <span
+               className={`truncate text-sm font-medium ${faded ? "text-gray-500" : "text-gray-900"}`}
+            >
+               {company}
+            </span>
+            <span
+               className={`col-span-2 row-start-2 truncate text-sm sm:col-span-1 sm:row-start-auto ${faded ? "text-gray-500" : "text-gray-600"}`}
+            >
                {title}
             </span>
             {/* on a phone the pair is a line, at the right: a menu opens leftwards from its button */}
             <div className="col-span-2 row-start-3 flex justify-end gap-1 sm:contents">
                <Menu
                   label={`Stage: ${stageLabels[stage]}`}
-                  triggerClassName={pickerClasses}
+                  triggerClassName={`${pickerClasses} ${stageStyles[stage]}`}
                   trigger={
                      <>
                         {stageLabels[stage]}
-                        <span className="text-xs text-gray-400">▾</span>
+                        <span className="opacity-60">▾</span>
                      </>
                   }
                >
@@ -99,20 +106,17 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
                         onClick={() => pickStage(option)}
                      >
                         <CheckMark shown={option === stage} />
-                        {stageLabels[option]}
+                        <Badge tone={stageStyles[option]}>{stageLabels[option]}</Badge>
                      </button>
                   ))}
                </Menu>
                <Menu
                   label={`Status: ${silence ? silenceLabels[silence] : statusLabels[status]}`}
-                  triggerClassName={pickerClasses}
+                  triggerClassName={`${pickerClasses} ${silence ? silenceStyles[silence] : statusStyles[status]}`}
                   trigger={
                      <>
-                        <span
-                           className={`size-2 rounded-full ${silence ? silenceDotStyles[silence] : statusDotStyles[status]}`}
-                        />
                         {silence ? silenceLabels[silence] : statusLabels[status]}
-                        <span className="text-xs text-gray-400">▾</span>
+                        <span className="opacity-60">▾</span>
                      </>
                   }
                >
@@ -124,7 +128,7 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
                         onClick={() => pickStatus(option)}
                      >
                         <CheckMark shown={option === status} />
-                        {statusLabels[option]}
+                        <Badge tone={statusStyles[option]}>{statusLabels[option]}</Badge>
                      </button>
                   ))}
                </Menu>
