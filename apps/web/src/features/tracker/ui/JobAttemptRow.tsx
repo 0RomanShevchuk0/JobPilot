@@ -40,7 +40,9 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
    // what I picked shows until the list has it: the old value would blink back in between
    const picked = update.isPending ? update.variables : undefined;
    const stage = picked?.stage ?? attempt.stage;
-   const status = picked?.status ?? attempt.status;
+   // a new stage takes a no_answer or ghosted back to active on the server: shown at once, as the stage
+   const silent = attempt.status === "no_answer" || attempt.status === "ghosted";
+   const status = picked?.status ?? (picked?.stage && silent ? "active" : attempt.status);
    const title = attempt.title ?? "Untitled job";
    const company = attempt.company ?? "Company unknown";
    const faded = fadedStatuses.includes(status);
