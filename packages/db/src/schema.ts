@@ -22,6 +22,7 @@ import type {
 import { sql } from "drizzle-orm";
 import {
    boolean,
+   check,
    index,
    integer,
    jsonb,
@@ -302,12 +303,24 @@ export const jobAttempts = pgTable(
       // the silence counts from it: the last change of the stage or status; a row added by hand has
       // it from the start, an old date of applying doesn't make it long silent. null = never changed
       progressChangedAt: tstz("progress_changed_at"),
-      // the last change I made to the rest: the company, title, link, date or notes; to Undo, a row
-      // with something of mine in it. null = never changed
+      // the last change I made to the rest: the company, title, link, date, notes or salary; to
+      // Undo, a row with something of mine in it. null = never changed
       editedAt: tstz("edited_at"),
+      // the salary I applied with; a row from JobPilot starts with the profile's target. null = not
+      // known
+      salaryAmount: integer("salary_amount"),
+      salaryCurrency: text("salary_currency").$type<ProfileCurrency>(),
+      salaryPeriod: text("salary_period").$type<SalaryPeriod>(),
    },
-   // one attempt per vacancy; nulls differ, so rows added by hand are not limited
-   (t) => [unique("job_attempts_user_vacancy_uq").on(t.userId, t.vacancyId)],
+   (t) => [
+      // one attempt per vacancy; nulls differ, so rows added by hand are not limited
+      unique("job_attempts_user_vacancy_uq").on(t.userId, t.vacancyId),
+      // a salary is all three or none: an amount says nothing without its currency and period
+      check(
+         "job_attempts_salary_complete",
+         sql`num_nulls(${t.salaryAmount}, ${t.salaryCurrency}, ${t.salaryPeriod}) in (0, 3)`,
+      ),
+   ],
 );
 
 export const applications = pgTable(

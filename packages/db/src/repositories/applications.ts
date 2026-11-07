@@ -12,10 +12,12 @@ import {
    companies,
    jobAttempts,
    postings,
+   profiles,
    sources,
    vacancies,
    vacancyMatches,
 } from "../schema.js";
+import { salaryColumns, salaryFromColumns } from "./job-attempts.js";
 import { externalApplyUrl } from "./matches.js";
 
 /** An application with its answers, as stored. */
@@ -171,23 +173,33 @@ function withIsoDates<T extends { submittedAt: Date | null; createdAt: Date; upd
    };
 }
 
-/** Puts a sent application into the attempt at its vacancy, starting one with the first application. */
+/**
+ * Puts a sent application into the attempt at its vacancy, starting one with the first application.
+ * A new one starts with the profile's target salary, when it has one: the one I most likely applied
+ * with. One already started keeps its own.
+ */
 async function addToAttempt(tx: Transaction, applicationId: string): Promise<void> {
    const [application] = await tx
       .select({
          userId: applications.userId,
          vacancyId: vacancies.id,
          companyId: vacancies.companyId,
+         salaryTarget: profiles.salaryTarget,
+         salaryCurrency: profiles.salaryCurrency,
+         salaryPeriod: profiles.salaryPeriod,
       })
       .from(applications)
       .innerJoin(postings, eq(postings.id, applications.postingId))
       .innerJoin(vacancies, eq(vacancies.id, postings.vacancyId))
+      .leftJoin(profiles, eq(profiles.userId, applications.userId))
       .where(eq(applications.id, applicationId));
    // applying goes through a vacancy's match, so its posting always has one
    if (!application) throw new Error(`application ${applicationId} has no vacancy`);
+   const { userId, vacancyId, companyId, salaryTarget, salaryCurrency, salaryPeriod } = application;
+   const targetSalary = salaryFromColumns(salaryTarget, salaryCurrency, salaryPeriod);
    const [attempt] = await tx
       .insert(jobAttempts)
-      .values(application)
+      .values({ userId, vacancyId, companyId, ...salaryColumns(targetSalary) })
       .onConflictDoUpdate({
          target: [jobAttempts.userId, jobAttempts.vacancyId],
          // changes nothing: returns the row and locks it against taking back the last application
