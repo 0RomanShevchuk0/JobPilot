@@ -6,6 +6,11 @@ interface Props {
    /** what the button shows */
    trigger: ReactNode;
    triggerClassName: string;
+   /**
+    * which edge of the button the menu lines up with: end (the default) opens leftwards, for a button
+    * at the right; start opens rightwards, for one at the left, where it would leave the screen
+    */
+   align?: "start" | "end";
    /** the items, menuItemStyles on each; anything in it closes the menu once clicked */
    children: ReactNode;
 }
@@ -15,10 +20,10 @@ export const menuItemStyles =
    "flex w-full items-center gap-2 px-4 py-2 text-left whitespace-nowrap text-gray-700 hover:bg-gray-50";
 
 /**
- * A button that opens a menu under it, its right edge under the button's. A click outside or Esc
- * closes it, so does a click on an item.
+ * A button that opens a menu under it, lined up with the button's right edge, or its left one with
+ * align="start". A click outside or Esc closes it, so does a click on an item.
  */
-export function Menu({ label, trigger, triggerClassName, children }: Props) {
+export function Menu({ label, trigger, triggerClassName, align = "end", children }: Props) {
    const [open, setOpen] = useState(false);
    const menuRef = useRef<HTMLDivElement>(null);
 
@@ -52,7 +57,7 @@ export function Menu({ label, trigger, triggerClassName, children }: Props) {
          {open && (
             <div
                onClick={() => setOpen(false)}
-               className="absolute right-0 z-20 mt-1 w-max max-w-72 min-w-40 rounded border border-gray-200 bg-white py-1 text-sm shadow-lg"
+               className={`absolute ${align === "start" ? "left-0" : "right-0"} z-20 mt-1 w-max max-w-72 min-w-40 rounded border border-gray-200 bg-white py-1 text-sm shadow-lg`}
             >
                {children}
             </div>
