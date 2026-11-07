@@ -21,6 +21,11 @@ const statsQuerySchema = z.object({
    timeZone: z.string().refine(isTimeZone, "Unknown time zone").default("UTC"),
 });
 
+const attemptsQuerySchema = z.object({
+   /** every company applied to more than once; by default the top ones */
+   companies: z.enum(["top", "all"]).default("top"),
+});
+
 @Controller("stats")
 export class StatsController {
    constructor(private readonly stats: StatsService) {}
@@ -32,5 +37,14 @@ export class StatsController {
       @Query(new ZodValidationPipe(statsQuerySchema)) query: z.infer<typeof statsQuerySchema>,
    ) {
       return this.stats.get(userId, query.period, query.timeZone);
+   }
+
+   /** Every attempt to get a job, all time: stages reached, where they stopped, statuses, companies. */
+   @Get("attempts")
+   attempts(
+      @CurrentUserId() userId: string,
+      @Query(new ZodValidationPipe(attemptsQuerySchema)) query: z.infer<typeof attemptsQuerySchema>,
+   ) {
+      return this.stats.attempts(userId, query.companies === "all");
    }
 }

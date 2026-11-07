@@ -1,7 +1,19 @@
-import type { Stats } from "@jobpilot/contracts";
-import { and, count, eq, gte, not, sql, type SQL } from "drizzle-orm";
+import type {
+   JobAttemptStage,
+   JobAttemptStatus,
+   RepeatedCompany,
+   Stats,
+} from "@jobpilot/contracts";
+import { and, count, desc, eq, gt, gte, isNotNull, not, sql, type SQL } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
-import { applications, postings, vacancies, vacancyMatches } from "../schema.js";
+import {
+   applications,
+   companies,
+   jobAttempts,
+   postings,
+   vacancies,
+   vacancyMatches,
+} from "../schema.js";
 import { postingRefusedOnItsPageSql } from "./apply-checks.js";
 import { userSubscribedToVacancySql } from "./subscriptions.js";
 
@@ -14,6 +26,13 @@ export interface StatsOptions {
    timeZone: string;
 }
 
+/** A user's attempts counted by stage and status, and the companies they went to. */
+export interface StoredJobAttemptStats {
+   /** one row per stage and status that has attempts */
+   byStageAndStatus: { stage: JobAttemptStage; status: JobAttemptStatus; count: number }[];
+   companies: { total: number; repeated: number; list: RepeatedCompany[] };
+}
+
 export interface StatsRepository {
    /**
     * The funnel of vacancies found in the user's categories since the start of the period, the user's
@@ -21,6 +40,11 @@ export interface StatsRepository {
     * older profile versions count too: the vacancy went through them all the same.
     */
    forUser(userId: string, options: StatsOptions): Promise<Omit<Stats, "period">>;
+   /**
+    * Every attempt of the user, all time, by stage and status; the companies they went to, and the ones
+    * with more than one attempt, the most first: companiesLimit of them, all when null.
+    */
+   attemptsForUser(userId: string, companiesLimit: number | null): Promise<StoredJobAttemptStats>;
 }
 
 export function createStatsRepository(db: Drizzle): StatsRepository {
@@ -147,6 +171,45 @@ export function createStatsRepository(db: Drizzle): StatsRepository {
                suitable: r.suitable,
                submitted: r.submitted,
             })),
+         };
+      },
+
+      async attemptsForUser(userId, companiesLimit) {
+         const mine = eq(jobAttempts.userId, userId);
+         const byStageAndStatus = await db
+            .select({ stage: jobAttempts.stage, status: jobAttempts.status, count: count() })
+            .from(jobAttempts)
+            .where(mine)
+            .groupBy(jobAttempts.stage, jobAttempts.status);
+
+         // attempts per company, rows without one aside
+         const perCompany = db
+            .select({ companyId: jobAttempts.companyId, attempts: count().as("attempts") })
+            .from(jobAttempts)
+            .where(and(mine, isNotNull(jobAttempts.companyId)))
+            .groupBy(jobAttempts.companyId)
+            .as("per_company");
+         const [summary] = await db
+            .select({
+               total: count(),
+               repeated: sql<number>`count(*) filter (where ${perCompany.attempts} > 1)`.mapWith(
+                  Number,
+               ),
+            })
+            .from(perCompany);
+         const repeatedList = db
+            .select({ name: companies.name, attempts: perCompany.attempts })
+            .from(perCompany)
+            .innerJoin(companies, eq(companies.id, perCompany.companyId))
+            .where(gt(perCompany.attempts, 1))
+            .orderBy(desc(perCompany.attempts), companies.name);
+         const list = await (companiesLimit === null
+            ? repeatedList
+            : repeatedList.limit(companiesLimit));
+
+         return {
+            byStageAndStatus,
+            companies: { total: summary!.total, repeated: summary!.repeated, list },
          };
       },
    };
