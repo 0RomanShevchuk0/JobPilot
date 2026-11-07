@@ -24,6 +24,8 @@ export interface JobAttemptsRepository {
     * value again leave it. False when there is no such row.
     */
    update(userId: string, attemptId: string, changes: JobAttemptChanges): Promise<boolean>;
+   /** Removes a row of mine; its applications stay sent. False when there is no such row. */
+   delete(userId: string, attemptId: string): Promise<boolean>;
 }
 
 export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository {
@@ -97,6 +99,14 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
             .where(and(eq(jobAttempts.id, attemptId), eq(jobAttempts.userId, userId)))
             .returning({ id: jobAttempts.id });
          return updated.length > 0;
+      },
+
+      async delete(userId, attemptId) {
+         const deleted = await db
+            .delete(jobAttempts)
+            .where(and(eq(jobAttempts.id, attemptId), eq(jobAttempts.userId, userId)))
+            .returning({ id: jobAttempts.id });
+         return deleted.length > 0;
       },
    };
 }

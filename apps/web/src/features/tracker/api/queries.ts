@@ -1,6 +1,6 @@
 import type { JobAttemptChanges, JobAttemptListPage } from "@jobpilot/contracts";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPatch } from "../../../shared/api/client";
+import { apiDelete, apiGet, apiPatch } from "../../../shared/api/client";
 import { queryKeys } from "../../../shared/api/queryKeys";
 
 /** My tracker a page at a time, the latest applied first. A refetch reloads every page loaded. */
@@ -22,5 +22,20 @@ export function useUpdateJobAttempt(attemptId: string) {
    return useMutation({
       mutationFn: (changes: JobAttemptChanges) => apiPatch(`/job-attempts/${attemptId}`, changes),
       onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.jobAttempts.all }),
+   });
+}
+
+/**
+ * Removes a row; its applications stay sent. onDeleted runs before the list reloads: whoever shows the
+ * row is gone with it by then, and couldn't close anymore.
+ */
+export function useDeleteJobAttempt(onDeleted: () => void) {
+   const queryClient = useQueryClient();
+   return useMutation({
+      mutationFn: (attemptId: string) => apiDelete(`/job-attempts/${attemptId}`),
+      onSuccess: () => {
+         onDeleted();
+         return queryClient.invalidateQueries({ queryKey: queryKeys.jobAttempts.all });
+      },
    });
 }

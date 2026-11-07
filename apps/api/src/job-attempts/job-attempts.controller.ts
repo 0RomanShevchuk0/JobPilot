@@ -2,6 +2,7 @@ import { jobAttemptChangesSchema, type JobAttemptChanges } from "@jobpilot/contr
 import {
    Body,
    Controller,
+   Delete,
    Get,
    HttpCode,
    NotFoundException,
@@ -41,6 +42,18 @@ export class JobAttemptsController {
       @Body(new ZodValidationPipe(jobAttemptChangesSchema)) changes: JobAttemptChanges,
    ) {
       if (!(await this.jobAttempts.update(userId, id, changes))) {
+         throw new NotFoundException("No such row in the tracker");
+      }
+   }
+
+   /** Removes a row; its applications stay sent. */
+   @Delete(":id")
+   @HttpCode(204)
+   async delete(
+      @CurrentUserId() userId: string,
+      @Param("id", new ZodValidationPipe(z.uuid())) id: string,
+   ) {
+      if (!(await this.jobAttempts.delete(userId, id))) {
          throw new NotFoundException("No such row in the tracker");
       }
    }
