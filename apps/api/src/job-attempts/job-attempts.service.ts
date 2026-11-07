@@ -27,4 +27,9 @@ export class JobAttemptsService {
    update(userId: string, attemptId: string, changes: JobAttemptChanges): Promise<boolean> {
       return this.db.jobAttempts.update(userId, attemptId, changes);
    }
+
+   /** Removes a row of mine; its applications stay sent. False when there is no such row. */
+   delete(userId: string, attemptId: string): Promise<boolean> {
+      return this.db.jobAttempts.delete(userId, attemptId);
+   }
 }

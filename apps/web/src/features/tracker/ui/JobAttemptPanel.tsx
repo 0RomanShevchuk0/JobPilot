@@ -1,12 +1,12 @@
 import type { JobAttemptListItem } from "@jobpilot/contracts";
 import { useEffect, useRef } from "react";
 import { Link } from "react-router";
-import { textareaClasses } from "../../../shared/ui";
-import { useUpdateJobAttempt } from "../api/queries";
+import { Button, textareaClasses, TrashIcon } from "../../../shared/ui";
+import { useDeleteJobAttempt, useUpdateJobAttempt } from "../api/queries";
 
 /**
  * A tracker row's details, at the screen's right edge (the whole screen on a phone): the job, the
- * answers of each application, the notes. Esc closes it.
+ * answers of each application, the notes, and the way to remove a row made by mistake. Esc closes it.
  */
 export function JobAttemptPanel({
    attempt,
@@ -24,6 +24,13 @@ export function JobAttemptPanel({
    }, [onClose]);
 
    const title = attempt.title ?? "Untitled job";
+   const remove = useDeleteJobAttempt(onClose);
+   // what I wrote goes with it: asked first
+   const confirmAndRemove = () => {
+      if (window.confirm("Remove this row? Its stage, status and notes are lost.")) {
+         remove.mutate(attempt.id);
+      }
+   };
 
    return (
       <aside
@@ -77,6 +84,20 @@ export function JobAttemptPanel({
 
          {/* a new field for each row: it starts from what that row has */}
          <NotesField key={attempt.id} attemptId={attempt.id} notes={attempt.notes} />
+
+         <div className="mt-auto">
+            <Button
+               variant="dangerGhost"
+               size="sm"
+               className="inline-flex items-center gap-1.5"
+               loading={remove.isPending}
+               onClick={confirmAndRemove}
+            >
+               {!remove.isPending && <TrashIcon />}
+               Remove from tracker
+            </Button>
+            {remove.isError && <p className="mt-1 text-sm text-red-600">{remove.error.message}</p>}
+         </div>
       </aside>
    );
 }
