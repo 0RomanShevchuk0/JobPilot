@@ -125,17 +125,7 @@ for (const entry of sources) {
 }
 
 if (collectsVacancies) {
-   await markSilentJobAttemptsQueue.upsertJobScheduler(
-      "mark-silent-job-attempts",
-      { every: MARK_SILENT_EVERY_MS },
-      { name: "mark-silent-job-attempts", data: {}, opts: markSilentJobAttemptsJobOptions },
-   );
    workers.push(
-      new Worker<MarkSilentJobAttemptsJobData>(
-         QueueNames.markSilentJobAttempts,
-         () => handleMarkSilentJobAttempts(database),
-         { connection, concurrency: 1 },
-      ),
       new Worker<DiscoverJobData>(
          QueueNames.discover,
          (job) => handleDiscover(job, database, fetchQueues),
@@ -147,10 +137,22 @@ if (collectsVacancies) {
          { connection, concurrency: 1 },
       ),
    );
-} else {
-   // the server's worker keeps this one: dates are the same for both
-   await markSilentJobAttemptsQueue.removeJobScheduler("mark-silent-job-attempts");
 }
+
+// every worker, collecting or not: it asks no site, and a second one on the same database finds
+// nothing left to mark
+await markSilentJobAttemptsQueue.upsertJobScheduler(
+   "mark-silent-job-attempts",
+   { every: MARK_SILENT_EVERY_MS },
+   { name: "mark-silent-job-attempts", data: {}, opts: markSilentJobAttemptsJobOptions },
+);
+workers.push(
+   new Worker<MarkSilentJobAttemptsJobData>(
+      QueueNames.markSilentJobAttempts,
+      () => handleMarkSilentJobAttempts(database),
+      { connection, concurrency: 1 },
+   ),
+);
 
 workers.push(
    // check-can-apply queues it too, for a page found gone: a worker not collecting needs it as well
