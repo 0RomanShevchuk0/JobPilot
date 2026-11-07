@@ -2,7 +2,6 @@ import type { JobAttemptChanges, JobAttemptListPage, NewJobAttempt } from "@jobp
 import { normalizeCompanyName } from "@jobpilot/vacancies";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { Database } from "../infra/database.js";
-import { jobAttemptSilence } from "./job-attempt-silence.js";
 
 // rows per page of the tracker: a page fills a screen or two
 const PAGE_SIZE = 30;
@@ -11,15 +10,11 @@ const PAGE_SIZE = 30;
 export class JobAttemptsService {
    constructor(private readonly db: Database) {}
 
-   /** A page of my tracker, each row with how silent its company is; the next one starts after its last row. */
+   /** A page of my tracker; the next one starts after its last row. */
    async list(userId: string, after: string | undefined): Promise<JobAttemptListPage> {
       // one more than a page: whether another one follows
       const rows = await this.db.jobAttempts.listForUser(userId, { after, limit: PAGE_SIZE + 1 });
-      const now = new Date();
-      const items = rows.slice(0, PAGE_SIZE).map(({ progressChangedAt, ...row }) => ({
-         ...row,
-         silence: jobAttemptSilence({ ...row, progressChangedAt }, now),
-      }));
+      const items = rows.slice(0, PAGE_SIZE);
       const hasMore = rows.length > PAGE_SIZE;
       return { items, nextCursor: hasMore ? items[PAGE_SIZE - 1]!.id : null };
    }

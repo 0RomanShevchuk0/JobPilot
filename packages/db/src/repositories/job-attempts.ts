@@ -4,15 +4,9 @@ import type {
    JobAttemptStage,
    JobAttemptStatus,
 } from "@jobpilot/contracts";
-import { and, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lte, ne, or, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { applications, companies, jobAttempts, postings, sources, vacancies } from "../schema.js";
-
-/** A row of the tracker as stored: how silent the company is, the reader works out from the dates. */
-export interface StoredJobAttempt extends Omit<JobAttemptListItem, "silence"> {
-   /** the last change of the stage or status; null = never changed */
-   progressChangedAt: string | null;
-}
 
 export interface JobAttemptListOptions {
    /** the last row of the previous page: the list goes on after it; absent = from the top */
@@ -41,21 +35,29 @@ export interface StoredJobAttemptChanges extends Omit<JobAttemptChanges, "compan
 
 export interface JobAttemptsRepository {
    /** My tracker a page at a time, the latest applied first. */
-   listForUser(userId: string, options: JobAttemptListOptions): Promise<StoredJobAttempt[]>;
+   listForUser(userId: string, options: JobAttemptListOptions): Promise<JobAttemptListItem[]>;
    /** Adds a row by hand; its company is found by the normalized name, or made. */
    create(userId: string, attempt: NewStoredJobAttempt): Promise<{ id: string }>;
    /**
-    * Changes a row of mine. The silence is counted anew by a stage or status that really changes, and
-    * by active even on a row already active: the company answered, the stage stays. Notes and the same
-    * value again leave it, and so does a company, set only on a row with none. False when there is no
-    * such row.
+    * Changes a row of mine. A stage or status that really changes counts the silence anew, and a new
+    * stage ends a no_answer or ghosted: the company is clearly there. Notes, a company (set only on a
+    * row with none) and the same value again leave them. False when there is no such row.
     */
    update(userId: string, attemptId: string, changes: StoredJobAttemptChanges): Promise<boolean>;
    /** Removes a row of mine; its applications stay sent. False when there is no such row. */
    delete(userId: string, attemptId: string): Promise<boolean>;
+   /**
+    * The active rows with no stage or status change since quietSince go to no_answer, or to ghosted
+    * once the process began; an offer waits on me, not the company. Leaves their date: to Undo, that
+    * row was never touched. Returns how many.
+    */
+   markSilent(quietSince: Date): Promise<number>;
 }
 
 type Transaction = Parameters<Parameters<Drizzle["transaction"]>[0]>[0];
+
+// the statuses the worker sets, when a company goes quiet
+const silentStatuses: JobAttemptStatus[] = ["no_answer", "ghosted"];
 
 /** The company with this normalized name; the first name seen stays, a new one is made. */
 async function findOrCreateCompany(
@@ -97,7 +99,6 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
                status: jobAttempts.status,
                notes: jobAttempts.notes,
                appliedAt: jobAttempts.appliedAt,
-               progressChangedAt: jobAttempts.progressChangedAt,
             })
             .from(jobAttempts)
             .leftJoin(vacancies, eq(vacancies.id, jobAttempts.vacancyId))
@@ -122,7 +123,6 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
          return rows.map((row) => ({
             ...row,
             appliedAt: row.appliedAt.toISOString(),
-            progressChangedAt: row.progressChangedAt?.toISOString() ?? null,
             applications: sent
                .filter((application) => application.attemptId === row.id)
                .map(({ id, sourceName }) => ({ id, sourceName })),
@@ -142,9 +142,7 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
 
       async update(userId, attemptId, { company, ...changes }) {
          const stageChanges = changes.stage && ne(jobAttempts.stage, changes.stage);
-         const statusChanges =
-            changes.status &&
-            (changes.status === "active" ? sql`true` : ne(jobAttempts.status, changes.status));
+         const statusChanges = changes.status && ne(jobAttempts.status, changes.status);
          const progressChanges = or(stageChanges, statusChanges);
          return db.transaction(async (tx) => {
             const mine = and(eq(jobAttempts.id, attemptId), eq(jobAttempts.userId, userId));
@@ -161,6 +159,10 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
             const fields = {
                ...changes,
                ...(companyId && { companyId }),
+               ...(stageChanges &&
+                  !changes.status && {
+                     status: sql<JobAttemptStatus>`case when ${and(stageChanges, inArray(jobAttempts.status, silentStatuses))} then 'active' else ${jobAttempts.status} end`,
+                  }),
                ...(progressChanges && {
                   progressChangedAt: sql`case when ${progressChanges} then now() else ${jobAttempts.progressChangedAt} end`,
                }),
@@ -178,6 +180,24 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
             .where(and(eq(jobAttempts.id, attemptId), eq(jobAttempts.userId, userId)))
             .returning({ id: jobAttempts.id });
          return deleted.length > 0;
+      },
+
+      async markSilent(quietSince) {
+         const lastProgressSql = sql`coalesce(${jobAttempts.progressChangedAt}, ${jobAttempts.appliedAt})`;
+         const marked = await db
+            .update(jobAttempts)
+            .set({
+               status: sql<JobAttemptStatus>`case when ${jobAttempts.stage} = 'applied' then 'no_answer' else 'ghosted' end`,
+            })
+            .where(
+               and(
+                  eq(jobAttempts.status, "active"),
+                  ne(jobAttempts.stage, "offer"),
+                  lte(lastProgressSql, quietSince),
+               ),
+            )
+            .returning({ id: jobAttempts.id });
+         return marked.length;
       },
    };
 }

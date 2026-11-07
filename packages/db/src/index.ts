@@ -15,7 +15,6 @@ export type {
    JobAttemptListOptions,
    JobAttemptsRepository,
    NewStoredJobAttempt,
-   StoredJobAttempt,
    StoredJobAttemptChanges,
 } from "./repositories/job-attempts.js";
 export type {

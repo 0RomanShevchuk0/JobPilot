@@ -1,4 +1,4 @@
-import type { JobAttemptSilence, JobAttemptStage, JobAttemptStatus } from "@jobpilot/contracts";
+import type { JobAttemptStage, JobAttemptStatus } from "@jobpilot/contracts";
 
 export const stageLabels: Record<JobAttemptStage, string> = {
    applied: "Applied",
@@ -12,15 +12,12 @@ export const stageLabels: Record<JobAttemptStage, string> = {
 
 export const statusLabels: Record<JobAttemptStatus, string> = {
    active: "Active",
+   no_answer: "No answer",
+   ghosted: "Ghosted",
    hold: "On hold",
    rejected: "Rejected",
    declined: "I declined",
    accepted: "Accepted",
-};
-
-export const silenceLabels: Record<JobAttemptSilence, string> = {
-   no_answer: "No answer",
-   ghosted: "Ghosted",
 };
 
 // the stage's color deepens as the attempt goes on: gray has seen nothing yet, green an offer
@@ -37,13 +34,10 @@ export const stageStyles: Record<JobAttemptStage, string> = {
 // the status's color says how it stands; nothing to act on stays calm
 export const statusStyles: Record<JobAttemptStatus, string> = {
    active: "bg-sky-100 text-sky-800",
+   no_answer: "bg-gray-100 text-gray-700",
+   ghosted: "bg-orange-100 text-orange-800",
    hold: "bg-amber-100 text-amber-800",
    rejected: "bg-red-100 text-red-800",
    declined: "bg-gray-100 text-gray-700",
    accepted: "bg-green-100 text-green-800",
-};
-
-export const silenceStyles: Record<JobAttemptSilence, string> = {
-   no_answer: "bg-gray-100 text-gray-700",
-   ghosted: "bg-orange-100 text-orange-800",
 };

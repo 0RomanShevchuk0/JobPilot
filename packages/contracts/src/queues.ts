@@ -5,6 +5,8 @@
 //   detect-closed-postings                         │
 //   match-user (profile changed) ──────────────────┘
 //
+//   mark-silent-job-attempts (daily): tracker rows a company went quiet on get their status
+//
 //   prepare-application (the user asked to apply): read the form on the job site, answer it
 //   fill-application (the user approved the answers): fill the form in a visible browser, they send it
 //
@@ -16,6 +18,8 @@ export const QueueNames = {
    discover: "discover",
    /** Sends postings long gone from a source's listings to fetch, to learn whether they are closed. */
    detectClosedPostings: "detect-closed-postings",
+   /** Gives the tracker rows a company went quiet on their status. */
+   markSilentJobAttempts: "mark-silent-job-attempts",
    /** Builds or updates the vacancy of a stored posting. */
    buildVacancy: "build-vacancy",
    /** Evaluates one vacancy for one user with the prefilter; what passes goes to check-can-apply. */
@@ -45,6 +49,9 @@ export interface DiscoverJobData {
 export interface DetectClosedPostingsJobData {
    source: string;
 }
+
+/** Which rows is read when the job runs. */
+export type MarkSilentJobAttemptsJobData = Record<string, never>;
 
 export interface FetchJobData {
    postingId: string;

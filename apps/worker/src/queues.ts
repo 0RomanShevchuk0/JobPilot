@@ -16,6 +16,13 @@ export const detectClosedPostingsJobOptions: JobsOptions = {
    removeOnFail: 500,
 };
 
+export const markSilentJobAttemptsJobOptions: JobsOptions = {
+   attempts: 2,
+   backoff: { type: "exponential", delay: 60_000 },
+   removeOnComplete: 100,
+   removeOnFail: 500,
+};
+
 export const fetchJobOptions: JobsOptions = {
    attempts: 3,
    backoff: { type: "exponential", delay: 30_000 },
