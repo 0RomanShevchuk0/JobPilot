@@ -69,6 +69,10 @@ export const newJobAttemptSchema = z.object({
       .optional(),
    /** "2026-11-01"; absent = now */
    appliedAt: z.iso.date().optional(),
+   /** an attempt already under way goes in as it stands; absent = just applied */
+   stage: z.enum(jobAttemptStages).optional(),
+   status: z.enum(jobAttemptStatuses).optional(),
+   notes: z.string().max(10_000).optional(),
 });
 export type NewJobAttempt = z.infer<typeof newJobAttemptSchema>;
 
@@ -78,6 +82,8 @@ export const jobAttemptChangesSchema = z
       stage: z.enum(jobAttemptStages),
       status: z.enum(jobAttemptStatuses),
       notes: z.string().max(10_000),
+      /** on a row with no company; a company it already has stays */
+      companyName: z.string().trim().min(1).max(200),
    })
    .partial()
    .refine((changes) => Object.keys(changes).length > 0, "Nothing to change");

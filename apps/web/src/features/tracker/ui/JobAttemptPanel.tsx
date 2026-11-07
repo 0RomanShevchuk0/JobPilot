@@ -1,13 +1,13 @@
 import type { JobAttemptListItem } from "@jobpilot/contracts";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ChangeEvent } from "react";
 import { Link } from "react-router";
-import { Button, textareaClasses, TrashIcon } from "../../../shared/ui";
+import { Button, inputClasses, textareaClasses, TrashIcon } from "../../../shared/ui";
 import { useDeleteJobAttempt, useUpdateJobAttempt } from "../api/queries";
 import { TrackerPanel } from "./TrackerPanel";
 
 /**
- * A tracker row's details: the job, the answers of each application, the notes, and the way to remove
- * a row made by mistake.
+ * A tracker row's details: the job, its company, or a field for it when it's not known, the answers
+ * of each application, the notes, and the way to remove a row made by mistake.
  */
 export function JobAttemptPanel({
    attempt,
@@ -31,7 +31,11 @@ export function JobAttemptPanel({
          onClose={onClose}
          heading={
             <>
-               <p className="text-sm text-gray-600">{attempt.company ?? "Company unknown"}</p>
+               {attempt.company ? (
+                  <p className="text-sm text-gray-600">{attempt.company}</p>
+               ) : (
+                  <CompanyField key={attempt.id} attemptId={attempt.id} />
+               )}
                <h2 className="font-semibold text-gray-900">
                   {attempt.vacancyId ? (
                      <Link to={`/matches/${attempt.vacancyId}`} className="hover:underline">
@@ -101,34 +105,60 @@ export function JobAttemptPanel({
 }
 
 /**
- * The notes, saved when I leave the field, or when it goes away with my text in it: Esc, the back
- * button, another row.
+ * A field's handlers: what I wrote is saved when I leave the field, or when it goes away with my text
+ * in it (Esc, the back button, another row). save stays the first render's: it needs nothing newer.
  */
-function NotesField({ attemptId, notes }: { attemptId: string; notes: string }) {
-   const { mutate, error } = useUpdateJobAttempt(attemptId);
-   const draft = useRef(notes);
-   const saved = useRef(notes);
-   const save = useRef(() => {
+function useSaveOnLeave(value: string, save: (text: string) => void) {
+   const draft = useRef(value);
+   const saved = useRef(value);
+   const saveDraft = useRef(() => {
       if (draft.current === saved.current) return;
       saved.current = draft.current;
-      mutate({ notes: draft.current });
+      save(draft.current);
    });
 
-   useEffect(() => () => save.current(), []);
+   useEffect(() => () => saveDraft.current(), []);
+
+   return {
+      onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+         draft.current = event.target.value;
+      },
+      onBlur: () => saveDraft.current(),
+   };
+}
+
+function NotesField({ attemptId, notes }: { attemptId: string; notes: string }) {
+   const { mutate, error } = useUpdateJobAttempt(attemptId);
+   const handlers = useSaveOnLeave(notes, (text) => mutate({ notes: text }));
 
    return (
       <div>
          <label className="block">
             <span className="mb-1 block text-sm text-gray-500">Notes</span>
-            <textarea
-               className={textareaClasses}
-               defaultValue={notes}
-               onChange={(e) => {
-                  draft.current = e.target.value;
-               }}
-               onBlur={() => save.current()}
-            />
+            <textarea className={textareaClasses} defaultValue={notes} {...handlers} />
          </label>
+         {error && <p className="mt-1 text-sm text-red-600">{error.message}</p>}
+      </div>
+   );
+}
+
+/** The company of a row that has none; once saved, the row shows it and the field goes. */
+function CompanyField({ attemptId }: { attemptId: string }) {
+   const { mutate, error } = useUpdateJobAttempt(attemptId);
+   const handlers = useSaveOnLeave("", (text) => {
+      const companyName = text.trim();
+      if (companyName) mutate({ companyName });
+   });
+
+   return (
+      <div className="mb-1">
+         <input
+            aria-label="Company"
+            placeholder="Company unknown: type it"
+            maxLength={200}
+            className={inputClasses}
+            {...handlers}
+         />
          {error && <p className="mt-1 text-sm text-red-600">{error.message}</p>}
       </div>
    );
