@@ -8,14 +8,7 @@ import {
 import { Link } from "react-router";
 import { Badge, CheckIcon, Menu, menuItemStyles } from "../../../shared/ui";
 import { useUpdateJobAttempt } from "../api/queries";
-import {
-   silenceLabels,
-   silenceStyles,
-   stageLabels,
-   stageStyles,
-   statusLabels,
-   statusStyles,
-} from "../lib/labels";
+import { stageLabels, stageStyles, statusLabels, statusStyles } from "../lib/labels";
 
 /** The tracker's columns from sm up; on a phone a row stacks. Shared with the table's header. */
 export const rowGridClasses = "sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_8.5rem_7.5rem_4.5rem]";
@@ -40,8 +33,7 @@ function shortDate(iso: string): string {
 
 /**
  * One attempt, a line of the tracker: who, what, how far it got, how it stands, when I applied. The
- * stage and status change right here; the rest of the row opens the panel. A silent company shows in
- * place of the status, which stays active: picking Active says it answered, and counts anew.
+ * stage and status change right here; the rest of the row opens the panel.
  */
 export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
    const update = useUpdateJobAttempt(attempt.id);
@@ -49,8 +41,6 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
    const picked = update.isPending ? update.variables : undefined;
    const stage = picked?.stage ?? attempt.stage;
    const status = picked?.status ?? attempt.status;
-   // once I say Active, the silence is over: no need to wait for the list
-   const silence = picked?.status ? null : attempt.silence;
    const title = attempt.title ?? "Untitled job";
    const company = attempt.company ?? "Company unknown";
    const faded = fadedStatuses.includes(status);
@@ -58,11 +48,8 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
    const pickStage = (next: JobAttemptStage) => {
       if (next !== attempt.stage) update.mutate({ stage: next });
    };
-   // the same status again changes nothing, except Active on a silent company
    const pickStatus = (next: JobAttemptStatus) => {
-      if (next !== attempt.status || (next === "active" && attempt.silence)) {
-         update.mutate({ status: next });
-      }
+      if (next !== attempt.status) update.mutate({ status: next });
    };
 
    return (
@@ -111,11 +98,11 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
                   ))}
                </Menu>
                <Menu
-                  label={`Status: ${silence ? silenceLabels[silence] : statusLabels[status]}`}
-                  triggerClassName={`${pickerClasses} ${silence ? silenceStyles[silence] : statusStyles[status]}`}
+                  label={`Status: ${statusLabels[status]}`}
+                  triggerClassName={`${pickerClasses} ${statusStyles[status]}`}
                   trigger={
                      <>
-                        {silence ? silenceLabels[silence] : statusLabels[status]}
+                        {statusLabels[status]}
                         <span className="opacity-60">▾</span>
                      </>
                   }

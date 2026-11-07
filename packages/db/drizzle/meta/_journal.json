@@ -134,6 +134,13 @@
       "when": 1794012981206,
       "tag": "0018_job_attempt_title_url",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794015110899,
+      "tag": "0019_job_attempt_silent_statuses",
+      "breakpoints": true
     }
   ]
 }

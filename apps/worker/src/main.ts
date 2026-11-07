@@ -2,6 +2,7 @@ import {
    QueueNames,
    type DiscoverJobData,
    type DetectClosedPostingsJobData,
+   type MarkSilentJobAttemptsJobData,
    fetchQueueName,
    type FetchJobData,
    type BuildVacancyJobData,
@@ -30,7 +31,15 @@ import { handleScoreVacancy } from "./jobs/score-vacancy.js";
 import { handlePrepareApplication } from "./jobs/prepare-application.js";
 import { createScoringLlm } from "./llm.js";
 import { log } from "./log.js";
-import { discoverJobOptions, detectClosedPostingsJobOptions } from "./queues.js";
+import {
+   handleMarkSilentJobAttempts,
+   MARK_SILENT_EVERY_MS,
+} from "./jobs/mark-silent-job-attempts.js";
+import {
+   discoverJobOptions,
+   detectClosedPostingsJobOptions,
+   markSilentJobAttemptsJobOptions,
+} from "./queues.js";
 import { sources } from "./sources.js";
 
 // error reporting first, so a crash during setup is caught too (no-op without SENTRY_DSN)
@@ -51,6 +60,10 @@ const detectClosedPostingsQueue = new Queue<DetectClosedPostingsJobData>(
    {
       connection,
    },
+);
+const markSilentJobAttemptsQueue = new Queue<MarkSilentJobAttemptsJobData>(
+   QueueNames.markSilentJobAttempts,
+   { connection },
 );
 const fetchQueues = new Map(
    sources.map((s) => [
@@ -112,7 +125,17 @@ for (const entry of sources) {
 }
 
 if (collectsVacancies) {
+   await markSilentJobAttemptsQueue.upsertJobScheduler(
+      "mark-silent-job-attempts",
+      { every: MARK_SILENT_EVERY_MS },
+      { name: "mark-silent-job-attempts", data: {}, opts: markSilentJobAttemptsJobOptions },
+   );
    workers.push(
+      new Worker<MarkSilentJobAttemptsJobData>(
+         QueueNames.markSilentJobAttempts,
+         () => handleMarkSilentJobAttempts(database),
+         { connection, concurrency: 1 },
+      ),
       new Worker<DiscoverJobData>(
          QueueNames.discover,
          (job) => handleDiscover(job, database, fetchQueues),
@@ -124,6 +147,9 @@ if (collectsVacancies) {
          { connection, concurrency: 1 },
       ),
    );
+} else {
+   // the server's worker keeps this one: dates are the same for both
+   await markSilentJobAttemptsQueue.removeJobScheduler("mark-silent-job-attempts");
 }
 
 workers.push(
@@ -229,6 +255,7 @@ async function shutdown(signal: string) {
    await Promise.all([
       discoverQueue.close(),
       detectClosedPostingsQueue.close(),
+      markSilentJobAttemptsQueue.close(),
       buildVacancyQueue.close(),
       matchVacancyQueue.close(),
       checkCanApplyQueue.close(),

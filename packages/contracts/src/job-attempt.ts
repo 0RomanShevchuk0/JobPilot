@@ -15,14 +15,21 @@ export const jobAttemptStages = [
 ] as const;
 export type JobAttemptStage = (typeof jobAttemptStages)[number];
 
-export const jobAttemptStatuses = ["active", "hold", "rejected", "declined", "accepted"] as const;
-export type JobAttemptStatus = (typeof jobAttemptStatuses)[number];
-
 /**
- * How the company went quiet on an active attempt. no_answer: nothing since I applied. ghosted: it
- * stopped answering after the process began.
+ * How an attempt stands. no_answer: nothing since I applied. ghosted: the company stopped answering
+ * after the process began. The worker sets these two on an active attempt quiet for long enough; like
+ * the others, they can also be picked by hand.
  */
-export type JobAttemptSilence = "no_answer" | "ghosted";
+export const jobAttemptStatuses = [
+   "active",
+   "no_answer",
+   "ghosted",
+   "hold",
+   "rejected",
+   "declined",
+   "accepted",
+] as const;
+export type JobAttemptStatus = (typeof jobAttemptStatuses)[number];
 
 /** An application of an attempt: the way to its answers. */
 export interface JobAttemptApplication {
@@ -45,8 +52,6 @@ export interface JobAttemptListItem {
    status: JobAttemptStatus;
    notes: string;
    appliedAt: string;
-   /** worked out from the dates when read; null when the company isn't silent */
-   silence: JobAttemptSilence | null;
    /** the earliest sent first */
    applications: JobAttemptApplication[];
 }
