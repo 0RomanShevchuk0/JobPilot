@@ -1,4 +1,5 @@
 import type { JobAttemptChanges, JobAttemptListPage, NewJobAttempt } from "@jobpilot/contracts";
+import type { JobAttemptListOptions } from "@jobpilot/db";
 import { normalizeCompanyName } from "@jobpilot/vacancies";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { Database } from "../infra/database.js";
@@ -22,10 +23,16 @@ function companyNamed(name: string): { name: string; normalizedName: string } | 
 export class JobAttemptsService {
    constructor(private readonly db: Database) {}
 
-   /** A page of my tracker; the next one starts after its last row. */
-   async list(userId: string, after: string | undefined): Promise<JobAttemptListPage> {
+   /** A page of my tracker, only the rows matching the filters; the next one starts after its last row. */
+   async list(
+      userId: string,
+      options: Omit<JobAttemptListOptions, "limit">,
+   ): Promise<JobAttemptListPage> {
       // one more than a page: whether another one follows
-      const rows = await this.db.jobAttempts.listForUser(userId, { after, limit: PAGE_SIZE + 1 });
+      const rows = await this.db.jobAttempts.listForUser(userId, {
+         ...options,
+         limit: PAGE_SIZE + 1,
+      });
       const items = rows.slice(0, PAGE_SIZE);
       const hasMore = rows.length > PAGE_SIZE;
       return { items, nextCursor: hasMore ? items[PAGE_SIZE - 1]!.id : null };

@@ -1,5 +1,7 @@
 import {
    jobAttemptChangesSchema,
+   jobAttemptStages,
+   jobAttemptStatuses,
    newJobAttemptSchema,
    type JobAttemptChanges,
    type NewJobAttempt,
@@ -22,6 +24,17 @@ import { ZodValidationPipe } from "../common/zod-validation.pipe.js";
 import { JobAttemptsService } from "./job-attempts.service.js";
 
 const listQuerySchema = z.object({
+   /** words in the job's title or its company's name; absent or blank = every one */
+   q: z
+      .string()
+      .trim()
+      .max(100)
+      .optional()
+      .transform((q) => q || undefined),
+   /** only at this stage */
+   stage: z.enum(jobAttemptStages).optional(),
+   /** only with this status */
+   status: z.enum(jobAttemptStatuses).optional(),
    /** the nextCursor of the previous page; absent = the first page */
    after: z.uuid().optional(),
 });
@@ -30,13 +43,13 @@ const listQuerySchema = z.object({
 export class JobAttemptsController {
    constructor(private readonly jobAttempts: JobAttemptsService) {}
 
-   /** My tracker, a page at a time, the latest applied first. */
+   /** My tracker, a page at a time, the latest applied first: every row, or the ones found. */
    @Get()
    list(
       @CurrentUserId() userId: string,
       @Query(new ZodValidationPipe(listQuerySchema)) query: z.infer<typeof listQuerySchema>,
    ) {
-      return this.jobAttempts.list(userId, query.after);
+      return this.jobAttempts.list(userId, query);
    }
 
    /** Adds a job JobPilot doesn't know about: LinkedIn, a referral, a company's site. */

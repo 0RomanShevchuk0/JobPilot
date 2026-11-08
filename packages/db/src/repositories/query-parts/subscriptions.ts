@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { postings, profiles, vacancies } from "../schema.js";
+import { postings, profiles, vacancies } from "../../schema.js";
 
 /**
  * SQL condition for a query joining profiles and postings: the posting's category (from its page) is

@@ -11,7 +11,7 @@ import type {
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { companies, postings, profiles, vacancies } from "../schema.js";
-import { profilePickedPostingCategorySql } from "./subscriptions.js";
+import { profilePickedPostingCategorySql } from "./query-parts/subscriptions.js";
 
 export interface LinkPostingInput {
    postingId: string;

@@ -14,8 +14,8 @@ import {
    vacancies,
    vacancyMatches,
 } from "../schema.js";
-import { postingRefusedOnItsPageSql } from "./apply-checks.js";
-import { userSubscribedToVacancySql } from "./subscriptions.js";
+import { postingRefusedOnItsPageSql } from "./query-parts/apply-checks.js";
+import { userSubscribedToVacancySql } from "./query-parts/subscriptions.js";
 
 export interface StatsOptions {
    /** start of the period; null = all time */

@@ -5,9 +5,10 @@ import {
    type JobAttemptStage,
    type JobAttemptStatus,
 } from "@jobpilot/contracts";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { Badge, CheckIcon, Menu, menuItemStyles } from "../../../shared/ui";
 import { useUpdateJobAttempt } from "../api/queries";
+import { trackerAddress } from "../lib/address";
 import { stageLabels, stageStyles, statusLabels, statusStyles } from "../lib/labels";
 
 /** The tracker's columns from sm up; on a phone a row stacks. Shared with the table's header. */
@@ -38,6 +39,7 @@ function shortDate(iso: string): string {
  */
 export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
    const update = useUpdateJobAttempt(attempt.id);
+   const [params] = useSearchParams();
    // what I picked shows until the list has it: the old value would blink back in between
    const picked = update.isPending ? update.variables : undefined;
    const stage = picked?.stage ?? attempt.stage;
@@ -59,7 +61,7 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
       <li className="relative hover:bg-gray-50">
          {/* the whole row, under the pickers: a menu's button can't sit in a link */}
          <Link
-            to={{ search: `?attempt=${attempt.id}` }}
+            to={{ search: trackerAddress.withPanel(params, { attempt: attempt.id }) }}
             aria-label={`${company}: ${title}`}
             className="absolute inset-0"
          />

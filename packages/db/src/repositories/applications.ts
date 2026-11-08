@@ -18,6 +18,7 @@ import {
    vacancyMatches,
 } from "../schema.js";
 import { requestedSalaryColumns, salaryFromColumns } from "./job-attempts.js";
+import { likeContainsPattern } from "./query-parts/like-pattern.js";
 import { externalApplyUrl } from "./matches.js";
 
 /** An application with its answers, as stored. */
@@ -157,8 +158,7 @@ const vacancyOfApplicationSql = and(
 
 /** The vacancy's title or its company's name holds the text, in any case; % and _ in it are literal. */
 function titleOrCompanyContainsSql(text: string) {
-   // escapes LIKE's wildcards and its escape char: 50%_off\ → 50\%\_off\\
-   const pattern = `%${text.replace(/[\\%_]/g, "\\$&")}%`;
+   const pattern = likeContainsPattern(text);
    return or(ilike(vacancies.title, pattern), ilike(companies.name, pattern));
 }
 

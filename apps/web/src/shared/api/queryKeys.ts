@@ -18,6 +18,8 @@ export const queryKeys = {
    },
    jobAttempts: {
       all: ["job-attempts"] as const,
+      list: (filter: { q: string; stage: string | null; status: string | null }) =>
+         ["job-attempts", "list", filter] as const,
    },
    documents: {
       all: ["documents"] as const,

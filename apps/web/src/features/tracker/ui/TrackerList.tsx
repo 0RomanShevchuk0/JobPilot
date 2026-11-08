@@ -1,36 +1,50 @@
 import { useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Button, LoadMoreTrigger, PageLoader } from "../../../shared/ui";
-import { useJobAttempts } from "../api/queries";
+import { useJobAttempts, type JobAttemptListFilter } from "../api/queries";
+import { trackerAddress } from "../lib/address";
 import { JobAttemptPanel } from "./JobAttemptPanel";
 import { JobAttemptRow, rowGridClasses } from "./JobAttemptRow";
 import { NewJobAttemptPanel } from "./NewJobAttemptPanel";
+import { TrackerFilters } from "./TrackerFilters";
 
 const columns = ["Company", "Role", "Stage", "Status", "Applied"];
 
 /**
- * Every attempt to get a job, the latest applied first, a page at a time as I scroll. What the panel
- * shows is in the address: a row (?attempt=…: back from its answers, it's open again; only a row of
- * the pages loaded opens) or the form to add one (?add).
+ * Every attempt to get a job, the latest applied first, a page at a time as I scroll, searched and
+ * filtered by stage and status. The filter and what the panel shows are in the address: a row
+ * (?attempt=…: back from its answers, it's open again; only a row of the pages loaded opens, so one
+ * filtered out closes) or the form to add one (?add).
  */
 export function TrackerList() {
-   const attempts = useJobAttempts();
+   const [params, setParams] = useSearchParams();
+   const filter = trackerAddress.readFilter(params);
+   const filtered = !!(filter.q || filter.stage || filter.status);
+   const attempts = useJobAttempts(filter);
    const items = attempts.data?.pages.flatMap((page) => page.items);
-   const [params] = useSearchParams();
    const navigate = useNavigate();
    const openAttempt = items?.find((attempt) => attempt.id === params.get("attempt"));
-   const closePanel = useCallback(() => navigate({ search: "" }), [navigate]);
+   // the filter stays
+   const closePanel = useCallback(
+      () => navigate({ search: trackerAddress.withPanel(params, null) }),
+      [navigate, params],
+   );
+   // in place of the address, not a new entry: back leaves the page, it doesn't walk through searches
+   const setFilter = (next: JobAttemptListFilter) =>
+      setParams((current) => trackerAddress.withFilter(current, next), { replace: true });
 
    return (
       <>
+         <TrackerFilters filter={filter} onChange={setFilter} />
          {attempts.isPending && <PageLoader />}
          {attempts.isError && !attempts.isFetchNextPageError && (
             <p className="text-red-600">{attempts.error.message}</p>
          )}
          {items?.length === 0 && (
             <p className="text-sm text-gray-500">
-               Nothing yet: what you send through JobPilot, or Mark applied on a job site in
-               Matches, shows here. Jobs from elsewhere go in with Add.
+               {filtered
+                  ? "Nothing matches."
+                  : "Nothing yet: what you send through JobPilot, or Mark applied on a job site in Matches, shows here. Jobs from elsewhere go in with Add."}
             </p>
          )}
          {!!items?.length && (

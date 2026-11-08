@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { postings, vacancyMatches } from "../schema.js";
+import { postings, vacancyMatches } from "../../schema.js";
 
 /**
  * SQL condition for a query joining vacancy_matches and postings: the posting's page refused in the

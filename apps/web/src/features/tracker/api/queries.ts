@@ -1,20 +1,44 @@
-import type { JobAttemptChanges, JobAttemptListPage, NewJobAttempt } from "@jobpilot/contracts";
+import type {
+   JobAttemptChanges,
+   JobAttemptListPage,
+   JobAttemptStage,
+   JobAttemptStatus,
+   NewJobAttempt,
+} from "@jobpilot/contracts";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiDelete, apiGet, apiPatch, apiPost } from "../../../shared/api/client";
 import { queryKeys } from "../../../shared/api/queryKeys";
 import { useProfile } from "../../profile";
 import { defaultRequestedSalaryUnits, type RequestedSalaryUnits } from "../lib/requested-salary";
 
-/** My tracker a page at a time, the latest applied first. A refetch reloads every page loaded. */
-export function useJobAttempts() {
+export interface JobAttemptListFilter {
+   /** text in the job's title or its company's name; "" = every row */
+   q: string;
+   /** null = every stage */
+   stage: JobAttemptStage | null;
+   /** null = every status */
+   status: JobAttemptStatus | null;
+}
+
+/**
+ * My tracker a page at a time, the latest applied first, only the rows matching the filter. A refetch
+ * reloads every page loaded.
+ */
+export function useJobAttempts(filter: JobAttemptListFilter) {
    return useInfiniteQuery({
-      queryKey: queryKeys.jobAttempts.all,
+      queryKey: queryKeys.jobAttempts.list(filter),
       queryFn: ({ pageParam }) => {
-         const query = pageParam ? `?${new URLSearchParams({ after: pageParam })}` : "";
-         return apiGet<JobAttemptListPage>(`/job-attempts${query}`);
+         const query = new URLSearchParams();
+         if (filter.q) query.set("q", filter.q);
+         if (filter.stage) query.set("stage", filter.stage);
+         if (filter.status) query.set("status", filter.status);
+         if (pageParam) query.set("after", pageParam);
+         return apiGet<JobAttemptListPage>(`/job-attempts?${query}`);
       },
       initialPageParam: null as string | null,
       getNextPageParam: (page) => page.nextCursor, // null: no next page
+      // the list stays while a new search loads: no loader blinking in its place as I type
+      placeholderData: (previous) => previous,
    });
 }
 

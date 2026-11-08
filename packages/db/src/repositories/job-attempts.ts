@@ -12,6 +12,7 @@ import {
    bindIfParam,
    desc,
    eq,
+   ilike,
    inArray,
    lte,
    ne,
@@ -22,8 +23,15 @@ import {
 } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { applications, companies, jobAttempts, postings, sources, vacancies } from "../schema.js";
+import { likeContainsPattern } from "./query-parts/like-pattern.js";
 
 export interface JobAttemptListOptions {
+   /** text in the job's title or its company's name, as typed */
+   q?: string;
+   /** only at this stage */
+   stage?: JobAttemptStage;
+   /** only with this status */
+   status?: JobAttemptStatus;
    /** the last row of the previous page: the list goes on after it; absent = from the top */
    after?: string;
    limit: number;
@@ -62,7 +70,7 @@ export type JobAttemptUpdateOutcome =
    "updated" | "not_found" | "title_required" | "url_not_allowed";
 
 export interface JobAttemptsRepository {
-   /** My tracker a page at a time, the latest applied first. */
+   /** My tracker a page at a time, the latest applied first; only the rows matching the filters. */
    listForUser(userId: string, options: JobAttemptListOptions): Promise<JobAttemptListItem[]>;
    /**
     * Adds a row by hand; its company is found by the normalized name, or made. Its silence counts from
@@ -94,6 +102,15 @@ type Transaction = Parameters<Parameters<Drizzle["transaction"]>[0]>[0];
 
 // the statuses the worker sets, when a company goes quiet
 const silentStatuses: JobAttemptStatus[] = ["no_answer", "ghosted"];
+
+// a row's title: what I wrote on it, or its vacancy's
+const attemptTitleSql = sql<string | null>`coalesce(${jobAttempts.title}, ${vacancies.title})`;
+
+/** The row's title or its company's name holds the text, in any case; % and _ in it are literal. */
+function titleOrCompanyContainsSql(text: string) {
+   const pattern = likeContainsPattern(text);
+   return or(ilike(attemptTitleSql, pattern), ilike(companies.name, pattern));
+}
 
 /** column is distinct from value: unlike <>, a null against a value counts as a change too. */
 function distinctFromSql<TColumn extends Column>(
@@ -145,7 +162,7 @@ async function findOrCreateCompany(
 
 export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository {
    return {
-      async listForUser(userId, { after, limit }) {
+      async listForUser(userId, { q, stage, status, after, limit }) {
          // the next page: what comes below the last row shown. (a, b) < (x, y) compares like words: b
          // only when a ties. Its values are read from the table, not sent by the client: JS dates
          // would drop microseconds
@@ -159,7 +176,7 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
             .select({
                id: jobAttempts.id,
                vacancyId: jobAttempts.vacancyId,
-               title: sql<string | null>`coalesce(${jobAttempts.title}, ${vacancies.title})`,
+               title: attemptTitleSql,
                company: companies.name,
                url: jobAttempts.url,
                stage: jobAttempts.stage,
@@ -173,7 +190,15 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
             .from(jobAttempts)
             .leftJoin(vacancies, eq(vacancies.id, jobAttempts.vacancyId))
             .leftJoin(companies, eq(companies.id, jobAttempts.companyId))
-            .where(and(eq(jobAttempts.userId, userId), after ? belowLastShown : undefined))
+            .where(
+               and(
+                  eq(jobAttempts.userId, userId),
+                  q ? titleOrCompanyContainsSql(q) : undefined,
+                  stage ? eq(jobAttempts.stage, stage) : undefined,
+                  status ? eq(jobAttempts.status, status) : undefined,
+                  after ? belowLastShown : undefined,
+               ),
+            )
             .orderBy(desc(jobAttempts.appliedAt), desc(jobAttempts.id))
             .limit(limit);
 
