@@ -290,6 +290,21 @@ describe("apply form", () => {
       expect(() => readApplyFormOnPage($.html())).toThrow(CannotApplyError);
    });
 
+   it("is the user's own application on a job applied to, closed since or not", () => {
+      const $ = cheerio.load(fixture("job-closed.html"));
+      $("a.sign-in-link").remove();
+      // the card Djinni puts in place of the button, linking to the dialog with the employer
+      $("body").append('<div class="card-body"><a href="/my/inbox/123456/">Dialog</a></div>');
+      let refusal: CannotApplyError | undefined;
+      try {
+         readApplyFormOnPage($.html());
+      } catch (err) {
+         refusal = err as CannotApplyError;
+      }
+      expect(refusal?.message).toBe("Already applied to this job on Djinni");
+      expect(refusal?.alreadyApplied).toBe(true);
+   });
+
    it("needs the session: a page offering to sign in is a logged-out one", () => {
       expect(() => readApplyFormOnPage(fixture("job-remote.html"))).toThrow(SessionExpiredError);
    });

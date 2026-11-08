@@ -47,7 +47,11 @@ export function readJobPage(html: string): JobPageResult {
  */
 function applyCheckOnPage($: CheerioAPI): ApplyCheck {
    if ($(ALREADY_APPLIED_SELECTOR).length > 0) {
-      return { canApply: false, reason: "Already applied to this job on DOU" };
+      return {
+         canApply: false,
+         reason: "Already applied to this job on DOU",
+         alreadyApplied: true,
+      };
    }
    if ($(APPLY_BUTTON_SELECTOR).length > 0 || $(EXTERNAL_APPLY_SELECTOR).length > 0) {
       return { canApply: true };

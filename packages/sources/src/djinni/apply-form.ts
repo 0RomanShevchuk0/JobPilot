@@ -44,7 +44,9 @@ export function readApplyFormOnPage(html: string): ApplyForm {
    const $ = cheerio.load(html);
    if ($(SIGN_IN_LINK_SELECTOR).length > 0) throw new SessionExpiredError(DJINNI_NAME);
    const applyCheck = applyCheckOnPage($);
-   if (!applyCheck.canApply) throw new CannotApplyError(applyCheck.reason);
+   if (!applyCheck.canApply) {
+      throw new CannotApplyError(applyCheck.reason, applyCheck.alreadyApplied);
+   }
    const form = $(APPLY_FORM_SELECTOR).first();
    if (form.length === 0)
       throw new CannotApplyError("Djinni shows no application form on this job");

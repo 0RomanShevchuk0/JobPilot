@@ -48,6 +48,14 @@ export async function handlePrepareApplication(
       if (err instanceof SessionExpiredError) {
          await database.sourceSessions.markExpired(application.userId, application.source);
       }
+      // the site says I applied to this job myself: what Apply was for is done, so it is marked sent
+      // by hand, as I'd mark it, and joins the tracker; Undo takes it back. Dated today: the site
+      // doesn't say when
+      if (err instanceof CannotApplyError && err.alreadyApplied) {
+         await database.applications.markSentByHand(application.userId, application.postingId);
+         log("prepare-application", `marked sent by hand: ${reason}`);
+         return reason;
+      }
       // not an error: the job site takes no application here, trying again won't change that. This
       // posting only: the vacancy's other job sites may well take one (it stays new while one does).
       // The job completes, so it is neither retried nor reported to Sentry

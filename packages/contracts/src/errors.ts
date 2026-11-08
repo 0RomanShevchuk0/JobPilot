@@ -14,4 +14,12 @@ export class SessionExpiredError extends Error {
  * The source offers no application form on this job: applied already, the job is closed, or the
  * profile doesn't meet its requirements. The message says which, for the user to read.
  */
-export class CannotApplyError extends Error {}
+export class CannotApplyError extends Error {
+   /** alreadyApplied: the reason is that the user applied to this job already, by themselves */
+   constructor(
+      message: string,
+      readonly alreadyApplied = false,
+   ) {
+      super(message);
+   }
+}

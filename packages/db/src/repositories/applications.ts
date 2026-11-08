@@ -36,6 +36,7 @@ export interface PostingToApply {
 /** What the worker needs to prepare an application. */
 export interface ApplicationToPrepare {
    userId: string;
+   postingId: string;
    status: ApplicationStatus;
    /** the job page to open */
    postingUrl: string;
@@ -307,6 +308,7 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
          const [row] = await db
             .select({
                userId: applications.userId,
+               postingId: applications.postingId,
                status: applications.status,
                postingUrl: postings.url,
                source: postings.sourceId,

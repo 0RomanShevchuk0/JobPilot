@@ -62,7 +62,9 @@ export function checkFormToFill(html: string): void {
    const $ = cheerio.load(html);
    if (result.status === "gone") throw new CannotApplyError("The job is no longer active on DOU");
    const { applyCheck } = result.check;
-   if (!applyCheck.canApply) throw new CannotApplyError(applyCheck.reason);
+   if (!applyCheck.canApply) {
+      throw new CannotApplyError(applyCheck.reason, applyCheck.alreadyApplied);
+   }
    const external = $(EXTERNAL_APPLY_SELECTOR).attr("href");
    if (external) {
       throw new CannotApplyError(`This job is applied to on the employer's site: ${external}`);

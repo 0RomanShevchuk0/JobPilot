@@ -42,12 +42,22 @@ const TIMEOUT_MS = 30_000;
  */
 export function applyCheckOnPage($: CheerioAPI): ApplyCheck {
    if ($(APPLY_BUTTON_SELECTOR).length > 0) return { canApply: true };
+   // applied before closed: on a job I applied to and that closed since, my application is what counts
+   if ($(ALREADY_APPLIED_SELECTOR).length > 0) {
+      return {
+         canApply: false,
+         reason: "Already applied to this job on Djinni",
+         alreadyApplied: true,
+      };
+   }
+   if ($(JOB_CLOSED_ALERT_SELECTOR).length > 0) {
+      return { canApply: false, reason: "The job is no longer active on Djinni" };
+   }
    return { canApply: false, reason: whyNoApplyButton($) };
 }
 
+/** Why there's no Apply button on an open job the user hasn't applied to: the unmet requirements. */
 function whyNoApplyButton($: CheerioAPI): string {
-   if ($(JOB_CLOSED_ALERT_SELECTOR).length > 0) return "The job is no longer active on Djinni";
-   if ($(ALREADY_APPLIED_SELECTOR).length > 0) return "Already applied to this job on Djinni";
    const listed = $(UNMET_REQUIREMENTS_SELECTOR).toArray();
    const failed = listed.filter((li) => FAILED_ICON.test($(li).find("use").attr("href") ?? ""));
    // the failed ones are why; a page that marks none failed still gets its whole list as the reason

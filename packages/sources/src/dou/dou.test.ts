@@ -194,7 +194,13 @@ describe("job page under the account", () => {
    it("says the user applied already", () => {
       expect(readJobPage(fixture("account-applied.html"))).toEqual({
          status: "ok",
-         check: { applyCheck: { canApply: false, reason: "Already applied to this job on DOU" } },
+         check: {
+            applyCheck: {
+               canApply: false,
+               reason: "Already applied to this job on DOU",
+               alreadyApplied: true,
+            },
+         },
       });
    });
 
@@ -246,6 +252,18 @@ describe("application form", () => {
       expect(() => readApplyFormOnPage(fixture("account-closed.html"))).toThrow(
          "The job is no longer active on DOU",
       );
+   });
+
+   it("says which refusal is the user's own application", () => {
+      const refusal = (file: string) => {
+         try {
+            readApplyFormOnPage(fixture(file));
+         } catch (err) {
+            return err as CannotApplyError;
+         }
+      };
+      expect(refusal("account-applied.html")?.alreadyApplied).toBe(true);
+      expect(refusal("account-closed.html")?.alreadyApplied).toBe(false);
    });
 
    it("throws SessionExpiredError without a session", () => {

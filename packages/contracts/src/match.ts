@@ -70,9 +70,11 @@ export type AiAssessment = z.infer<typeof aiAssessmentSchema>;
 
 /**
  * Whether the job site lets the user apply, as its job page shows it to them; the reason when it won't
- * ("Already applied…", the job is closed, unmet requirements).
+ * ("Already applied…", the job is closed, unmet requirements). alreadyApplied: the reason is that the
+ * user applied to this job already, by themselves.
  */
-export type ApplyCheck = { canApply: true } | { canApply: false; reason: string };
+export type ApplyCheck =
+   { canApply: true } | { canApply: false; reason: string; alreadyApplied?: true };
 
 /**
  * How the job's salary range compares with the expectations in the user's profile on the job site.
