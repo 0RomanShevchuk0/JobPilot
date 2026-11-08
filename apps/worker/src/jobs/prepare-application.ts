@@ -49,10 +49,12 @@ export async function handlePrepareApplication(
          await database.sourceSessions.markExpired(application.userId, application.source);
       }
       // not an error: the job site takes no application here, trying again won't change that. This
-      // posting only: the vacancy's other job sites may well take one (it stays new while one does)
+      // posting only: the vacancy's other job sites may well take one (it stays new while one does).
+      // The job completes, so it is neither retried nor reported to Sentry
       if (err instanceof CannotApplyError) {
          await database.applications.setCannotApply(applicationId, reason);
-         throw new UnrecoverableError(reason);
+         log("prepare-application", `cannot apply: ${reason}`);
+         return reason;
       }
       // a final failure must not leave the application "preparing" forever
       if (err instanceof UnrecoverableError || err instanceof SessionExpiredError || lastAttempt) {
