@@ -1,7 +1,7 @@
-import type { JobAttemptStats } from "@jobpilot/contracts";
+import { salaryLevelParam, type JobAttemptStats } from "@jobpilot/contracts";
 import { useState, type ReactNode } from "react";
 import { Badge, Button, PageLoader } from "../../../shared/ui";
-import { stageLabels, stageStyles, statusLabels, statusStyles } from "../../tracker";
+import { salaryText, stageLabels, stageStyles, statusLabels, statusStyles } from "../../tracker";
 import { useAttemptStats } from "../api/queries";
 
 interface Bar {
@@ -11,24 +11,87 @@ interface Bar {
 }
 
 /**
- * Every attempt to get a job, all time: how far they got, where the ended ones stopped, how they stand
- * now, and the companies applied to more than once.
+ * Every attempt to get a job, all time, or the ones that asked for one salary: how far they got, how
+ * they stand now, and the companies applied to more than once. The salary is salaryLevelParam's, null
+ * for all of them.
  */
-export function AttemptStats() {
+export function AttemptStats({
+   salary,
+   onSalaryChange,
+}: {
+   salary: string | null;
+   onSalaryChange: (salary: string | null) => void;
+}) {
    const [allCompanies, setAllCompanies] = useState(false);
-   const stats = useAttemptStats(allCompanies);
+   const stats = useAttemptStats(allCompanies, salary);
 
    if (stats.isPending) return <PageLoader />;
    if (stats.isError) return <p className="text-red-600">{stats.error.message}</p>;
-   const { total, reached, stopped, statuses, companies } = stats.data;
-   if (total === 0) {
+   const { salaryLevels, total } = stats.data;
+   if (salaryLevels.length === 0) {
       return (
          <p className="text-sm text-gray-500">
             Nothing yet: what you apply to shows here once it's in the Tracker.
          </p>
       );
    }
-   const ended = stopped.reduce((sum, row) => sum + row.count, 0);
+   const everyAttempt = salaryLevels.reduce((sum, level) => sum + level.attempts, 0);
+   const levels = [
+      { param: null, title: "All", attempts: everyAttempt },
+      ...salaryLevels.map((level) => ({
+         param: salaryLevelParam(level.salary),
+         title: level.salary ? salaryText(level.salary) : "Not set",
+         attempts: level.attempts,
+      })),
+   ];
+
+   return (
+      <div className="space-y-8">
+         {/* one level is the same as all of them: nothing to pick, unless it's picked already */}
+         {(salaryLevels.length > 1 || salary !== null) && (
+            <nav className="flex flex-wrap gap-2">
+               {levels.map((level) => (
+                  <Button
+                     key={level.param ?? "all"}
+                     size="sm"
+                     variant={level.param === salary ? "primary" : "outline"}
+                     onClick={() => onSalaryChange(level.param)}
+                  >
+                     {level.title}
+                     <span className="tabular-nums opacity-70">{level.attempts}</span>
+                  </Button>
+               ))}
+            </nav>
+         )}
+
+         {total === 0 ? (
+            <p className="text-sm text-gray-500">No attempts asked for this salary.</p>
+         ) : (
+            // what is shown meanwhile is of the level before, or the top companies only: dimmed
+            <div className={stats.isPlaceholderData ? "opacity-50" : undefined}>
+               <Counts
+                  stats={stats.data}
+                  // the button shows only with the top companies: while it waits for all of them, not
+                  // while another level loads
+                  loadingAllCompanies={stats.isPlaceholderData && allCompanies}
+                  onShowAllCompanies={() => setAllCompanies(true)}
+               />
+            </div>
+         )}
+      </div>
+   );
+}
+
+/** How far the attempts got, how they stand now, the companies applied to more than once. */
+function Counts({
+   stats: { total, reached, statuses, companies },
+   loadingAllCompanies,
+   onShowAllCompanies,
+}: {
+   stats: JobAttemptStats;
+   loadingAllCompanies: boolean;
+   onShowAllCompanies: () => void;
+}) {
    const stageBadge = (stage: JobAttemptStats["reached"][number]["stage"]) => (
       <Badge tone={stageStyles[stage]}>{stageLabels[stage]}</Badge>
    );
@@ -47,27 +110,6 @@ export function AttemptStats() {
                   value: row.count,
                }))}
             />
-         </Section>
-
-         <Section
-            title="Where they stopped"
-            note={`Of ${ended} ended without a job: rejected, declined, ghosted, no answer`}
-         >
-            {ended === 0 ? (
-               <p className="text-sm text-gray-500">None has ended yet.</p>
-            ) : (
-               <Bars
-                  of={ended}
-                  // only the stages something ended at: here a zero says nothing
-                  bars={stopped
-                     .filter((row) => row.count > 0)
-                     .map((row) => ({
-                        key: row.stage,
-                        label: stageBadge(row.stage),
-                        value: row.count,
-                     }))}
-               />
-            )}
          </Section>
 
          <Section title="Now">
@@ -110,8 +152,8 @@ export function AttemptStats() {
                <Button
                   size="sm"
                   className="mt-3"
-                  loading={stats.isPlaceholderData}
-                  onClick={() => setAllCompanies(true)}
+                  loading={loadingAllCompanies}
+                  onClick={onShowAllCompanies}
                >
                   Show all {companies.repeated}
                </Button>

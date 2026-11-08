@@ -1,4 +1,4 @@
-import type { ProfileCurrency, SalaryPeriod } from "@jobpilot/contracts";
+import type { ProfileCurrency, RequestedSalary, SalaryPeriod } from "@jobpilot/contracts";
 
 /** The currency and period a requested salary is picked in when a row has none yet. */
 export interface RequestedSalaryUnits {
@@ -11,3 +11,8 @@ export const defaultRequestedSalaryUnits: RequestedSalaryUnits = {
    currency: "USD",
    period: "month",
 };
+
+/** "3 000 USD / month", the amount grouped as my locale groups it. */
+export function salaryText({ amount, currency, period }: RequestedSalary): string {
+   return `${amount.toLocaleString()} ${currency} / ${period}`;
+}

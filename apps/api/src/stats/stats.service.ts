@@ -2,7 +2,7 @@ import {
    jobAttemptStages,
    jobAttemptStatuses,
    type JobAttemptStats,
-   type JobAttemptStatus,
+   type RequestedSalary,
    type Stats,
    type StatsPeriod,
 } from "@jobpilot/contracts";
@@ -13,10 +13,6 @@ const HOUR_MS = 60 * 60 * 1000;
 
 // the repeated companies shown at first; the rest when asked
 const TOP_COMPANIES = 10;
-
-// the attempts that ended without a job: where they stopped. An accepted one ended with it, a held or
-// active one hasn't ended
-const stoppedStatuses: JobAttemptStatus[] = ["rejected", "declined", "ghosted", "no_answer"];
 
 /** How far back each period goes; "all" has no start. */
 const periodHours: Record<Exclude<StatsPeriod, "all">, number> = {
@@ -41,13 +37,20 @@ export class StatsService {
    }
 
    /**
-    * Every attempt to get a job, all time: how far they got, where the ended ones stopped, how they
-    * stand now, and the companies applied to more than once (the top ones, or all).
+    * Every attempt to get a job, all time, or the ones that asked for a salary (null = for none): how
+    * far they got, how they stand now, and the companies applied to more than once (the top ones, or
+    * all). And every salary asked for, to pick from.
     */
-   async attempts(userId: string, allCompanies: boolean): Promise<JobAttemptStats> {
-      const { byStageAndStatus, companies } = await this.db.stats.attemptsForUser(
+   async attempts(
+      userId: string,
+      {
+         allCompanies,
+         salaryLevel,
+      }: { allCompanies: boolean; salaryLevel?: RequestedSalary | null },
+   ): Promise<JobAttemptStats> {
+      const { salaryLevels, byStageAndStatus, companies } = await this.db.stats.attemptsForUser(
          userId,
-         allCompanies ? null : TOP_COMPANIES,
+         { companiesLimit: allCompanies ? null : TOP_COMPANIES, salaryLevel },
       );
       const countOf = (matches: (row: (typeof byStageAndStatus)[number]) => boolean) =>
          byStageAndStatus.filter(matches).reduce((sum, row) => sum + row.count, 0);
@@ -55,14 +58,11 @@ export class StatsService {
       const order = (stage: (typeof jobAttemptStages)[number]) => jobAttemptStages.indexOf(stage);
 
       return {
+         salaryLevels,
          total: countOf(() => true),
          reached: jobAttemptStages.map((stage) => ({
             stage,
             count: countOf((row) => order(row.stage) >= order(stage)),
-         })),
-         stopped: jobAttemptStages.map((stage) => ({
-            stage,
-            count: countOf((row) => row.stage === stage && stoppedStatuses.includes(row.status)),
          })),
          statuses: jobAttemptStatuses.map((status) => ({
             status,

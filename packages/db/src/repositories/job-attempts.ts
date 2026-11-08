@@ -3,8 +3,6 @@ import type {
    JobAttemptListItem,
    JobAttemptSummary,
    RequestedSalary,
-   ProfileCurrency,
-   SalaryPeriod,
    JobAttemptStage,
    JobAttemptStatus,
 } from "@jobpilot/contracts";
@@ -27,6 +25,7 @@ import {
 import type { Drizzle } from "../drizzle.js";
 import { applications, companies, jobAttempts, postings, sources, vacancies } from "../schema.js";
 import { likeContainsPattern } from "./query-parts/like-pattern.js";
+import { requestedSalaryColumns, salaryFromColumns } from "./query-parts/requested-salary.js";
 
 export interface JobAttemptListOptions {
    /** text in the job's title or its company's name, as typed */
@@ -139,29 +138,6 @@ function distinctFromSql<TColumn extends Column>(
    value: GetColumnData<TColumn, "query">,
 ) {
    return sql`${column} is distinct from ${bindIfParam(value, column)}`;
-}
-
-/** A requested salary as the table's three columns: all three null when there is none. */
-export function requestedSalaryColumns(salary: RequestedSalary | null) {
-   return {
-      requestedSalaryAmount: salary?.amount ?? null,
-      requestedSalaryCurrency: salary?.currency ?? null,
-      requestedSalaryPeriod: salary?.period ?? null,
-   };
-}
-
-/**
- * A salary from its three columns, a row's requested one or a profile's target (what a new row asks
- * for): null unless all three are there.
- */
-export function salaryFromColumns(
-   amount: number | null,
-   currency: ProfileCurrency | null,
-   period: SalaryPeriod | null,
-): RequestedSalary | null {
-   return amount !== null && currency !== null && period !== null
-      ? { amount, currency, period }
-      : null;
 }
 
 /** The company with this normalized name; the first name seen stays, a new one is made. */

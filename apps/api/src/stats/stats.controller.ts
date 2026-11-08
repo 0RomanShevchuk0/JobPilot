@@ -1,4 +1,4 @@
-import { statsPeriods } from "@jobpilot/contracts";
+import { salaryLevelParamSchema, statsPeriods } from "@jobpilot/contracts";
 import { Controller, Get, Query } from "@nestjs/common";
 import { z } from "zod";
 import { CurrentUserId } from "../auth/current-user-id.decorator.js";
@@ -24,6 +24,8 @@ const statsQuerySchema = z.object({
 const attemptsQuerySchema = z.object({
    /** every company applied to more than once; by default the top ones */
    companies: z.enum(["top", "all"]).default("top"),
+   /** the attempts at one salary level: "3000-USD-month", or "none"; absent = all of them */
+   salary: salaryLevelParamSchema.optional(),
 });
 
 @Controller("stats")
@@ -39,12 +41,15 @@ export class StatsController {
       return this.stats.get(userId, query.period, query.timeZone);
    }
 
-   /** Every attempt to get a job, all time: stages reached, where they stopped, statuses, companies. */
+   /** Every attempt to get a job, all time, or at one salary level: stages reached, statuses, companies. */
    @Get("attempts")
    attempts(
       @CurrentUserId() userId: string,
       @Query(new ZodValidationPipe(attemptsQuerySchema)) query: z.infer<typeof attemptsQuerySchema>,
    ) {
-      return this.stats.attempts(userId, query.companies === "all");
+      return this.stats.attempts(userId, {
+         allCompanies: query.companies === "all",
+         salaryLevel: query.salary,
+      });
    }
 }

@@ -17,7 +17,7 @@ import {
    vacancies,
    vacancyMatches,
 } from "../schema.js";
-import { requestedSalaryColumns, salaryFromColumns } from "./job-attempts.js";
+import { requestedSalaryColumns, salaryFromColumns } from "./query-parts/requested-salary.js";
 import { likeContainsPattern } from "./query-parts/like-pattern.js";
 import { externalApplyUrl } from "./matches.js";
 

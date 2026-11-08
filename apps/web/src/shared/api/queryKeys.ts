@@ -35,7 +35,8 @@ export const queryKeys = {
    },
    stats: {
       period: (period: string) => ["stats", period] as const,
-      attempts: (allCompanies: boolean) => ["stats", "attempts", allCompanies] as const,
+      attempts: (filter: { allCompanies: boolean; salary: string | null }) =>
+         ["stats", "attempts", filter] as const,
    },
    extension: {
       installed: ["extension", "installed"] as const,

@@ -13,7 +13,11 @@ import {
 import type { ReactNode } from "react";
 import { Badge, inputClasses, textareaClasses } from "../../../shared/ui";
 import { stageLabels, stageStyles, statusLabels, statusStyles } from "../lib/labels";
-import { defaultRequestedSalaryUnits, type RequestedSalaryUnits } from "../lib/requested-salary";
+import {
+   defaultRequestedSalaryUnits,
+   salaryText,
+   type RequestedSalaryUnits,
+} from "../lib/requested-salary";
 
 /** What the fields of a tracker row hold; an empty text is "". */
 export interface JobAttemptFieldValues {
@@ -39,11 +43,6 @@ export function requestedSalaryOf(fields: JobAttemptFieldValues): RequestedSalar
       currency: fields.requestedSalaryCurrency,
       period: fields.requestedSalaryPeriod,
    };
-}
-
-/** "3 000 USD / month", the amount grouped as my locale groups it. */
-function salaryText({ amount, currency, period }: RequestedSalary): string {
-   return `${amount.toLocaleString()} ${currency} / ${period}`;
 }
 
 /** A day in my time zone, as a date input takes it; the en-CA locale writes dates as 2026-11-07. */

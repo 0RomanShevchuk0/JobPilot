@@ -1,4 +1,10 @@
-import type { JobAttemptStage, JobAttemptStatus } from "./job-attempt.js";
+import { z } from "zod";
+import {
+   requestedSalarySchema,
+   type JobAttemptStage,
+   type JobAttemptStatus,
+   type RequestedSalary,
+} from "./job-attempt.js";
 
 /** last 24 hours, 7 days, 30 days, everything */
 export const statsPeriods = ["day", "week", "month", "all"] as const;
@@ -58,13 +64,49 @@ export interface RepeatedCompany {
    attempts: number;
 }
 
-/** GET /stats/attempts: every attempt to get a job, all time. Every list is in its values' order. */
+/** A salary I asked for, and how many attempts asked for it; null = the attempts with none. */
+export interface SalaryLevel {
+   salary: RequestedSalary | null;
+   attempts: number;
+}
+
+/**
+ * A salary level in an address: "3000-USD-month", or "none" for the attempts with no requested salary.
+ * The stats tab keeps it in the page's address and sends it to GET /stats/attempts?salary=… as is.
+ */
+export function salaryLevelParam(salary: RequestedSalary | null): string {
+   return salary ? `${salary.amount}-${salary.currency}-${salary.period}` : "none";
+}
+
+/**
+ * Reads what salaryLevelParam wrote: a requested salary, or null for "none". Only as it writes it:
+ * "03000-USD-month" or "3000-USD-month-x" would pick the same attempts under another name, and no
+ * level would show as picked.
+ */
+export const salaryLevelParamSchema = z.string().transform((value, ctx): RequestedSalary | null => {
+   if (value === "none") return null;
+   const [amount, currency, period] = value.split("-");
+   const parsed = requestedSalarySchema.safeParse({ amount: Number(amount), currency, period });
+   if (!parsed.success || salaryLevelParam(parsed.data) !== value) {
+      ctx.addIssue({ code: "custom", message: "Not a salary level" });
+      return z.NEVER;
+   }
+   return parsed.data;
+});
+
+/**
+ * GET /stats/attempts: every attempt to get a job, all time, or the ones at one salary level. Every
+ * list is in its values' order.
+ */
 export interface JobAttemptStats {
+   /**
+    * every salary I asked for, of all the attempts whatever level is picked: grouped by period and
+    * currency, the higher amount first within them; "none" last
+    */
+   salaryLevels: SalaryLevel[];
    total: number;
    /** the attempts that got to each stage: there or further, a stage skipped counts as passed */
    reached: StageCount[];
-   /** the attempts that ended without a job (rejected, declined, ghosted, no answer), by their stage */
-   stopped: StageCount[];
    /** how many stand at each status now */
    statuses: { status: JobAttemptStatus; count: number }[];
    companies: {

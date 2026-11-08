@@ -2,9 +2,11 @@ import type {
    JobAttemptStage,
    JobAttemptStatus,
    RepeatedCompany,
+   RequestedSalary,
+   SalaryLevel,
    Stats,
 } from "@jobpilot/contracts";
-import { and, count, desc, eq, gt, gte, isNotNull, not, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, isNotNull, not, sql, type SQL } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import {
    applications,
@@ -15,6 +17,7 @@ import {
    vacancyMatches,
 } from "../schema.js";
 import { postingRefusedOnItsPageSql } from "./query-parts/apply-checks.js";
+import { attemptAtSalaryLevelSql, salaryFromColumns } from "./query-parts/requested-salary.js";
 import { userSubscribedToVacancySql } from "./query-parts/subscriptions.js";
 
 export interface StatsOptions {
@@ -26,8 +29,20 @@ export interface StatsOptions {
    timeZone: string;
 }
 
-/** A user's attempts counted by stage and status, and the companies they went to. */
+/** Which of a user's attempts the attempt stats count. */
+export interface JobAttemptStatsOptions {
+   /** the repeated companies to list, the most attempts first; null = all of them */
+   companiesLimit: number | null;
+   /** the attempts that asked for this salary; null = the ones with none; absent = all of them */
+   salaryLevel?: RequestedSalary | null;
+}
+
+/**
+ * A user's attempts counted by stage and status, and the companies they went to; the salaries asked
+ * for, of all the attempts.
+ */
 export interface StoredJobAttemptStats {
+   salaryLevels: SalaryLevel[];
    /** one row per stage and status that has attempts */
    byStageAndStatus: { stage: JobAttemptStage; status: JobAttemptStatus; count: number }[];
    companies: { total: number; repeated: number; list: RepeatedCompany[] };
@@ -41,10 +56,11 @@ export interface StatsRepository {
     */
    forUser(userId: string, options: StatsOptions): Promise<Omit<Stats, "period">>;
    /**
-    * Every attempt of the user, all time, by stage and status; the companies they went to, and the ones
-    * with more than one attempt, the most first: companiesLimit of them, all when null.
+    * Every attempt of the user, all time, or the ones at a salary level, by stage and status; the
+    * companies they went to, and the ones with more than one attempt, the most first. And every salary
+    * the user asked for, whatever level is counted: what there is to pick from.
     */
-   attemptsForUser(userId: string, companiesLimit: number | null): Promise<StoredJobAttemptStats>;
+   attemptsForUser(userId: string, options: JobAttemptStatsOptions): Promise<StoredJobAttemptStats>;
 }
 
 export function createStatsRepository(db: Drizzle): StatsRepository {
@@ -174,8 +190,37 @@ export function createStatsRepository(db: Drizzle): StatsRepository {
          };
       },
 
-      async attemptsForUser(userId, companiesLimit) {
-         const mine = eq(jobAttempts.userId, userId);
+      async attemptsForUser(userId, { companiesLimit, salaryLevel }) {
+         const allMine = eq(jobAttempts.userId, userId);
+         const mine = and(allMine, attemptAtSalaryLevelSql(salaryLevel));
+
+         // a requested salary is all three columns or none: grouped by them, "none" is one group
+         const levelRows = await db
+            .select({
+               amount: jobAttempts.requestedSalaryAmount,
+               currency: jobAttempts.requestedSalaryCurrency,
+               period: jobAttempts.requestedSalaryPeriod,
+               attempts: count(),
+            })
+            .from(jobAttempts)
+            .where(allMine)
+            .groupBy(
+               jobAttempts.requestedSalaryPeriod,
+               jobAttempts.requestedSalaryCurrency,
+               jobAttempts.requestedSalaryAmount,
+            )
+            // the same units together, the higher amount first; with nulls last on ascending, "none"
+            // goes after them all
+            .orderBy(
+               asc(jobAttempts.requestedSalaryPeriod),
+               asc(jobAttempts.requestedSalaryCurrency),
+               desc(jobAttempts.requestedSalaryAmount),
+            );
+         const salaryLevels = levelRows.map((row) => ({
+            salary: salaryFromColumns(row.amount, row.currency, row.period),
+            attempts: row.attempts,
+         }));
+
          const byStageAndStatus = await db
             .select({ stage: jobAttempts.stage, status: jobAttempts.status, count: count() })
             .from(jobAttempts)
@@ -208,6 +253,7 @@ export function createStatsRepository(db: Drizzle): StatsRepository {
             : repeatedList.limit(companiesLimit));
 
          return {
+            salaryLevels,
             byStageAndStatus,
             companies: { total: summary!.total, repeated: summary!.repeated, list },
          };

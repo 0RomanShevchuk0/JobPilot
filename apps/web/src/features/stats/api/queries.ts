@@ -16,14 +16,19 @@ export function useStats(period: StatsPeriod) {
 }
 
 /**
- * Every attempt to get a job, all time; the companies applied to more than once, the top ones or all.
- * Asking for all keeps the top ones shown meanwhile: no loader in place of the list.
+ * Every attempt to get a job, all time, or at one salary level (salaryLevelParam's; null = all); the
+ * companies applied to more than once, the top ones or all. Asking for more, or another level, keeps
+ * what is shown meanwhile: no loader in place of it.
  */
-export function useAttemptStats(allCompanies: boolean) {
+export function useAttemptStats(allCompanies: boolean, salary: string | null) {
    return useQuery({
-      queryKey: queryKeys.stats.attempts(allCompanies),
-      queryFn: () =>
-         apiGet<JobAttemptStats>(`/stats/attempts${allCompanies ? "?companies=all" : ""}`),
+      queryKey: queryKeys.stats.attempts({ allCompanies, salary }),
+      queryFn: () => {
+         const query = new URLSearchParams();
+         if (allCompanies) query.set("companies", "all");
+         if (salary !== null) query.set("salary", salary);
+         return apiGet<JobAttemptStats>(`/stats/attempts?${query}`);
+      },
       placeholderData: keepPreviousData,
    });
 }

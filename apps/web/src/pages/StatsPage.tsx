@@ -1,4 +1,4 @@
-import type { StatsPeriod } from "@jobpilot/contracts";
+import { salaryLevelParamSchema, type StatsPeriod } from "@jobpilot/contracts";
 import { useSearchParams } from "react-router";
 import { AttemptStats, StatsFunnel, StatsTimeline, useStats } from "../features/stats";
 import { Button, PageLoader } from "../shared/ui";
@@ -18,13 +18,20 @@ type StatsTab = (typeof tabs)[number]["tab"];
 
 /**
  * Two tabs: the vacancies found over a period, how many suited me and what I did with them; and the
- * Tracker's attempts, all time. The tab and the period are in the address (?tab=tracker,
- * ?period=week), kept on a reload and back; each tab keeps the other's while away.
+ * Tracker's attempts, all time, all of them or at one requested salary. The tab, the period and the
+ * salary are in the address (?tab=tracker, ?period=week, ?salary=3000-USD-month), kept on a reload and
+ * back; each tab keeps the other's while away.
  */
 export function StatsPage() {
    const [params, setParams] = useSearchParams();
    const tab = tabs.find((t) => t.tab === params.get("tab"))?.tab ?? "vacancies";
    const period = periods.find((p) => p.period === params.get("period"))?.period ?? "day";
+   // one that isn't a salary level (edited by hand) is all of them, as an unknown period is the default
+   const salaryInAddress = params.get("salary");
+   const salary =
+      salaryInAddress !== null && salaryLevelParamSchema.safeParse(salaryInAddress).success
+         ? salaryInAddress
+         : null;
    // in place of the address, as the tabs in Matches
    const setParam = (name: string, value: string | null) => {
       const query = new URLSearchParams(params);
@@ -34,6 +41,7 @@ export function StatsPage() {
    };
    const setTab = (t: StatsTab) => setParam("tab", t === "vacancies" ? null : t);
    const setPeriod = (p: StatsPeriod) => setParam("period", p === "day" ? null : p);
+   const setSalary = (s: string | null) => setParam("salary", s);
 
    return (
       <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
@@ -54,7 +62,7 @@ export function StatsPage() {
          {tab === "vacancies" ? (
             <VacancyStats period={period} onPeriodChange={setPeriod} />
          ) : (
-            <AttemptStats />
+            <AttemptStats salary={salary} onSalaryChange={setSalary} />
          )}
       </main>
    );
