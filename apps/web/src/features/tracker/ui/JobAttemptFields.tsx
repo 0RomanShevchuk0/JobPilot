@@ -4,7 +4,7 @@ import {
    profileCurrencies,
    salaryPeriods,
    type JobAttemptListItem,
-   type JobAttemptSalary,
+   type RequestedSalary,
    type JobAttemptStage,
    type JobAttemptStatus,
    type ProfileCurrency,
@@ -13,7 +13,7 @@ import {
 import type { ReactNode } from "react";
 import { Badge, inputClasses, textareaClasses } from "../../../shared/ui";
 import { stageLabels, stageStyles, statusLabels, statusStyles } from "../lib/labels";
-import { defaultSalaryUnits, type SalaryUnits } from "../lib/salary";
+import { defaultRequestedSalaryUnits, type RequestedSalaryUnits } from "../lib/requested-salary";
 
 /** What the fields of a tracker row hold; an empty text is "". */
 export interface JobAttemptFieldValues {
@@ -25,24 +25,24 @@ export interface JobAttemptFieldValues {
    stage: JobAttemptStage;
    status: JobAttemptStatus;
    notes: string;
-   /** "" = no salary */
-   salaryAmount: string;
-   salaryCurrency: ProfileCurrency;
-   salaryPeriod: SalaryPeriod;
+   /** "" = no requested salary */
+   requestedSalaryAmount: string;
+   requestedSalaryCurrency: ProfileCurrency;
+   requestedSalaryPeriod: SalaryPeriod;
 }
 
-/** The salary the fields hold: null when the amount is empty. */
-export function salaryOf(fields: JobAttemptFieldValues): JobAttemptSalary | null {
-   if (fields.salaryAmount === "") return null;
+/** The requested salary the fields hold: null when the amount is empty. */
+export function requestedSalaryOf(fields: JobAttemptFieldValues): RequestedSalary | null {
+   if (fields.requestedSalaryAmount === "") return null;
    return {
-      amount: Number(fields.salaryAmount),
-      currency: fields.salaryCurrency,
-      period: fields.salaryPeriod,
+      amount: Number(fields.requestedSalaryAmount),
+      currency: fields.requestedSalaryCurrency,
+      period: fields.requestedSalaryPeriod,
    };
 }
 
 /** "3 000 USD / month", the amount grouped as my locale groups it. */
-function salaryText({ amount, currency, period }: JobAttemptSalary): string {
+function salaryText({ amount, currency, period }: RequestedSalary): string {
    return `${amount.toLocaleString()} ${currency} / ${period}`;
 }
 
@@ -63,19 +63,19 @@ export function readJobAttemptFields(form: HTMLFormElement): JobAttemptFieldValu
       stage: data.get("stage") as JobAttemptStage,
       status: data.get("status") as JobAttemptStatus,
       notes: text("notes"),
-      salaryAmount: text("salaryAmount"),
-      salaryCurrency: data.get("salaryCurrency") as ProfileCurrency,
-      salaryPeriod: data.get("salaryPeriod") as SalaryPeriod,
+      requestedSalaryAmount: text("requestedSalaryAmount"),
+      requestedSalaryCurrency: data.get("requestedSalaryCurrency") as ProfileCurrency,
+      requestedSalaryPeriod: data.get("requestedSalaryPeriod") as SalaryPeriod,
    };
 }
 
 /**
  * What a row's fields start from: what it shows. The date is the day in my time zone, the way the
- * tracker shows it; a row with no salary offers the units given to pick one in.
+ * tracker shows it; a row with no requested salary offers the units given to pick one in.
  */
 export function jobAttemptFieldValues(
    attempt: JobAttemptListItem,
-   units: SalaryUnits = defaultSalaryUnits,
+   units: RequestedSalaryUnits = defaultRequestedSalaryUnits,
 ): JobAttemptFieldValues {
    return {
       company: attempt.company ?? "",
@@ -85,9 +85,9 @@ export function jobAttemptFieldValues(
       stage: attempt.stage,
       status: attempt.status,
       notes: attempt.notes,
-      salaryAmount: attempt.salary ? String(attempt.salary.amount) : "",
-      salaryCurrency: attempt.salary?.currency ?? units.currency,
-      salaryPeriod: attempt.salary?.period ?? units.period,
+      requestedSalaryAmount: attempt.requestedSalary ? String(attempt.requestedSalary.amount) : "",
+      requestedSalaryCurrency: attempt.requestedSalary?.currency ?? units.currency,
+      requestedSalaryPeriod: attempt.requestedSalary?.period ?? units.period,
    };
 }
 
@@ -151,7 +151,7 @@ export function JobAttemptFields({
    titleRequired: boolean;
    withLink: boolean;
 }) {
-   const salaryOfValues = salaryOf(values);
+   const requestedSalary = requestedSalaryOf(values);
    return (
       <div className={fieldGridClasses}>
          <FieldRow name="Company" editing={editing}>
@@ -229,27 +229,27 @@ export function JobAttemptFields({
                </Value>
             )}
          </FieldRow>
-         <FieldRow name="Salary" editing={editing}>
+         <FieldRow name="Asked salary" editing={editing}>
             {editing ? (
                // the amount a line of its own, the units under it: beside them it'd be too narrow to
-               // read. Empty, there is no salary
+               // read. Empty, there is no requested salary
                <div className="grid grid-cols-2 gap-2">
                   <input
-                     name="salaryAmount"
+                     name="requestedSalaryAmount"
                      type="number"
                      inputMode="numeric"
                      min={1}
                      max={100_000_000}
                      step={1}
                      placeholder="Amount"
-                     aria-label="Salary amount"
-                     defaultValue={values.salaryAmount}
+                     aria-label="Asked salary amount"
+                     defaultValue={values.requestedSalaryAmount}
                      className={`${inputClasses} col-span-2`}
                   />
                   <select
-                     name="salaryCurrency"
+                     name="requestedSalaryCurrency"
                      aria-label="Currency"
-                     defaultValue={values.salaryCurrency}
+                     defaultValue={values.requestedSalaryCurrency}
                      className={inputClasses}
                   >
                      {profileCurrencies.map((currency) => (
@@ -259,9 +259,9 @@ export function JobAttemptFields({
                      ))}
                   </select>
                   <select
-                     name="salaryPeriod"
+                     name="requestedSalaryPeriod"
                      aria-label="Per"
-                     defaultValue={values.salaryPeriod}
+                     defaultValue={values.requestedSalaryPeriod}
                      className={inputClasses}
                   >
                      {salaryPeriods.map((period) => (
@@ -272,7 +272,7 @@ export function JobAttemptFields({
                   </select>
                </div>
             ) : (
-               <Value>{salaryOfValues ? salaryText(salaryOfValues) : ""}</Value>
+               <Value>{requestedSalary ? salaryText(requestedSalary) : ""}</Value>
             )}
          </FieldRow>
          <FieldRow name="Stage" required editing={editing}>

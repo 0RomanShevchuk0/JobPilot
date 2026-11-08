@@ -1,7 +1,12 @@
 import type { FormEvent } from "react";
 import { Button, PageLoader } from "../../../shared/ui";
-import { useCreateJobAttempt, useSalaryUnits } from "../api/queries";
-import { JobAttemptFields, localDate, readJobAttemptFields, salaryOf } from "./JobAttemptFields";
+import { useCreateJobAttempt, useRequestedSalaryUnits } from "../api/queries";
+import {
+   JobAttemptFields,
+   localDate,
+   readJobAttemptFields,
+   requestedSalaryOf,
+} from "./JobAttemptFields";
 import { TrackerPanel } from "./TrackerPanel";
 
 /**
@@ -10,7 +15,7 @@ import { TrackerPanel } from "./TrackerPanel";
  */
 export function NewJobAttemptPanel({ onClose }: { onClose: () => void }) {
    const create = useCreateJobAttempt(onClose);
-   const salaryUnits = useSalaryUnits();
+   const requestedSalaryUnits = useRequestedSalaryUnits();
 
    const submit = (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -23,7 +28,7 @@ export function NewJobAttemptPanel({ onClose }: { onClose: () => void }) {
          stage: fields.stage,
          status: fields.status,
          notes: fields.notes || undefined,
-         salary: salaryOf(fields) ?? undefined,
+         requestedSalary: requestedSalaryOf(fields) ?? undefined,
       });
    };
 
@@ -33,8 +38,9 @@ export function NewJobAttemptPanel({ onClose }: { onClose: () => void }) {
          onClose={onClose}
          heading={<h2 className="font-semibold text-gray-900">Add a job</h2>}
       >
-         {/* the profile names the salary's units: the fields take their first values only */}
-         {!salaryUnits ? (
+         {/* the profile names the requested salary's units: the fields take their first values
+             only */}
+         {!requestedSalaryUnits ? (
             <PageLoader />
          ) : (
             <form onSubmit={submit} className="flex flex-col gap-4">
@@ -47,9 +53,9 @@ export function NewJobAttemptPanel({ onClose }: { onClose: () => void }) {
                      stage: "applied",
                      status: "active",
                      notes: "",
-                     salaryAmount: "",
-                     salaryCurrency: salaryUnits.currency,
-                     salaryPeriod: salaryUnits.period,
+                     requestedSalaryAmount: "",
+                     requestedSalaryCurrency: requestedSalaryUnits.currency,
+                     requestedSalaryPeriod: requestedSalaryUnits.period,
                   }}
                   titleRequired
                   withLink

@@ -17,7 +17,7 @@ import {
    vacancies,
    vacancyMatches,
 } from "../schema.js";
-import { salaryColumns, salaryFromColumns } from "./job-attempts.js";
+import { requestedSalaryColumns, salaryFromColumns } from "./job-attempts.js";
 import { externalApplyUrl } from "./matches.js";
 
 /** An application with its answers, as stored. */
@@ -175,8 +175,8 @@ function withIsoDates<T extends { submittedAt: Date | null; createdAt: Date; upd
 
 /**
  * Puts a sent application into the attempt at its vacancy, starting one with the first application.
- * A new one starts with the profile's target salary, when it has one: the one I most likely applied
- * with. One already started keeps its own.
+ * A new one starts asking the profile's target salary, when it has one: the one I most likely asked
+ * for. One already started keeps its own.
  */
 async function addToAttempt(tx: Transaction, applicationId: string): Promise<void> {
    const [application] = await tx
@@ -199,7 +199,7 @@ async function addToAttempt(tx: Transaction, applicationId: string): Promise<voi
    const targetSalary = salaryFromColumns(salaryTarget, salaryCurrency, salaryPeriod);
    const [attempt] = await tx
       .insert(jobAttempts)
-      .values({ userId, vacancyId, companyId, ...salaryColumns(targetSalary) })
+      .values({ userId, vacancyId, companyId, ...requestedSalaryColumns(targetSalary) })
       .onConflictDoUpdate({
          target: [jobAttempts.userId, jobAttempts.vacancyId],
          // changes nothing: returns the row and locks it against taking back the last application

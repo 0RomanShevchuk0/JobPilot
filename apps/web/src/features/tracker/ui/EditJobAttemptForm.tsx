@@ -6,10 +6,10 @@ import {
    JobAttemptFields,
    jobAttemptFieldValues,
    readJobAttemptFields,
-   salaryOf,
+   requestedSalaryOf,
    type JobAttemptFieldValues,
 } from "./JobAttemptFields";
-import type { SalaryUnits } from "../lib/salary";
+import type { RequestedSalaryUnits } from "../lib/requested-salary";
 
 /**
  * What I changed in the fields, only that: the rest isn't sent, so Undo doesn't see it as changed. An
@@ -26,26 +26,26 @@ function changesIn(attempt: JobAttemptListItem, fields: JobAttemptFieldValues): 
    if (fields.stage !== shown.stage) changes.stage = fields.stage;
    if (fields.status !== shown.status) changes.status = fields.status;
    if (fields.notes !== shown.notes) changes.notes = fields.notes;
-   // an emptied amount: no salary any more
-   const salary = salaryOf(fields);
-   const kept = attempt.salary;
+   // an emptied amount: no requested salary any more
+   const salary = requestedSalaryOf(fields);
+   const kept = attempt.requestedSalary;
    const salaryChanged =
       salary?.amount !== kept?.amount ||
       salary?.currency !== kept?.currency ||
       salary?.period !== kept?.period;
-   if (salaryChanged) changes.salary = salary;
+   if (salaryChanged) changes.requestedSalary = salary;
    return changes;
 }
 
 /** Changes everything of a row at once; done once the list shows it, or when nothing changed. */
 export function EditJobAttemptForm({
    attempt,
-   salaryUnits,
+   requestedSalaryUnits,
    onDone,
 }: {
    attempt: JobAttemptListItem;
-   /** what a salary is picked in when the row has none */
-   salaryUnits: SalaryUnits;
+   /** what a requested salary is picked in when the row has none */
+   requestedSalaryUnits: RequestedSalaryUnits;
    onDone: () => void;
 }) {
    const update = useUpdateJobAttempt(attempt.id);
@@ -62,7 +62,7 @@ export function EditJobAttemptForm({
    return (
       <form onSubmit={submit} className="flex flex-col gap-4">
          <JobAttemptFields
-            values={jobAttemptFieldValues(attempt, salaryUnits)}
+            values={jobAttemptFieldValues(attempt, requestedSalaryUnits)}
             titleRequired={addedByHand}
             withLink={addedByHand}
          />

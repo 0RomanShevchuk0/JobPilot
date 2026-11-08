@@ -155,6 +155,13 @@
       "when": 1794095371503,
       "tag": "0021_job_attempt_salary",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1794096602461,
+      "tag": "0022_requested_salary",
+      "breakpoints": true
     }
   ]
 }

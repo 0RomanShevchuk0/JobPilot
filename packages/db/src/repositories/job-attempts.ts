@@ -1,7 +1,7 @@
 import type {
    JobAttemptChanges,
    JobAttemptListItem,
-   JobAttemptSalary,
+   RequestedSalary,
    ProfileCurrency,
    SalaryPeriod,
    JobAttemptStage,
@@ -40,7 +40,7 @@ export interface NewStoredJobAttempt {
    /** absent = just applied */
    stage?: JobAttemptStage;
    status?: JobAttemptStatus;
-   salary?: JobAttemptSalary;
+   requestedSalary?: RequestedSalary;
    notes?: string;
 }
 
@@ -72,8 +72,8 @@ export interface JobAttemptsRepository {
    /**
     * Changes a row of mine. A stage or status that really changes counts the silence anew, and a new
     * stage ends a no_answer or ghosted: the company is clearly there. The rest that really changes
-    * (salary too) marks the row edited, for Undo. The same value again changes neither. A company
-    * found anew is linked; the old one stays, even with nothing linked to it.
+    * (the requested salary too) marks the row edited, for Undo. The same value again changes
+    * neither. A company found anew is linked; the old one stays, even with nothing linked to it.
     */
    update(
       userId: string,
@@ -103,21 +103,24 @@ function distinctFromSql<TColumn extends Column>(
    return sql`${column} is distinct from ${bindIfParam(value, column)}`;
 }
 
-/** A salary as the table's three columns: all three null when there is none. */
-export function salaryColumns(salary: JobAttemptSalary | null) {
+/** A requested salary as the table's three columns: all three null when there is none. */
+export function requestedSalaryColumns(salary: RequestedSalary | null) {
    return {
-      salaryAmount: salary?.amount ?? null,
-      salaryCurrency: salary?.currency ?? null,
-      salaryPeriod: salary?.period ?? null,
+      requestedSalaryAmount: salary?.amount ?? null,
+      requestedSalaryCurrency: salary?.currency ?? null,
+      requestedSalaryPeriod: salary?.period ?? null,
    };
 }
 
-/** A salary from its three columns, the table's or a profile's: null unless all three are there. */
+/**
+ * A salary from its three columns, a row's requested one or a profile's target (what a new row asks
+ * for): null unless all three are there.
+ */
 export function salaryFromColumns(
    amount: number | null,
    currency: ProfileCurrency | null,
    period: SalaryPeriod | null,
-): JobAttemptSalary | null {
+): RequestedSalary | null {
    return amount !== null && currency !== null && period !== null
       ? { amount, currency, period }
       : null;
@@ -163,9 +166,9 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
                status: jobAttempts.status,
                notes: jobAttempts.notes,
                appliedAt: jobAttempts.appliedAt,
-               salaryAmount: jobAttempts.salaryAmount,
-               salaryCurrency: jobAttempts.salaryCurrency,
-               salaryPeriod: jobAttempts.salaryPeriod,
+               requestedSalaryAmount: jobAttempts.requestedSalaryAmount,
+               requestedSalaryCurrency: jobAttempts.requestedSalaryCurrency,
+               requestedSalaryPeriod: jobAttempts.requestedSalaryPeriod,
             })
             .from(jobAttempts)
             .leftJoin(vacancies, eq(vacancies.id, jobAttempts.vacancyId))
@@ -187,17 +190,28 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
             .where(inArray(applications.attemptId, attemptIds))
             .orderBy(applications.submittedAt);
 
-         return rows.map(({ salaryAmount, salaryCurrency, salaryPeriod, ...row }) => ({
-            ...row,
-            appliedAt: row.appliedAt.toISOString(),
-            salary: salaryFromColumns(salaryAmount, salaryCurrency, salaryPeriod),
-            applications: sent
-               .filter((application) => application.attemptId === row.id)
-               .map(({ id, sourceName }) => ({ id, sourceName })),
-         }));
+         return rows.map(
+            ({
+               requestedSalaryAmount,
+               requestedSalaryCurrency,
+               requestedSalaryPeriod,
+               ...row
+            }) => ({
+               ...row,
+               appliedAt: row.appliedAt.toISOString(),
+               requestedSalary: salaryFromColumns(
+                  requestedSalaryAmount,
+                  requestedSalaryCurrency,
+                  requestedSalaryPeriod,
+               ),
+               applications: sent
+                  .filter((application) => application.attemptId === row.id)
+                  .map(({ id, sourceName }) => ({ id, sourceName })),
+            }),
+         );
       },
 
-      async create(userId, { company, salary, ...attempt }) {
+      async create(userId, { company, requestedSalary, ...attempt }) {
          return db.transaction(async (tx) => {
             const companyId = company ? await findOrCreateCompany(tx, company) : null;
             const [row] = await tx
@@ -205,7 +219,7 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
                // the silence counts from now: an old date goes in as it stands, not as long silent
                .values({
                   ...attempt,
-                  ...salaryColumns(salary ?? null),
+                  ...requestedSalaryColumns(requestedSalary ?? null),
                   userId,
                   companyId,
                   progressChangedAt: sql`now()`,
@@ -215,7 +229,7 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
          });
       },
 
-      async update(userId, attemptId, { company, salary, ...changes }) {
+      async update(userId, attemptId, { company, requestedSalary, ...changes }) {
          const { stage, status, title, url, appliedAt, notes } = changes;
          const stageChanges = stage && ne(jobAttempts.stage, stage);
          const statusChanges = status && ne(jobAttempts.status, status);
@@ -234,7 +248,8 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
 
             // null: not known any more
             const companyId = company && (await findOrCreateCompany(tx, company));
-            const salaryFields = salary !== undefined ? salaryColumns(salary) : undefined;
+            const salaryFields =
+               requestedSalary !== undefined ? requestedSalaryColumns(requestedSalary) : undefined;
             const edits = or(
                title !== undefined ? distinctFromSql(jobAttempts.title, title) : undefined,
                url !== undefined ? distinctFromSql(jobAttempts.url, url) : undefined,
@@ -245,9 +260,18 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
                   : undefined,
                salaryFields &&
                   or(
-                     distinctFromSql(jobAttempts.salaryAmount, salaryFields.salaryAmount),
-                     distinctFromSql(jobAttempts.salaryCurrency, salaryFields.salaryCurrency),
-                     distinctFromSql(jobAttempts.salaryPeriod, salaryFields.salaryPeriod),
+                     distinctFromSql(
+                        jobAttempts.requestedSalaryAmount,
+                        salaryFields.requestedSalaryAmount,
+                     ),
+                     distinctFromSql(
+                        jobAttempts.requestedSalaryCurrency,
+                        salaryFields.requestedSalaryCurrency,
+                     ),
+                     distinctFromSql(
+                        jobAttempts.requestedSalaryPeriod,
+                        salaryFields.requestedSalaryPeriod,
+                     ),
                   ),
             );
             await tx

@@ -54,8 +54,8 @@ export interface JobAttemptListItem {
    status: JobAttemptStatus;
    notes: string;
    appliedAt: string;
-   /** the salary I applied with; null when not known */
-   salary: JobAttemptSalary | null;
+   /** the salary I asked for when applying; null when not known */
+   requestedSalary: RequestedSalary | null;
    /** the earliest sent first */
    applications: JobAttemptApplication[];
 }
@@ -67,13 +67,13 @@ export interface JobAttemptListPage {
    nextCursor: string | null;
 }
 
-/** The salary I applied with: a whole amount, in a currency, per hour, month or year. */
-export const jobAttemptSalarySchema = z.object({
+/** The salary I asked for when applying: a whole amount, in a currency, per hour, month or year. */
+export const requestedSalarySchema = z.object({
    amount: z.number().int().positive().max(100_000_000),
    currency: z.enum(profileCurrencies),
    period: z.enum(salaryPeriods),
 });
-export type JobAttemptSalary = z.infer<typeof jobAttemptSalarySchema>;
+export type RequestedSalary = z.infer<typeof requestedSalarySchema>;
 
 // a job's title, as I write it
 const titleSchema = z.string().trim().min(1).max(200);
@@ -94,7 +94,7 @@ export const newJobAttemptSchema = z.object({
    stage: z.enum(jobAttemptStages).optional(),
    status: z.enum(jobAttemptStatuses).optional(),
    notes: notesSchema.optional(),
-   salary: jobAttemptSalarySchema.optional(),
+   requestedSalary: requestedSalarySchema.optional(),
 });
 export type NewJobAttempt = z.infer<typeof newJobAttemptSchema>;
 
@@ -112,8 +112,8 @@ export const jobAttemptChangesSchema = z
       stage: z.enum(jobAttemptStages),
       status: z.enum(jobAttemptStatuses),
       notes: notesSchema,
-      /** null: no salary any more */
-      salary: jobAttemptSalarySchema.nullable(),
+      /** null: no requested salary any more */
+      requestedSalary: requestedSalarySchema.nullable(),
    })
    .partial()
    .refine((changes) => Object.keys(changes).length > 0, "Nothing to change");
