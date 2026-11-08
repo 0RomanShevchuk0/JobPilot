@@ -11,6 +11,8 @@ export function TrackerPage() {
             <h1 className="text-2xl font-semibold">Tracker</h1>
             <Link
                to={{ search: trackerAddress.withPanel(params, "add") }}
+               // the form opens over the list: the list stays where I scrolled it
+               preventScrollReset
                className={buttonStyles({ variant: "primary" })}
             >
                Add

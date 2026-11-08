@@ -27,9 +27,10 @@ export function TrackerList() {
    // asked for on its own too: the list's copy shows at once, this one when the list has none
    const openDetails = useJobAttempt(openId);
    const openAttempt = items?.find((attempt) => attempt.id === openId) ?? openDetails.data;
-   // the filter stays
+   // the filter stays, and so does where the list is scrolled
    const closePanel = useCallback(
-      () => navigate({ search: trackerAddress.withPanel(params, null) }),
+      () =>
+         navigate({ search: trackerAddress.withPanel(params, null) }, { preventScrollReset: true }),
       [navigate, params],
    );
    // in place of the address, not a new entry: back leaves the page, it doesn't walk through searches

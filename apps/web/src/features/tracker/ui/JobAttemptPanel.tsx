@@ -8,8 +8,8 @@ import { fieldGridClasses, JobAttemptFields, jobAttemptFieldValues } from "./Job
 import { TrackerPanel } from "./TrackerPanel";
 
 /**
- * A tracker row's details: its fields, laid out as the form that changes them (Edit), the answers of
- * each application, and the way to remove a row made by mistake. Shown for one row: another one opens
+ * A tracker row's details: its fields, laid out as the form that changes them (Edit), its
+ * applications, one a job site, each a link to what it sent, and the way to remove a row made by mistake. Shown for one row: another one opens
  * a new panel.
  */
 export function JobAttemptPanel({
@@ -73,7 +73,7 @@ export function JobAttemptPanel({
                   />
                   {attempt.applications.length > 0 && (
                      <div className={fieldGridClasses}>
-                        <span className="text-gray-500">Answers</span>
+                        <span className="text-gray-500">Applications</span>
                         <div className="flex flex-wrap gap-x-3">
                            {attempt.applications.map((application) => (
                               <Link

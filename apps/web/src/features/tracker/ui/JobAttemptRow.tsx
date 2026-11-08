@@ -52,6 +52,8 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
          {/* the whole row, under the pickers: a menu's button can't sit in a link */}
          <Link
             to={{ search: trackerAddress.withPanel(params, { attempt: attempt.id }) }}
+            // the panel opens over the list: the list stays where I scrolled it
+            preventScrollReset
             aria-label={`${company}: ${title}`}
             className="absolute inset-0"
          />
