@@ -195,7 +195,7 @@ export function createStatsRepository(db: Drizzle): StatsRepository {
          const mine = and(allMine, attemptAtSalaryLevelSql(salaryLevel));
 
          // a requested salary is all three columns or none: grouped by them, "none" is one group
-         const levelRows = await db
+         const levelRowsQuery = db
             .select({
                amount: jobAttempts.requestedSalaryAmount,
                currency: jobAttempts.requestedSalaryCurrency,
@@ -216,12 +216,8 @@ export function createStatsRepository(db: Drizzle): StatsRepository {
                asc(jobAttempts.requestedSalaryCurrency),
                desc(jobAttempts.requestedSalaryAmount),
             );
-         const salaryLevels = levelRows.map((row) => ({
-            salary: salaryFromColumns(row.amount, row.currency, row.period),
-            attempts: row.attempts,
-         }));
 
-         const byStageAndStatus = await db
+         const byStageAndStatusQuery = db
             .select({ stage: jobAttempts.stage, status: jobAttempts.status, count: count() })
             .from(jobAttempts)
             .where(mine)
@@ -234,7 +230,7 @@ export function createStatsRepository(db: Drizzle): StatsRepository {
             .where(and(mine, isNotNull(jobAttempts.companyId)))
             .groupBy(jobAttempts.companyId)
             .as("per_company");
-         const [summary] = await db
+         const summaryQuery = db
             .select({
                total: count(),
                repeated: sql<number>`count(*) filter (where ${perCompany.attempts} > 1)`.mapWith(
@@ -248,9 +244,20 @@ export function createStatsRepository(db: Drizzle): StatsRepository {
             .innerJoin(companies, eq(companies.id, perCompany.companyId))
             .where(gt(perCompany.attempts, 1))
             .orderBy(desc(perCompany.attempts), companies.name);
-         const list = await (companiesLimit === null
-            ? repeatedList
-            : repeatedList.limit(companiesLimit));
+         const listQuery =
+            companiesLimit === null ? repeatedList : repeatedList.limit(companiesLimit);
+
+         // none depends on another: at once, a round trip to the database instead of four
+         const [levelRows, byStageAndStatus, [summary], list] = await Promise.all([
+            levelRowsQuery,
+            byStageAndStatusQuery,
+            summaryQuery,
+            listQuery,
+         ]);
+         const salaryLevels = levelRows.map((row) => ({
+            salary: salaryFromColumns(row.amount, row.currency, row.period),
+            attempts: row.attempts,
+         }));
 
          return {
             salaryLevels,
