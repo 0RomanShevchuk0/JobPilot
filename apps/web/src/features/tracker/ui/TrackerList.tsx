@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Button, LoadMoreTrigger, PageLoader } from "../../../shared/ui";
-import { useJobAttempts, type JobAttemptListFilter } from "../api/queries";
+import { useJobAttempt, useJobAttempts, type JobAttemptListFilter } from "../api/queries";
 import { trackerAddress } from "../lib/address";
 import { JobAttemptPanel } from "./JobAttemptPanel";
 import { JobAttemptRow, rowGridClasses } from "./JobAttemptRow";
@@ -13,8 +13,8 @@ const columns = ["Company", "Role", "Stage", "Status", "Applied"];
 /**
  * Every attempt to get a job, the latest applied first, a page at a time as I scroll, searched and
  * filtered by stage and status. The filter and what the panel shows are in the address: a row
- * (?attempt=…: back from its answers, it's open again; only a row of the pages loaded opens, so one
- * filtered out closes) or the form to add one (?add).
+ * (?attempt=…: back from its answers, it's open again; any row of mine opens, loaded or not, and stays
+ * open when a change filters it out) or the form to add one (?add).
  */
 export function TrackerList() {
    const [params, setParams] = useSearchParams();
@@ -23,7 +23,10 @@ export function TrackerList() {
    const attempts = useJobAttempts(filter);
    const items = attempts.data?.pages.flatMap((page) => page.items);
    const navigate = useNavigate();
-   const openAttempt = items?.find((attempt) => attempt.id === params.get("attempt"));
+   const openId = params.get("attempt");
+   // asked for on its own too: the list's copy shows at once, this one when the list has none
+   const openDetails = useJobAttempt(openId);
+   const openAttempt = items?.find((attempt) => attempt.id === openId) ?? openDetails.data;
    // the filter stays
    const closePanel = useCallback(
       () => navigate({ search: trackerAddress.withPanel(params, null) }),
@@ -39,6 +42,10 @@ export function TrackerList() {
          {attempts.isPending && <PageLoader />}
          {attempts.isError && !attempts.isFetchNextPageError && (
             <p className="text-red-600">{attempts.error.message}</p>
+         )}
+         {/* a link to a row that's gone: said, not a panel that never opens */}
+         {!openAttempt && openDetails.isError && (
+            <p className="mb-4 text-red-600">{openDetails.error.message}</p>
          )}
          {items?.length === 0 && (
             <p className="text-sm text-gray-500">

@@ -10,6 +10,7 @@ import { Badge, CheckIcon, Menu, menuItemStyles } from "../../../shared/ui";
 import { useUpdateJobAttempt } from "../api/queries";
 import { trackerAddress } from "../lib/address";
 import { stageLabels, stageStyles, statusLabels, statusStyles } from "../lib/labels";
+import { shortDate } from "../lib/short-date";
 
 /** The tracker's columns from sm up; on a phone a row stacks. Shared with the table's header. */
 export const rowGridClasses = "sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_8.5rem_7.5rem_4.5rem]";
@@ -21,17 +22,6 @@ const pickerClasses =
 
 // the attempts that ended without a job fade, their text only: a faded badge would be hard to read
 const fadedStatuses: JobAttemptStatus[] = ["rejected", "declined"];
-
-/** "7 Nov", with the year only when it isn't this one's. */
-function shortDate(iso: string): string {
-   const date = new Date(iso);
-   const thisYear = date.getFullYear() === new Date().getFullYear();
-   return date.toLocaleDateString(undefined, {
-      day: "numeric",
-      month: "short",
-      year: thisYear ? undefined : "numeric",
-   });
-}
 
 /**
  * One attempt, a line of the tracker: who, what, how far it got, how it stands, when I applied. The

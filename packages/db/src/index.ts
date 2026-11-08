@@ -16,6 +16,7 @@ export type {
    JobAttemptsRepository,
    JobAttemptUpdateOutcome,
    NewStoredJobAttempt,
+   StoredCompanyAttemptHistory,
    StoredJobAttemptChanges,
 } from "./repositories/job-attempts.js";
 export type {

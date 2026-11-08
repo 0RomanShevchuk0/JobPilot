@@ -7,9 +7,13 @@ import {
    useMatch,
    VacancyDescription,
 } from "../features/matches";
+import { CompanyAttempts } from "../features/tracker";
 import { BackLink, PageLoader } from "../shared/ui";
 
-/** One vacancy as evaluated for my profile: every job site it is on, the evaluation, the description. */
+/**
+ * One vacancy as evaluated for my profile: every job site it is on, what I already tried with it and
+ * its employer, the evaluation, the description.
+ */
 export function VacancyPage() {
    const { vacancyId } = useParams<{ vacancyId: string }>();
    const match = useMatch(vacancyId!);
@@ -36,6 +40,7 @@ function Vacancy({ match }: { match: MatchDetails }) {
          <div className="mt-4">
             <PostingLinks match={match} />
          </div>
+         <CompanyAttempts vacancyId={match.vacancyId} />
          {/* set apart: what JobPilot thinks of the vacancy, not what the job site says */}
          <section className="mt-6 rounded-lg border border-blue-100 bg-blue-50/50 p-4">
             <h2 className="mb-2 text-xs font-semibold tracking-wide text-blue-900 uppercase">

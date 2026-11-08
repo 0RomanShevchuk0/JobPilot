@@ -1,4 +1,4 @@
-export { normalizeCompanyName } from "./company.js";
+export { isHiddenEmployerName, normalizeCompanyName } from "./company.js";
 export { normalizeSkill, normalizeSkills } from "./skills.js";
 export { normalizeTitle, seniorityFromTitle } from "./title.js";
 export {

@@ -27,6 +27,29 @@ export const trackerAddress = {
       return next;
    },
 
+   /**
+    * The tracker searched for q, with a row open: the rows around it are the ones like it. "" =
+    * unsearched.
+    */
+   attemptHref(attemptId: string, q: string): string {
+      const filter = trackerAddress.withFilter(new URLSearchParams(), {
+         q,
+         stage: null,
+         status: null,
+      });
+      return `/tracker${trackerAddress.withPanel(filter, { attempt: attemptId })}`;
+   },
+
+   /** The tracker searched for q. */
+   searchHref(q: string): string {
+      const filter = trackerAddress.withFilter(new URLSearchParams(), {
+         q,
+         stage: null,
+         status: null,
+      });
+      return `/tracker?${filter}`;
+   },
+
    /** The address's query with another panel, or none; the filter stays. */
    withPanel(params: URLSearchParams, panel: TrackerPanel | null): string {
       const next = new URLSearchParams(params);

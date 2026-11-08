@@ -1,11 +1,20 @@
-import type { JobAttemptChanges, JobAttemptListPage, NewJobAttempt } from "@jobpilot/contracts";
+import type {
+   CompanyAttemptHistory,
+   JobAttemptChanges,
+   JobAttemptListItem,
+   JobAttemptListPage,
+   NewJobAttempt,
+} from "@jobpilot/contracts";
 import type { JobAttemptListOptions } from "@jobpilot/db";
-import { normalizeCompanyName } from "@jobpilot/vacancies";
+import { isHiddenEmployerName, normalizeCompanyName } from "@jobpilot/vacancies";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { Database } from "../infra/database.js";
 
 // rows per page of the tracker: a page fills a screen or two
 const PAGE_SIZE = 30;
+
+// a vacancy's page shows this many attempts at its employer: the rest are a link to the tracker away
+const COMPANY_HISTORY_SIZE = 3;
 
 /** "2026-11-01" at noon UTC: it stays that day in any time zone people look at it from. */
 function noonUtc(date: string): Date {
@@ -36,6 +45,24 @@ export class JobAttemptsService {
       const items = rows.slice(0, PAGE_SIZE);
       const hasMore = rows.length > PAGE_SIZE;
       return { items, nextCursor: hasMore ? items[PAGE_SIZE - 1]!.id : null };
+   }
+
+   /** A row of my tracker; undefined when there's no such row of mine. */
+   get(userId: string, attemptId: string): Promise<JobAttemptListItem | undefined> {
+      return this.db.jobAttempts.getForUser(userId, attemptId);
+   }
+
+   /**
+    * What I already tried with a vacancy and its employer. A name that hides the employer ("NDA") is
+    * no employer: my attempts at other hidden ones aren't its history.
+    */
+   async getCompanyHistory(userId: string, vacancyId: string): Promise<CompanyAttemptHistory> {
+      const { thisVacancy, company, otherCount, latestOther } =
+         await this.db.jobAttempts.getCompanyHistory(userId, vacancyId, COMPANY_HISTORY_SIZE);
+      if (!company || isHiddenEmployerName(company.normalizedName)) {
+         return { thisVacancy, company: null, otherCount: 0, latestOther: [] };
+      }
+      return { thisVacancy, company: company.name, otherCount, latestOther };
    }
 
    /** Adds a job JobPilot doesn't know about. */

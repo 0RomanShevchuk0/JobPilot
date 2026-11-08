@@ -20,6 +20,9 @@ export const queryKeys = {
       all: ["job-attempts"] as const,
       list: (filter: { q: string; stage: string | null; status: string | null }) =>
          ["job-attempts", "list", filter] as const,
+      details: (attemptId: string) => ["job-attempts", "details", attemptId] as const,
+      companyHistory: (vacancyId: string) =>
+         ["job-attempts", "company-history", vacancyId] as const,
    },
    documents: {
       all: ["documents"] as const,

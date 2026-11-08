@@ -67,6 +67,28 @@ export interface JobAttemptListPage {
    nextCursor: string | null;
 }
 
+/** An attempt as a vacancy's page shows it. The API's wire format: ISO dates. */
+export interface JobAttemptSummary {
+   id: string;
+   /** the job's title: the vacancy's, or what I wrote on a row added by hand */
+   title: string | null;
+   stage: JobAttemptStage;
+   status: JobAttemptStatus;
+   appliedAt: string;
+}
+
+/** GET /job-attempts/company-history: what I already tried with a vacancy and its employer. */
+export interface CompanyAttemptHistory {
+   /** my attempt at this very vacancy; null when I haven't applied to it */
+   thisVacancy: JobAttemptSummary | null;
+   /** the employer's name; null when it's hidden, then there's no history with it either */
+   company: string | null;
+   /** how many attempts at the employer's other vacancies, rows added by hand too */
+   otherCount: number;
+   /** the latest of them, the latest applied first */
+   latestOther: JobAttemptSummary[];
+}
+
 /** The salary I asked for when applying: a whole amount, in a currency, per hour, month or year. */
 export const requestedSalarySchema = z.object({
    amount: z.number().int().positive().max(100_000_000),

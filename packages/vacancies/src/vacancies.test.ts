@@ -2,6 +2,7 @@ import type { NormalizedPosting } from "@jobpilot/contracts";
 import { describe, expect, it } from "vitest";
 import {
    findSameVacancy,
+   isHiddenEmployerName,
    mergeVacancy,
    normalizeCompanyName,
    normalizeSkills,
@@ -45,6 +46,17 @@ describe("normalizeCompanyName", () => {
       ["Kiss My Apps", "kiss my apps"],
    ])("%s → %s", (name, key) => {
       expect(normalizeCompanyName(name)).toBe(key);
+   });
+});
+
+describe("isHiddenEmployerName", () => {
+   it.each([
+      ["NDA (DefTech)", true],
+      ["NDA (Miltech)", true],
+      ["NDA Solutions", false],
+      ["Kiss My Apps", false],
+   ])("%s → %s", (name, hidden) => {
+      expect(isHiddenEmployerName(normalizeCompanyName(name))).toBe(hidden);
    });
 });
 

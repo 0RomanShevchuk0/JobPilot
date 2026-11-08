@@ -1,6 +1,7 @@
 import type {
    JobAttemptChanges,
    JobAttemptListItem,
+   JobAttemptSummary,
    RequestedSalary,
    ProfileCurrency,
    SalaryPeriod,
@@ -14,12 +15,14 @@ import {
    eq,
    ilike,
    inArray,
+   isNull,
    lte,
    ne,
    or,
    sql,
    type Column,
    type GetColumnData,
+   type SQL,
 } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { applications, companies, jobAttempts, postings, sources, vacancies } from "../schema.js";
@@ -62,6 +65,18 @@ export interface StoredJobAttemptChanges extends Omit<
    appliedAt?: Date;
 }
 
+/** What I already tried with a vacancy and its employer, as stored. */
+export interface StoredCompanyAttemptHistory {
+   /** my attempt at this very vacancy; null when I haven't applied to it */
+   thisVacancy: JobAttemptSummary | null;
+   /** the vacancy's employer; null when it's hidden or there's no such vacancy */
+   company: { name: string; normalizedName: string } | null;
+   /** how many attempts at the employer's other vacancies, rows added by hand too */
+   otherCount: number;
+   /** the latest of them, the latest applied first */
+   latestOther: JobAttemptSummary[];
+}
+
 /**
  * How changing a row ended. title_required: a row added by hand has no vacancy's title to fall back
  * on. url_not_allowed: a row from JobPilot links to its vacancy, not to a page of its own.
@@ -72,6 +87,14 @@ export type JobAttemptUpdateOutcome =
 export interface JobAttemptsRepository {
    /** My tracker a page at a time, the latest applied first; only the rows matching the filters. */
    listForUser(userId: string, options: JobAttemptListOptions): Promise<JobAttemptListItem[]>;
+   /** A row of my tracker as the list shows it; undefined when there's no such row of mine. */
+   getForUser(userId: string, attemptId: string): Promise<JobAttemptListItem | undefined>;
+   /** My attempt at a vacancy and the latest `limit` of mine at its employer's other vacancies. */
+   getCompanyHistory(
+      userId: string,
+      vacancyId: string,
+      limit: number,
+   ): Promise<StoredCompanyAttemptHistory>;
    /**
     * Adds a row by hand; its company is found by the normalized name, or made. Its silence counts from
     * now, whatever date it was applied on.
@@ -160,6 +183,63 @@ async function findOrCreateCompany(
    return row!.id;
 }
 
+/** The tracker's rows matching where, the latest applied first, with the applications of each. */
+async function selectListItems(
+   db: Drizzle,
+   where: SQL | undefined,
+   limit: number,
+): Promise<JobAttemptListItem[]> {
+   const rows = await db
+      .select({
+         id: jobAttempts.id,
+         vacancyId: jobAttempts.vacancyId,
+         title: attemptTitleSql,
+         company: companies.name,
+         url: jobAttempts.url,
+         stage: jobAttempts.stage,
+         status: jobAttempts.status,
+         notes: jobAttempts.notes,
+         appliedAt: jobAttempts.appliedAt,
+         requestedSalaryAmount: jobAttempts.requestedSalaryAmount,
+         requestedSalaryCurrency: jobAttempts.requestedSalaryCurrency,
+         requestedSalaryPeriod: jobAttempts.requestedSalaryPeriod,
+      })
+      .from(jobAttempts)
+      .leftJoin(vacancies, eq(vacancies.id, jobAttempts.vacancyId))
+      .leftJoin(companies, eq(companies.id, jobAttempts.companyId))
+      .where(where)
+      .orderBy(desc(jobAttempts.appliedAt), desc(jobAttempts.id))
+      .limit(limit);
+
+   const attemptIds = rows.map((row) => row.id);
+   const sent = await db
+      .select({
+         attemptId: applications.attemptId,
+         id: applications.id,
+         sourceName: sources.name,
+      })
+      .from(applications)
+      .innerJoin(postings, eq(postings.id, applications.postingId))
+      .innerJoin(sources, eq(sources.id, postings.sourceId))
+      .where(inArray(applications.attemptId, attemptIds))
+      .orderBy(applications.submittedAt);
+
+   return rows.map(
+      ({ requestedSalaryAmount, requestedSalaryCurrency, requestedSalaryPeriod, ...row }) => ({
+         ...row,
+         appliedAt: row.appliedAt.toISOString(),
+         requestedSalary: salaryFromColumns(
+            requestedSalaryAmount,
+            requestedSalaryCurrency,
+            requestedSalaryPeriod,
+         ),
+         applications: sent
+            .filter((application) => application.attemptId === row.id)
+            .map(({ id, sourceName }) => ({ id, sourceName })),
+      }),
+   );
+}
+
 export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository {
    return {
       async listForUser(userId, { q, stage, status, after, limit }) {
@@ -172,68 +252,83 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
                from job_attempts last_shown
                where last_shown.user_id = ${userId} and last_shown.id = ${after}
             )`;
-         const rows = await db
-            .select({
-               id: jobAttempts.id,
-               vacancyId: jobAttempts.vacancyId,
-               title: attemptTitleSql,
-               company: companies.name,
-               url: jobAttempts.url,
-               stage: jobAttempts.stage,
-               status: jobAttempts.status,
-               notes: jobAttempts.notes,
-               appliedAt: jobAttempts.appliedAt,
-               requestedSalaryAmount: jobAttempts.requestedSalaryAmount,
-               requestedSalaryCurrency: jobAttempts.requestedSalaryCurrency,
-               requestedSalaryPeriod: jobAttempts.requestedSalaryPeriod,
-            })
-            .from(jobAttempts)
-            .leftJoin(vacancies, eq(vacancies.id, jobAttempts.vacancyId))
-            .leftJoin(companies, eq(companies.id, jobAttempts.companyId))
-            .where(
-               and(
-                  eq(jobAttempts.userId, userId),
-                  q ? titleOrCompanyContainsSql(q) : undefined,
-                  stage ? eq(jobAttempts.stage, stage) : undefined,
-                  status ? eq(jobAttempts.status, status) : undefined,
-                  after ? belowLastShown : undefined,
-               ),
-            )
-            .orderBy(desc(jobAttempts.appliedAt), desc(jobAttempts.id))
-            .limit(limit);
-
-         const attemptIds = rows.map((row) => row.id);
-         const sent = await db
-            .select({
-               attemptId: applications.attemptId,
-               id: applications.id,
-               sourceName: sources.name,
-            })
-            .from(applications)
-            .innerJoin(postings, eq(postings.id, applications.postingId))
-            .innerJoin(sources, eq(sources.id, postings.sourceId))
-            .where(inArray(applications.attemptId, attemptIds))
-            .orderBy(applications.submittedAt);
-
-         return rows.map(
-            ({
-               requestedSalaryAmount,
-               requestedSalaryCurrency,
-               requestedSalaryPeriod,
-               ...row
-            }) => ({
-               ...row,
-               appliedAt: row.appliedAt.toISOString(),
-               requestedSalary: salaryFromColumns(
-                  requestedSalaryAmount,
-                  requestedSalaryCurrency,
-                  requestedSalaryPeriod,
-               ),
-               applications: sent
-                  .filter((application) => application.attemptId === row.id)
-                  .map(({ id, sourceName }) => ({ id, sourceName })),
-            }),
+         return selectListItems(
+            db,
+            and(
+               eq(jobAttempts.userId, userId),
+               q ? titleOrCompanyContainsSql(q) : undefined,
+               stage ? eq(jobAttempts.stage, stage) : undefined,
+               status ? eq(jobAttempts.status, status) : undefined,
+               after ? belowLastShown : undefined,
+            ),
+            limit,
          );
+      },
+
+      async getForUser(userId, attemptId) {
+         const [item] = await selectListItems(
+            db,
+            and(eq(jobAttempts.userId, userId), eq(jobAttempts.id, attemptId)),
+            1,
+         );
+         return item;
+      },
+
+      async getCompanyHistory(userId, vacancyId, limit) {
+         const summary = {
+            id: jobAttempts.id,
+            title: attemptTitleSql,
+            stage: jobAttempts.stage,
+            status: jobAttempts.status,
+            appliedAt: jobAttempts.appliedAt,
+         };
+         const [[thisVacancy], [company]] = await Promise.all([
+            db
+               .select(summary)
+               .from(jobAttempts)
+               .leftJoin(vacancies, eq(vacancies.id, jobAttempts.vacancyId))
+               .where(and(eq(jobAttempts.userId, userId), eq(jobAttempts.vacancyId, vacancyId))),
+            db
+               .select({
+                  id: companies.id,
+                  name: companies.name,
+                  normalizedName: companies.normalizedName,
+               })
+               .from(vacancies)
+               .innerJoin(companies, eq(companies.id, vacancies.companyId))
+               .where(eq(vacancies.id, vacancyId)),
+         ]);
+
+         const others = company
+            ? await db
+                 // every one counted, before the limit cuts them: one query, not two
+                 .select({ ...summary, otherCount: sql<number>`count(*) over ()`.mapWith(Number) })
+                 .from(jobAttempts)
+                 .leftJoin(vacancies, eq(vacancies.id, jobAttempts.vacancyId))
+                 .where(
+                    and(
+                       eq(jobAttempts.userId, userId),
+                       eq(jobAttempts.companyId, company.id),
+                       // a row added by hand has no vacancy: it's another one too
+                       or(isNull(jobAttempts.vacancyId), ne(jobAttempts.vacancyId, vacancyId)),
+                    ),
+                 )
+                 .orderBy(desc(jobAttempts.appliedAt), desc(jobAttempts.id))
+                 .limit(limit)
+            : [];
+
+         const withIsoDate = <T extends { appliedAt: Date }>(row: T) => ({
+            ...row,
+            appliedAt: row.appliedAt.toISOString(),
+         });
+         return {
+            thisVacancy: thisVacancy ? withIsoDate(thisVacancy) : null,
+            company: company
+               ? { name: company.name, normalizedName: company.normalizedName }
+               : null,
+            otherCount: others[0]?.otherCount ?? 0,
+            latestOther: others.map(({ otherCount: _, ...row }) => withIsoDate(row)),
+         };
       },
 
       async create(userId, { company, requestedSalary, ...attempt }) {

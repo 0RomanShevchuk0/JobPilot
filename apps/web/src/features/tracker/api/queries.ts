@@ -1,12 +1,20 @@
 import type {
+   CompanyAttemptHistory,
    JobAttemptChanges,
+   JobAttemptListItem,
    JobAttemptListPage,
    JobAttemptStage,
    JobAttemptStatus,
    NewJobAttempt,
 } from "@jobpilot/contracts";
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiDelete, apiGet, apiPatch, apiPost } from "../../../shared/api/client";
+import {
+   skipToken,
+   useInfiniteQuery,
+   useMutation,
+   useQuery,
+   useQueryClient,
+} from "@tanstack/react-query";
+import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from "../../../shared/api/client";
 import { queryKeys } from "../../../shared/api/queryKeys";
 import { useProfile } from "../../profile";
 import { defaultRequestedSalaryUnits, type RequestedSalaryUnits } from "../lib/requested-salary";
@@ -42,6 +50,36 @@ export function useJobAttempts(filter: JobAttemptListFilter) {
    });
 }
 
+/**
+ * The row open in the panel, asked for on its own: one the pages loaded don't have (on a later page,
+ * or filtered out after a change) opens all the same. null = no row open.
+ */
+export function useJobAttempt(attemptId: string | null) {
+   return useQuery({
+      queryKey: queryKeys.jobAttempts.details(attemptId ?? ""),
+      queryFn: attemptId
+         ? () => apiGet<JobAttemptListItem>(`/job-attempts/${attemptId}`)
+         : skipToken,
+      // no such row (removed, or a stale link) won't appear by asking again
+      retry: (failures, error) =>
+         !(error instanceof ApiError && error.status === 404) && failures < 3,
+   });
+}
+
+/**
+ * What I already tried with a vacancy and its employer. Under the tracker's key: a change to a row, or
+ * a new one from Mark applied, shows here too.
+ */
+export function useCompanyAttemptHistory(vacancyId: string) {
+   return useQuery({
+      queryKey: queryKeys.jobAttempts.companyHistory(vacancyId),
+      queryFn: () =>
+         apiGet<CompanyAttemptHistory>(
+            `/job-attempts/company-history?${new URLSearchParams({ vacancyId })}`,
+         ),
+   });
+}
+
 /** Adds a job JobPilot doesn't know about. onCreated runs once the list has it. */
 export function useCreateJobAttempt(onCreated: () => void) {
    const queryClient = useQueryClient();
@@ -71,8 +109,10 @@ export function useDeleteJobAttempt(onDeleted: () => void) {
    const queryClient = useQueryClient();
    return useMutation({
       mutationFn: (attemptId: string) => apiDelete(`/job-attempts/${attemptId}`),
-      onSuccess: () => {
+      onSuccess: (_, attemptId) => {
          onDeleted();
+         // the panel still asks for it until it's gone: not refetched into a 404 by the reload below
+         queryClient.removeQueries({ queryKey: queryKeys.jobAttempts.details(attemptId) });
          return queryClient.invalidateQueries({ queryKey: queryKeys.jobAttempts.all });
       },
    });

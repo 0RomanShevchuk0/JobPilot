@@ -22,6 +22,14 @@ const LEGAL_FORMS = new Set([
    "ооо",
 ]);
 
+/**
+ * A normalized name that hides the employer, not names one: "NDA (DefTech)" and "NDA (Miltech)" are
+ * both "nda", two different companies under one name.
+ */
+export function isHiddenEmployerName(normalizedName: string): boolean {
+   return normalizedName === "nda";
+}
+
 /** Key for matching the same employer across postings and sources: "WeHireMediaBuyers Ltd." → "wehiremediabuyers". */
 export function normalizeCompanyName(name: string): string {
    let words = name

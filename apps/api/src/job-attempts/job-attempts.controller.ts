@@ -39,6 +39,10 @@ const listQuerySchema = z.object({
    after: z.uuid().optional(),
 });
 
+const companyHistoryQuerySchema = z.object({
+   vacancyId: z.uuid(),
+});
+
 @Controller("job-attempts")
 export class JobAttemptsController {
    constructor(private readonly jobAttempts: JobAttemptsService) {}
@@ -50,6 +54,30 @@ export class JobAttemptsController {
       @Query(new ZodValidationPipe(listQuerySchema)) query: z.infer<typeof listQuerySchema>,
    ) {
       return this.jobAttempts.list(userId, query);
+   }
+
+   /** For a vacancy's page: my attempt at it, and the latest at its employer's other vacancies. */
+   @Get("company-history")
+   getCompanyHistory(
+      @CurrentUserId() userId: string,
+      @Query(new ZodValidationPipe(companyHistoryQuerySchema))
+      query: z.infer<typeof companyHistoryQuerySchema>,
+   ) {
+      return this.jobAttempts.getCompanyHistory(userId, query.vacancyId);
+   }
+
+   /**
+    * One row, as the list shows it: the tracker opens a row the pages loaded don't have. After
+    * company-history: that one isn't an id.
+    */
+   @Get(":id")
+   async get(
+      @CurrentUserId() userId: string,
+      @Param("id", new ZodValidationPipe(z.uuid())) id: string,
+   ) {
+      const attempt = await this.jobAttempts.get(userId, id);
+      if (!attempt) throw new NotFoundException("No such row in the tracker");
+      return attempt;
    }
 
    /** Adds a job JobPilot doesn't know about: LinkedIn, a referral, a company's site. */
