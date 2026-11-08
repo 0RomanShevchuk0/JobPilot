@@ -12,16 +12,17 @@ let enabled = false;
 /** Error reporting through Sentry: one thing to import, the app's error monitoring in a few calls. */
 export const sentry = {
    /**
-    * Starts reporting when SENTRY_DSN is set; a no-op otherwise (dev, or not configured), so the app
-    * runs the same without it. Errors only: no performance tracing or profiling. environment and release
-    * (both from the env) group events in Sentry. Call once, before the app does its work.
+    * Starts reporting only in production (NODE_ENV=production, set by the Dockerfiles) with SENTRY_DSN
+    * set; a no-op otherwise, so local runs never send errors even with the prod DSN in .env. Errors only:
+    * no performance tracing or profiling. release (from the env) groups events in Sentry. Call once,
+    * before the app does its work.
     */
    init(): boolean {
       const dsn = process.env.SENTRY_DSN;
-      if (!dsn) return false;
+      if (!dsn || process.env.NODE_ENV !== "production") return false;
       Sentry.init({
          dsn,
-         environment: process.env.NODE_ENV ?? "development",
+         environment: "production",
          release: process.env.SENTRY_RELEASE || undefined,
          // errors only: no transactions sampled, and no trace headers added to outgoing requests
          tracesSampleRate: 0,

@@ -42,11 +42,13 @@ import {
 } from "./queues.js";
 import { sources } from "./sources.js";
 
-// error reporting first, so a crash during setup is caught too (no-op without SENTRY_DSN)
+// error reporting first, so a crash during setup is caught too (no-op outside production)
 const errorReportingOn = sentry.init();
 log(
    "worker",
-   errorReportingOn ? "error reporting on (Sentry)" : "error reporting off (no SENTRY_DSN)",
+   errorReportingOn
+      ? "error reporting on (Sentry)"
+      : "error reporting off (not production or no SENTRY_DSN)",
 );
 
 // BullMQ workers need maxRetriesPerRequest: null so blocking commands survive Redis reconnects

@@ -5,7 +5,7 @@ import { sentry } from "@jobpilot/observability";
 
 const enabled = sentry.init();
 console.log(
-   `Sentry ${enabled ? "enabled" : "off (no SENTRY_DSN)"}, environment ${process.env.NODE_ENV ?? "development"}`,
+   `Sentry ${enabled ? "enabled" : "off (not production or no SENTRY_DSN)"}, environment ${process.env.NODE_ENV ?? "development"}`,
 );
 if (enabled) {
    sentry.reportError(new Error("JobPilot Sentry test — safe to ignore"), {
