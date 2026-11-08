@@ -5,7 +5,7 @@ import type {
    ApplicationView,
 } from "@jobpilot/contracts";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiDelete, apiGet, apiPatch, apiPost } from "../../../shared/api/client";
+import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from "../../../shared/api/client";
 import { queryKeys } from "../../../shared/api/queryKeys";
 import { fillInExtension, isExtensionInstalled } from "../../../shared/extension/client";
 
@@ -64,6 +64,9 @@ export function useApplication(id: string) {
    return useQuery({
       queryKey: queryKeys.applications.details(id),
       queryFn: () => apiGet<ApplicationView>(`/applications/${id}`),
+      // no such application (taken back, removed, a stale link) won't appear by asking again
+      retry: (failures, error) =>
+         !(error instanceof ApiError && error.status === 404) && failures < 3,
       refetchInterval: (query) => {
          const app = query.state.data;
          if (app?.status === "preparing" && app.preparationRunning) return PREPARING_POLL_MS;

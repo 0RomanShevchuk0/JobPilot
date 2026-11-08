@@ -99,9 +99,10 @@ export interface ApplicationsRepository {
    /**
     * I applied through the posting myself (on the employer's site it sends to, or the job site) and
     * mark it sent: a new application, or the one JobPilot was preparing. It joins the tracker, unless
-    * it is sent already. Returns its id.
+    * it is sent already. siteSaid: the job site said I had applied, when JobPilot asked it to apply,
+    * and that is why it is marked; kept as its failureReason, to tell me. Returns its id.
     */
-   markSentByHand(userId: string, postingId: string): Promise<{ id: string }>;
+   markSentByHand(userId: string, postingId: string, siteSaid?: string): Promise<{ id: string }>;
    /**
     * Takes back an application I marked sent by hand: one JobPilot had answered is ready for review
     * again, with its answers; one with no form is gone. It leaves its attempt, and the attempt goes with
@@ -343,7 +344,7 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
          });
       },
 
-      async markSentByHand(userId, postingId) {
+      async markSentByHand(userId, postingId, siteSaid) {
          return db.transaction(async (tx) => {
             const [row] = await tx
                .insert(applications)
@@ -353,6 +354,7 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
                   status: "submitted",
                   origin: "manual",
                   submittedAt: sql`now()`,
+                  failureReason: siteSaid ?? null,
                })
                // one sent already stays as it was; one JobPilot was on is sent by hand now
                .onConflictDoUpdate({
@@ -361,7 +363,7 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
                      status: "submitted",
                      origin: "manual",
                      submittedAt: sql`now()`,
-                     failureReason: null,
+                     failureReason: siteSaid ?? null,
                      updatedAt: sql`now()`,
                   },
                   setWhere: ne(applications.status, "submitted"),
@@ -423,6 +425,8 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
                   status: "ready_for_review",
                   origin: "jobpilot",
                   attemptId: null,
+                  // what the job site said, if it said I had applied, is no problem to show with the answers
+                  failureReason: null,
                   submittedAt: null,
                   updatedAt: sql`now()`,
                })

@@ -1,8 +1,7 @@
 import type { MatchPosting } from "@jobpilot/contracts";
 import { Link, useNavigate } from "react-router";
-import { ApiError } from "../../../shared/api/client";
 import { ArrowRightIcon, Button, buttonStyles } from "../../../shared/ui";
-import { useStartApplication, useUnmarkSentByHand } from "../../applications";
+import { useStartApplication, useUndoSentByHand } from "../../applications";
 import { ActionError } from "./ActionError";
 import { ExternalApplyLink } from "./ExternalApplyLink";
 import { MarkSentByHandButton } from "./MarkSentByHandButton";
@@ -25,28 +24,12 @@ export function PostingApplyActions({
    withMarkApplied?: boolean;
 }) {
    const apply = useStartApplication();
-   const unmarkSent = useUnmarkSentByHand();
+   const undo = useUndoSentByHand();
    const navigate = useNavigate();
    const { application } = posting;
-   const error = apply.error ?? unmarkSent.error;
+   const error = apply.error ?? undo.error;
    const markSentButton = <MarkSentByHandButton postingId={posting.id} />;
    const markSentBesideApply = withMarkApplied && markSentButton;
-
-   // the only application of a tracker row I changed (409): what I wrote there goes too, asked first
-   const undoMarkSent = (applicationId: string) =>
-      unmarkSent.mutate(
-         { applicationId },
-         {
-            onError: (refusal) => {
-               if (!(refusal instanceof ApiError && refusal.status === 409)) return;
-               const removesRow = window.confirm(
-                  "Its row in the Tracker goes too, with what you changed in it. Undo anyway?",
-               );
-               if (removesRow) unmarkSent.mutate({ applicationId, withTrackerRow: true });
-               else unmarkSent.reset();
-            },
-         },
-      );
 
    function actions() {
       if (application?.status === "submitted") {
@@ -55,8 +38,8 @@ export function PostingApplyActions({
             <Button
                variant="outline"
                size="sm"
-               onClick={() => undoMarkSent(application.id)}
-               loading={unmarkSent.isPending}
+               onClick={() => undo.undoSentByHand(application.id)}
+               loading={undo.isPending}
             >
                Undo
             </Button>
@@ -118,7 +101,7 @@ export function PostingApplyActions({
                message={error.message}
                onClose={() => {
                   apply.reset();
-                  unmarkSent.reset();
+                  undo.reset();
                }}
             />
          )}

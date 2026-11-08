@@ -31,13 +31,19 @@ export function ApplicationStatusNotice({ app }: { app: ApplicationView }) {
          {app.status === "cannot_apply" && (
             <p className="text-gray-600">Can't apply through JobPilot: {app.failureReason}</p>
          )}
-         {app.status === "submitted" && (
-            <p className="text-green-700">
-               Sent on {new Date(app.submittedAt ?? app.updatedAt).toLocaleDateString()}
-               {/* by hand: I marked it, or the job site said I had applied when I asked to */}
-               {app.origin === "manual" ? ": you applied yourself." : "."}
-            </p>
-         )}
+         {app.status === "submitted" &&
+            (app.origin === "manual" && app.failureReason ? (
+               // JobPilot marked it: the job site said I had applied, when I asked it to apply
+               <p className="text-green-700">
+                  You have already applied to this job on {app.sourceName}. The application was
+                  marked as sent.
+               </p>
+            ) : (
+               <p className="text-green-700">
+                  Sent on {new Date(app.submittedAt ?? app.updatedAt).toLocaleDateString()}
+                  {app.origin === "manual" ? ": you applied yourself and marked it." : "."}
+               </p>
+            ))}
          {app.status === "ready_for_review" && app.filling && (
             <p className="text-gray-600">
                The form is open in your browser, filled in: check it there and send it, or close it.

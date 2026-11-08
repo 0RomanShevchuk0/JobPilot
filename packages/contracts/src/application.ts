@@ -140,7 +140,10 @@ export interface ApplicationListItem {
    sourceName: string;
    status: ApplicationStatus;
    origin: ApplicationOrigin;
-   /** why preparing or submitting failed, or why the job site takes no application */
+   /**
+    * why preparing or submitting failed, or why the job site takes no application; on one sent by
+    * hand, what the job site said when it was marked for me: that I had applied already
+    */
    failureReason: string | null;
    /** whether I hid its vacancy: then I'm done with it, sent or not */
    vacancyStatus: MatchStatus;

@@ -52,7 +52,8 @@ export async function handlePrepareApplication(
       // by hand, as I'd mark it, and joins the tracker; Undo takes it back. Dated today: the site
       // doesn't say when
       if (err instanceof CannotApplyError && err.alreadyApplied) {
-         await database.applications.markSentByHand(application.userId, application.postingId);
+         const { userId, postingId } = application;
+         await database.applications.markSentByHand(userId, postingId, reason);
          log("prepare-application", `marked sent by hand: ${reason}`);
          return reason;
       }

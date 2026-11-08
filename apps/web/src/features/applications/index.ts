@@ -6,7 +6,6 @@ export {
    useMarkSentByHand,
    useSaveAnswers,
    useStartApplication,
-   useUnmarkSentByHand,
    type AnswerChange,
    type ApplicationListFilter,
 } from "./api/queries";
@@ -16,3 +15,4 @@ export { ApplicationFilters } from "./ui/ApplicationFilters";
 export { ApplicationRow } from "./ui/ApplicationRow";
 export { ApplicationStatusNotice } from "./ui/ApplicationStatusNotice";
 export { FieldAnswer } from "./ui/FieldAnswer";
+export { useUndoSentByHand } from "./ui/useUndoSentByHand";

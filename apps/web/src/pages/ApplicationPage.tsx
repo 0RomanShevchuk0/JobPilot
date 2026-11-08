@@ -1,6 +1,6 @@
 import type { ApplicationView } from "@jobpilot/contracts";
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import {
    ApplicationStatusNotice,
    FieldAnswer,
@@ -10,13 +10,14 @@ import {
    useFillApplication,
    useSaveAnswers,
    useStartApplication,
+   useUndoSentByHand,
 } from "../features/applications";
 import { documentFileUrl, useDocuments } from "../features/documents";
 import { BackLink, Button, PageLoader } from "../shared/ui";
 
 /**
  * One application: while the worker reads the form and answers it, then the answers to review, opened
- * in a browser on this machine for the user to check and send.
+ * in a browser on this machine for the user to check and send. One sent by hand can be taken back.
  */
 export function ApplicationPage() {
    const { id } = useParams<{ id: string }>();
@@ -41,6 +42,8 @@ function Application({ app }: { app: ApplicationView }) {
    const extensionInstalled = useExtensionInstalled().data;
    const sendsHere = app.status === "ready_for_review" && extensionInstalled !== false;
    const prepareAgain = useStartApplication();
+   const undo = useUndoSentByHand();
+   const navigate = useNavigate();
    // the CV field attaches the base CV as it is when filling: the link opens that one
    const documents = useDocuments();
    const baseCv = documents.data?.find((d) => d.type === "cv" && d.isBase);
@@ -51,11 +54,16 @@ function Application({ app }: { app: ApplicationView }) {
       .map((field) => ({ name: field.name, value: drafts[field.name]! }));
    const clearDrafts = () => setDrafts({});
 
-   const busy = save.isPending || prepareAgain.isPending || fill.isPending;
+   const busy = save.isPending || prepareAgain.isPending || fill.isPending || undo.isPending;
    const preparingStopped = app.status === "preparing" && !app.preparationRunning;
-   const error = save.error ?? prepareAgain.error ?? fill.error;
+   const error = save.error ?? prepareAgain.error ?? fill.error ?? undo.error;
    // the answers can change while they are up for review and not open in a browser window
    const editable = app.status === "ready_for_review" && !app.filling && !busy;
+   // taken back without JobPilot's answers, the application is gone: on to its vacancy, to apply again
+   const leaveIfGone = () => {
+      if (app.fields.length > 0) return;
+      navigate(app.vacancyId ? `/matches/${app.vacancyId}` : "/applications", { replace: true });
+   };
 
    return (
       <>
@@ -117,6 +125,17 @@ function Application({ app }: { app: ApplicationView }) {
                   loading={fill.isPending}
                >
                   {app.filling ? "Show in browser" : "Open in browser"}
+               </Button>
+            )}
+            {/* marked by me, or by JobPilot when the job site said I had applied already */}
+            {app.status === "submitted" && app.origin === "manual" && (
+               <Button
+                  variant="outline"
+                  onClick={() => undo.undoSentByHand(app.id, leaveIfGone)}
+                  disabled={busy}
+                  loading={undo.isPending}
+               >
+                  Undo
                </Button>
             )}
             {(app.status === "ready_for_review" || app.status === "failed" || preparingStopped) && (
