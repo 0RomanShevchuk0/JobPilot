@@ -1,8 +1,8 @@
 import type { JobAttemptListItem } from "@jobpilot/contracts";
 import { useState } from "react";
 import { Link } from "react-router";
-import { Button, TrashIcon } from "../../../shared/ui";
-import { useDeleteJobAttempt } from "../api/queries";
+import { Button, PageLoader, TrashIcon } from "../../../shared/ui";
+import { useDeleteJobAttempt, useSalaryUnits } from "../api/queries";
 import { EditJobAttemptForm } from "./EditJobAttemptForm";
 import { fieldGridClasses, JobAttemptFields, jobAttemptFieldValues } from "./JobAttemptFields";
 import { TrackerPanel } from "./TrackerPanel";
@@ -21,6 +21,7 @@ export function JobAttemptPanel({
 }) {
    const title = attempt.title ?? "Untitled job";
    const [editing, setEditing] = useState(false);
+   const salaryUnits = useSalaryUnits();
    const addedByHand = attempt.vacancyId === null;
    const remove = useDeleteJobAttempt(onClose);
    // what I wrote goes with it: asked first
@@ -52,7 +53,15 @@ export function JobAttemptPanel({
          }
       >
          {editing ? (
-            <EditJobAttemptForm attempt={attempt} onDone={() => setEditing(false)} />
+            salaryUnits ? (
+               <EditJobAttemptForm
+                  attempt={attempt}
+                  salaryUnits={salaryUnits}
+                  onDone={() => setEditing(false)}
+               />
+            ) : (
+               <PageLoader />
+            )
          ) : (
             <>
                <div className="flex flex-col gap-4">

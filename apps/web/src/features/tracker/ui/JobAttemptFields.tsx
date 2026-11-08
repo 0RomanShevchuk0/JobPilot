@@ -1,13 +1,19 @@
 import {
    jobAttemptStages,
    jobAttemptStatuses,
+   profileCurrencies,
+   salaryPeriods,
    type JobAttemptListItem,
+   type JobAttemptSalary,
    type JobAttemptStage,
    type JobAttemptStatus,
+   type ProfileCurrency,
+   type SalaryPeriod,
 } from "@jobpilot/contracts";
 import type { ReactNode } from "react";
 import { Badge, inputClasses, textareaClasses } from "../../../shared/ui";
 import { stageLabels, stageStyles, statusLabels, statusStyles } from "../lib/labels";
+import { defaultSalaryUnits, type SalaryUnits } from "../lib/salary";
 
 /** What the fields of a tracker row hold; an empty text is "". */
 export interface JobAttemptFieldValues {
@@ -19,6 +25,25 @@ export interface JobAttemptFieldValues {
    stage: JobAttemptStage;
    status: JobAttemptStatus;
    notes: string;
+   /** "" = no salary */
+   salaryAmount: string;
+   salaryCurrency: ProfileCurrency;
+   salaryPeriod: SalaryPeriod;
+}
+
+/** The salary the fields hold: null when the amount is empty. */
+export function salaryOf(fields: JobAttemptFieldValues): JobAttemptSalary | null {
+   if (fields.salaryAmount === "") return null;
+   return {
+      amount: Number(fields.salaryAmount),
+      currency: fields.salaryCurrency,
+      period: fields.salaryPeriod,
+   };
+}
+
+/** "3 000 USD / month", the amount grouped as my locale groups it. */
+function salaryText({ amount, currency, period }: JobAttemptSalary): string {
+   return `${amount.toLocaleString()} ${currency} / ${period}`;
 }
 
 /** A day in my time zone, as a date input takes it; the en-CA locale writes dates as 2026-11-07. */
@@ -38,14 +63,20 @@ export function readJobAttemptFields(form: HTMLFormElement): JobAttemptFieldValu
       stage: data.get("stage") as JobAttemptStage,
       status: data.get("status") as JobAttemptStatus,
       notes: text("notes"),
+      salaryAmount: text("salaryAmount"),
+      salaryCurrency: data.get("salaryCurrency") as ProfileCurrency,
+      salaryPeriod: data.get("salaryPeriod") as SalaryPeriod,
    };
 }
 
 /**
  * What a row's fields start from: what it shows. The date is the day in my time zone, the way the
- * tracker shows it.
+ * tracker shows it; a row with no salary offers the units given to pick one in.
  */
-export function jobAttemptFieldValues(attempt: JobAttemptListItem): JobAttemptFieldValues {
+export function jobAttemptFieldValues(
+   attempt: JobAttemptListItem,
+   units: SalaryUnits = defaultSalaryUnits,
+): JobAttemptFieldValues {
    return {
       company: attempt.company ?? "",
       title: attempt.title ?? "",
@@ -54,6 +85,9 @@ export function jobAttemptFieldValues(attempt: JobAttemptListItem): JobAttemptFi
       stage: attempt.stage,
       status: attempt.status,
       notes: attempt.notes,
+      salaryAmount: attempt.salary ? String(attempt.salary.amount) : "",
+      salaryCurrency: attempt.salary?.currency ?? units.currency,
+      salaryPeriod: attempt.salary?.period ?? units.period,
    };
 }
 
@@ -117,6 +151,7 @@ export function JobAttemptFields({
    titleRequired: boolean;
    withLink: boolean;
 }) {
+   const salaryOfValues = salaryOf(values);
    return (
       <div className={fieldGridClasses}>
          <FieldRow name="Company" editing={editing}>
@@ -192,6 +227,52 @@ export function JobAttemptFields({
                      year: "numeric",
                   })}
                </Value>
+            )}
+         </FieldRow>
+         <FieldRow name="Salary" editing={editing}>
+            {editing ? (
+               // the amount a line of its own, the units under it: beside them it'd be too narrow to
+               // read. Empty, there is no salary
+               <div className="grid grid-cols-2 gap-2">
+                  <input
+                     name="salaryAmount"
+                     type="number"
+                     inputMode="numeric"
+                     min={1}
+                     max={100_000_000}
+                     step={1}
+                     placeholder="Amount"
+                     aria-label="Salary amount"
+                     defaultValue={values.salaryAmount}
+                     className={`${inputClasses} col-span-2`}
+                  />
+                  <select
+                     name="salaryCurrency"
+                     aria-label="Currency"
+                     defaultValue={values.salaryCurrency}
+                     className={inputClasses}
+                  >
+                     {profileCurrencies.map((currency) => (
+                        <option key={currency} value={currency}>
+                           {currency}
+                        </option>
+                     ))}
+                  </select>
+                  <select
+                     name="salaryPeriod"
+                     aria-label="Per"
+                     defaultValue={values.salaryPeriod}
+                     className={inputClasses}
+                  >
+                     {salaryPeriods.map((period) => (
+                        <option key={period} value={period}>
+                           / {period}
+                        </option>
+                     ))}
+                  </select>
+               </div>
+            ) : (
+               <Value>{salaryOfValues ? salaryText(salaryOfValues) : ""}</Value>
             )}
          </FieldRow>
          <FieldRow name="Stage" required editing={editing}>

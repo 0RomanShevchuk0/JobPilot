@@ -2,6 +2,8 @@ import type { JobAttemptChanges, JobAttemptListPage, NewJobAttempt } from "@jobp
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiDelete, apiGet, apiPatch, apiPost } from "../../../shared/api/client";
 import { queryKeys } from "../../../shared/api/queryKeys";
+import { useProfile } from "../../profile";
+import { defaultSalaryUnits, type SalaryUnits } from "../lib/salary";
 
 /** My tracker a page at a time, the latest applied first. A refetch reloads every page loaded. */
 export function useJobAttempts() {
@@ -50,4 +52,15 @@ export function useDeleteJobAttempt(onDeleted: () => void) {
          return queryClient.invalidateQueries({ queryKey: queryKeys.jobAttempts.all });
       },
    });
+}
+
+/**
+ * What a salary is picked in when a row has none: the profile's currency and period, USD a month
+ * without them. Undefined while the profile loads: a form's fields take their first values only.
+ */
+export function useSalaryUnits(): SalaryUnits | undefined {
+   const profile = useProfile();
+   if (profile.isPending) return undefined;
+   const salary = profile.data?.profile.salary;
+   return salary ? { currency: salary.currency, period: salary.period } : defaultSalaryUnits;
 }
