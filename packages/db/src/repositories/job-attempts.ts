@@ -65,10 +65,8 @@ export interface StoredJobAttemptChanges extends Omit<
    appliedAt?: Date;
 }
 
-/** What I already tried with a vacancy and its employer, as stored. */
+/** What I already tried with a vacancy's employer, as stored. */
 export interface StoredCompanyAttemptHistory {
-   /** my attempt at this very vacancy; null when I haven't applied to it */
-   thisVacancy: JobAttemptSummary | null;
    /** the vacancy's employer; null when it's hidden or there's no such vacancy */
    company: { name: string; normalizedName: string } | null;
    /** how many attempts at the employer's other vacancies, rows added by hand too */
@@ -89,7 +87,7 @@ export interface JobAttemptsRepository {
    listForUser(userId: string, options: JobAttemptListOptions): Promise<JobAttemptListItem[]>;
    /** A row of my tracker as the list shows it; undefined when there's no such row of mine. */
    getForUser(userId: string, attemptId: string): Promise<JobAttemptListItem | undefined>;
-   /** My attempt at a vacancy and the latest `limit` of mine at its employer's other vacancies. */
+   /** The latest `limit` of my attempts at a vacancy's employer's other vacancies, and their count. */
    getCompanyHistory(
       userId: string,
       vacancyId: string,
@@ -282,22 +280,15 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
             status: jobAttempts.status,
             appliedAt: jobAttempts.appliedAt,
          };
-         const [[thisVacancy], [company]] = await Promise.all([
-            db
-               .select(summary)
-               .from(jobAttempts)
-               .leftJoin(vacancies, eq(vacancies.id, jobAttempts.vacancyId))
-               .where(and(eq(jobAttempts.userId, userId), eq(jobAttempts.vacancyId, vacancyId))),
-            db
-               .select({
-                  id: companies.id,
-                  name: companies.name,
-                  normalizedName: companies.normalizedName,
-               })
-               .from(vacancies)
-               .innerJoin(companies, eq(companies.id, vacancies.companyId))
-               .where(eq(vacancies.id, vacancyId)),
-         ]);
+         const [company] = await db
+            .select({
+               id: companies.id,
+               name: companies.name,
+               normalizedName: companies.normalizedName,
+            })
+            .from(vacancies)
+            .innerJoin(companies, eq(companies.id, vacancies.companyId))
+            .where(eq(vacancies.id, vacancyId));
 
          const others = company
             ? await db
@@ -322,7 +313,6 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
             appliedAt: row.appliedAt.toISOString(),
          });
          return {
-            thisVacancy: thisVacancy ? withIsoDate(thisVacancy) : null,
             company: company
                ? { name: company.name, normalizedName: company.normalizedName }
                : null,
