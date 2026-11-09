@@ -10,8 +10,8 @@ function required(name: string): string {
 export const config = {
    databaseUrl: required("DATABASE_URL"),
    redisUrl: required("REDIS_URL"),
-   // 0: not collecting at all (main.ts); unset or empty: every 3 hours
-   discoverEveryMs: Number(process.env.DISCOVER_EVERY_MINUTES || 180) * 60_000,
+   // 0: not collecting at all (main.ts); unset or empty: every 30 minutes
+   discoverEveryMs: Number(process.env.DISCOVER_EVERY_MINUTES || 30) * 60_000,
    // decrypts the users' sessions in the database, the API encrypts them with the public one
    sessionKeys: {
       publicKey: required("SESSION_PUBLIC_KEY"),
