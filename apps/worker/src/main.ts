@@ -2,6 +2,7 @@ import {
    QueueNames,
    type DiscoverJobData,
    type DetectClosedPostingsJobData,
+   type ProbeSessionsJobData,
    type MarkSilentJobAttemptsJobData,
    fetchQueueName,
    type FetchJobData,
@@ -22,6 +23,7 @@ import {
    handleDetectClosedPostings,
    DETECT_CLOSED_EVERY_MS,
 } from "./jobs/detect-closed-postings.js";
+import { handleProbeSessions, PROBE_SESSIONS_EVERY_MS } from "./jobs/probe-sessions.js";
 import { handleFetch } from "./jobs/fetch.js";
 import { handleBuildVacancy } from "./jobs/build-vacancy.js";
 import { handleMatchUser } from "./jobs/match-user.js";
@@ -38,6 +40,7 @@ import {
 import {
    discoverJobOptions,
    detectClosedPostingsJobOptions,
+   probeSessionsJobOptions,
    markSilentJobAttemptsJobOptions,
 } from "./queues.js";
 import { sources } from "./sources.js";
@@ -63,6 +66,9 @@ const detectClosedPostingsQueue = new Queue<DetectClosedPostingsJobData>(
       connection,
    },
 );
+const probeSessionsQueue = new Queue<ProbeSessionsJobData>(QueueNames.probeSessions, {
+   connection,
+});
 const markSilentJobAttemptsQueue = new Queue<MarkSilentJobAttemptsJobData>(
    QueueNames.markSilentJobAttempts,
    { connection },
@@ -81,9 +87,9 @@ const checkCanApplyQueue = new Queue<CheckCanApplyJobData>(QueueNames.checkCanAp
 const scoreVacancyQueue = new Queue<ScoreVacancyJobData>(QueueNames.scoreVacancy, { connection });
 const workers: Worker[] = [];
 
-// DISCOVER_EVERY_MINUTES=0: this worker doesn't collect vacancies, only takes what its API and its own
-// jobs queue. For one on a dev machine sharing the server's database: collecting there too would hit
-// the sites twice and score the same vacancies twice
+// DISCOVER_EVERY_MINUTES=0: this worker doesn't collect vacancies or probe sessions, only takes what
+// its API and its own jobs queue. For one on a dev machine sharing the server's database: doing it there
+// too would hit the sites twice, score the same vacancies twice and try each session twice
 const collectsVacancies = config.discoverEveryMs > 0;
 
 for (const entry of sources) {
@@ -93,6 +99,7 @@ for (const entry of sources) {
       // one an earlier run left in this Redis would keep queueing discovers nobody takes
       await discoverQueue.removeJobScheduler(`discover-${source}`);
       await detectClosedPostingsQueue.removeJobScheduler(`detect-closed-postings-${source}`);
+      await probeSessionsQueue.removeJobScheduler(`probe-sessions-${source}`);
       continue;
    }
 
@@ -113,6 +120,15 @@ for (const entry of sources) {
          name: "detect-closed-postings",
          data: { source },
          opts: detectClosedPostingsJobOptions,
+      },
+   );
+   await probeSessionsQueue.upsertJobScheduler(
+      `probe-sessions-${source}`,
+      { every: PROBE_SESSIONS_EVERY_MS },
+      {
+         name: "probe-sessions",
+         data: { source },
+         opts: probeSessionsJobOptions,
       },
    );
 
@@ -136,6 +152,11 @@ if (collectsVacancies) {
       new Worker<DetectClosedPostingsJobData>(
          QueueNames.detectClosedPostings,
          (job) => handleDetectClosedPostings(job, database, fetchQueues),
+         { connection, concurrency: 1 },
+      ),
+      new Worker<ProbeSessionsJobData>(
+         QueueNames.probeSessions,
+         (job) => handleProbeSessions(job, database),
          { connection, concurrency: 1 },
       ),
    );
@@ -245,7 +266,8 @@ for (const worker of workers) {
 }
 
 const collecting = collectsVacancies
-   ? `discover every ${config.discoverEveryMs / 60_000} min`
+   ? `discover every ${config.discoverEveryMs / 60_000} min, ` +
+     `probe sessions every ${PROBE_SESSIONS_EVERY_MS / 60_000} min`
    : "not collecting (DISCOVER_EVERY_MINUTES=0)";
 log(
    "worker",
@@ -259,6 +281,7 @@ async function shutdown(signal: string) {
    await Promise.all([
       discoverQueue.close(),
       detectClosedPostingsQueue.close(),
+      probeSessionsQueue.close(),
       markSilentJobAttemptsQueue.close(),
       buildVacancyQueue.close(),
       matchVacancyQueue.close(),

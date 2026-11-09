@@ -7,9 +7,10 @@ export type ProbeResult = "ok" | "logged out" | "unknown";
 
 /**
  * Tries the session of everyone searching on the source, each their own, on a page of one of its
- * postings still up, as the can-apply check would, and records how it went for them. Run with every
- * discover, so a session that is over shows in the web without waiting for a new vacancy, and one
- * logged into again stops showing. A user without a session is logged out with no request made.
+ * postings still up, as the can-apply check would, and records how it went for them. Run on its own
+ * schedule (probe-sessions), so a session that is over shows in the web without waiting for a new
+ * vacancy, and one logged into again stops showing. A user without a session is logged out with no
+ * request made.
  */
 export async function probeSessions(
    source: string,

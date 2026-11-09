@@ -6,6 +6,7 @@
 //   match-user (profile changed) ──────────────────┘
 //
 //   mark-silent-job-attempts (daily): tracker rows a company went quiet on get their status
+//   probe-sessions: each user's session on a source tried, so the web shows one that is over
 //
 //   prepare-application (the user asked to apply): read the form on the job site, answer it
 //   fill-application (the user approved the answers): fill the form in a visible browser, they send it
@@ -18,6 +19,11 @@ export const QueueNames = {
    discover: "discover",
    /** Sends postings long gone from a source's listings to fetch, to learn whether they are closed. */
    detectClosedPostings: "detect-closed-postings",
+   /**
+    * Tries each searching user's session on a source on one job page and records whether it works:
+    * the web shows a session that is over even when no new vacancy needs it.
+    */
+   probeSessions: "probe-sessions",
    /** Gives the tracker rows a company went quiet on their status. */
    markSilentJobAttempts: "mark-silent-job-attempts",
    /** Builds or updates the vacancy of a stored posting. */
@@ -47,6 +53,11 @@ export interface DiscoverJobData {
 }
 
 export interface DetectClosedPostingsJobData {
+   source: string;
+}
+
+/** Whose sessions is read when the job runs: the users with categories on the source. */
+export interface ProbeSessionsJobData {
    source: string;
 }
 

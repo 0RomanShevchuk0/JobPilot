@@ -3,7 +3,6 @@ import type { DatabaseClient } from "@jobpilot/db";
 import { type Job, type Queue, UnrecoverableError } from "bullmq";
 import { log } from "../log.js";
 import { fetchJobOptions } from "../queues.js";
-import { probeSessions } from "../session-probe.js";
 import { findSource } from "../sources.js";
 
 /**
@@ -26,12 +25,6 @@ export async function handleDiscover(
       log("discover", `${source}: no user picked a category, skipped`);
       return { found: 0, queued: 0 };
    }
-   // one page per user's session per run: the web learns of one that is over even without new jobs
-   const sessions = await probeSessions(source, database)
-      .then((results) => results.map((r) => r.result).join(", ") || "none to try")
-      .catch((err: Error) => `failed: ${err.message}`);
-   log("discover", `${source} sessions: ${sessions}`);
-
    const refs = await entry.adapter.discover({ keywords });
    const toFetch = await database.postings.markSeen(source, refs);
 
