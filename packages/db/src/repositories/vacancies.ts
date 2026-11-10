@@ -8,16 +8,20 @@ import type {
    VacancyFields,
    WorkMode,
 } from "@jobpilot/contracts";
-import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
 import { companies, postings, profiles, vacancies } from "../schema.js";
 import { profilePickedPostingCategorySql } from "./query-parts/subscriptions.js";
 
 export interface LinkPostingInput {
    postingId: string;
-   fingerprint: string;
    /**
-    * Picks its vacancy among the postings of the open ones with the fingerprint, knowing when the
+    * Of the employer's open vacancies, by the titles of their postings, the ones it may belong to:
+    * only their postings are loaded for pickVacancy, texts and all.
+    */
+   pickTitleMatches: (openTitles: PostingTitleOfOpenVacancy[]) => Set<string>;
+   /**
+    * Picks its vacancy among the postings of the ones pickTitleMatches kept, knowing when the
     * posting was first seen; undefined for a new one.
     */
    pickVacancy: (openPostings: PostingOfOpenVacancy[], firstSeenAt: Date) => string | undefined;
@@ -26,6 +30,12 @@ export interface LinkPostingInput {
    // a new vacancy starts from its first posting; mergeVacancy fills in the rest
    title: string;
    description: string;
+}
+
+export interface PostingTitleOfOpenVacancy {
+   vacancyId: string;
+   source: string;
+   title: string;
 }
 
 export interface PostingOfOpenVacancy {
@@ -64,8 +74,8 @@ export interface VacancyForMatching {
 export interface VacanciesRepository {
    /**
     * Attaches a posting to its vacancy: the one it is already linked to, else the one pickVacancy
-    * finds among the open ones with the fingerprint (there can be several), else a new one. Returns
-    * the vacancy id.
+    * finds among its employer's open ones, else a new one. With the employer hidden it's always a new
+    * one: nothing tells whose it is. Returns the vacancy id.
     */
    linkPosting(input: LinkPostingInput): Promise<string>;
    /** All parsed postings of a vacancy, to merge its fields from. */
@@ -77,9 +87,50 @@ export interface VacanciesRepository {
    listOpenIdsSubscribedBy(userId: string): Promise<string[]>;
 }
 
+type Transaction = Parameters<Parameters<Drizzle["transaction"]>[0]>[0];
+
+/**
+ * The parsed postings of the company's open vacancies that pickTitleMatches keeps. Titles first, the
+ * texts only of the vacancies they match: a big employer has hundreds of open ones, one or two fit.
+ */
+async function selectOpenPostingsMatching(
+   tx: Transaction,
+   companyId: string,
+   pickTitleMatches: LinkPostingInput["pickTitleMatches"],
+): Promise<PostingOfOpenVacancy[]> {
+   const openOfCompany = and(
+      eq(vacancies.companyId, companyId),
+      isNull(vacancies.closedAt),
+      isNotNull(postings.parsed),
+   );
+   const openTitles = await tx
+      .select({
+         vacancyId: vacancies.id,
+         // from parsed, as the posting compared with them has it: one field for both sides
+         source: sql<string>`${postings.parsed}->>'source'`,
+         title: sql<string>`${postings.parsed}->>'title'`,
+      })
+      .from(postings)
+      .innerJoin(vacancies, eq(vacancies.id, postings.vacancyId))
+      .where(openOfCompany);
+   const matchingIds = [...pickTitleMatches(openTitles)];
+   if (matchingIds.length === 0) return [];
+
+   const rows = await tx
+      .select({
+         vacancyId: vacancies.id,
+         parsed: postings.parsed,
+         firstSeenAt: postings.firstSeenAt,
+      })
+      .from(postings)
+      .innerJoin(vacancies, eq(vacancies.id, postings.vacancyId))
+      .where(and(openOfCompany, inArray(vacancies.id, matchingIds)));
+   return rows.map((p) => ({ ...p, parsed: p.parsed! }));
+}
+
 export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
    return {
-      async linkPosting({ postingId, fingerprint, pickVacancy, company, title, description }) {
+      async linkPosting({ postingId, pickTitleMatches, pickVacancy, company, title, description }) {
          return db.transaction(async (tx) => {
             let companyId: string | null = null;
             if (company) {
@@ -104,28 +155,15 @@ export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
 
             // after the company's row is locked above: of two postings of one company at once, the
             // second waits for the first and sees the vacancy it made
-            const openPostings = await tx
-               .select({
-                  vacancyId: vacancies.id,
-                  parsed: postings.parsed,
-                  firstSeenAt: postings.firstSeenAt,
-               })
-               .from(postings)
-               .innerJoin(vacancies, eq(vacancies.id, postings.vacancyId))
-               .where(
-                  and(
-                     eq(vacancies.fingerprint, fingerprint),
-                     isNull(vacancies.closedAt),
-                     isNotNull(postings.parsed),
-                  ),
-               );
-            const parsedPostings = openPostings.map((p) => ({ ...p, parsed: p.parsed! }));
+            const openPostings = companyId
+               ? await selectOpenPostingsMatching(tx, companyId, pickTitleMatches)
+               : [];
             const vacancyId =
-               pickVacancy(parsedPostings, posting.firstSeenAt) ??
+               pickVacancy(openPostings, posting.firstSeenAt) ??
                (
                   await tx
                      .insert(vacancies)
-                     .values({ companyId, title, description, fingerprint })
+                     .values({ companyId, title, description })
                      .returning({ id: vacancies.id })
                )[0].id;
 

@@ -4,7 +4,8 @@ export { normalizeTitle, seniorityFromTitle } from "./title.js";
 export {
    findSameVacancy,
    mergeVacancy,
-   vacancyFingerprint,
+   vacanciesWithMatchingTitle,
+   type OpenPostingTitle,
    type OpenVacancyPosting,
    type PostingForMerge,
 } from "./vacancy.js";

@@ -4,14 +4,14 @@ import {
    findSameVacancy,
    mergeVacancy,
    normalizeCompanyName,
-   vacancyFingerprint,
+   vacanciesWithMatchingTitle,
 } from "@jobpilot/vacancies";
 import type { Job, Queue } from "bullmq";
 import { log } from "../log.js";
 import { matchVacancyJobOptions } from "../queues.js";
 
 /**
- * Posting → its vacancy (found among the open ones with its fingerprint, or created) → vacancy fields
+ * Posting → its vacancy (found among its employer's open ones, or created) → vacancy fields
  * rebuilt from all its postings → an open vacancy is queued for evaluation for every user;
  * match-vacancy skips what is up to date.
  */
@@ -26,7 +26,7 @@ export async function handleBuildVacancy(
 
    const vacancyId = await database.vacancies.linkPosting({
       postingId,
-      fingerprint: vacancyFingerprint({ postingId, parsed }),
+      pickTitleMatches: (openTitles) => vacanciesWithMatchingTitle(parsed, openTitles),
       pickVacancy: (openPostings, firstSeenAt) =>
          findSameVacancy({ parsed, firstSeenAt }, openPostings),
       company: parsed.company && {

@@ -7,7 +7,7 @@ import {
    normalizeCompanyName,
    normalizeSkills,
    seniorityFromTitle,
-   vacancyFingerprint,
+   vacanciesWithMatchingTitle,
    type PostingForMerge,
 } from "./index.js";
 
@@ -105,26 +105,58 @@ const posting = (
    goneAt: goneAt ? new Date(goneAt) : null,
 });
 
-describe("vacancyFingerprint", () => {
-   it("matches the same employer and title written differently", () => {
-      const a = posting(
-         "1",
-         { company: { name: "Zeely LLC" }, title: "Senior Node.js Developer" },
-         "2026-09-01",
-      );
-      const b = posting(
-         "2",
-         { company: { name: "zeely" }, title: "Senior  Node.js developer!" },
-         "2026-09-02",
-      );
-      expect(vacancyFingerprint(a)).toBe(vacancyFingerprint(b));
-      expect(vacancyFingerprint(a)).toBe("zeely|senior node js developer");
+// pairs below are real ones: open vacancies of one employer, collected from DOU and Djinni
+describe("vacanciesWithMatchingTitle", () => {
+   const matching = (
+      posting: { source: string; title: string },
+      ...open: { vacancyId: string; source: string; title: string }[]
+   ) => [...vacanciesWithMatchingTitle(posting, open)];
+
+   it("matches the same title written differently, on one site and across sites", () => {
+      const open = { vacancyId: "a", source: "djinni", title: "Senior  Node.js developer!" };
+      expect(matching({ source: "djinni", title: "Senior Node.js Developer" }, open)).toEqual([
+         "a",
+      ]);
+      expect(matching({ source: "dou", title: "Senior Node.js Developer" }, open)).toEqual(["a"]);
    });
 
-   it("never matches postings with a hidden employer", () => {
-      const a = posting("1", { company: undefined }, "2026-09-01");
-      const b = posting("2", { company: undefined }, "2026-09-01");
-      expect(vacancyFingerprint(a)).not.toBe(vacancyFingerprint(b));
+   it.each([
+      ["Middle Full-Stack Developer (AI Native)", "Middle Full-Stack Developer"],
+      ["Performance Analyst (#1230)", "Performance Analyst"],
+      ["Middle Business Analyst (Lviv, hybrid)", "Middle Business Analyst"],
+      ["Data Engineer (Middle/Senior)", "Senior Data Engineer"],
+   ])("across sites, matches a title within the other: %s ~ %s", (dou, djinni) => {
+      const open = { vacancyId: "a", source: "dou", title: dou };
+      expect(matching({ source: "djinni", title: djinni }, open)).toEqual(["a"]);
+   });
+
+   it.each([
+      ["Product Analyst", "Junior Product Analyst"],
+      ["Big Data Engineer", "Senior Big Data Engineer"],
+   ])("on one site, keeps apart a title within the other: %s ≠ %s", (first, second) => {
+      const open = { vacancyId: "a", source: "dou", title: first };
+      expect(matching({ source: "dou", title: second }, open)).toEqual([]);
+   });
+
+   it("keeps apart titles neither within the other, across sites too", () => {
+      const open = { vacancyId: "a", source: "dou", title: "Senior Node.js Developer" };
+      expect(matching({ source: "djinni", title: "Middle+ Node.js Developer" }, open)).toEqual([]);
+   });
+
+   it("leaves out a vacancy its site lists under another title, however alike elsewhere", () => {
+      const found = matching(
+         { source: "djinni", title: "Junior Product Analyst" },
+         { vacancyId: "a", source: "dou", title: "Product Analyst" },
+         { vacancyId: "a", source: "djinni", title: "Product Analyst" },
+      );
+      expect(found).toEqual([]);
+   });
+
+   it("never matches a title of no words", () => {
+      const open = { vacancyId: "a", source: "dou", title: "Senior Node.js Developer" };
+      expect(matching({ source: "djinni", title: "—" }, open)).toEqual([]);
+      const noWords = { vacancyId: "a", source: "djinni", title: "—" };
+      expect(matching({ source: "djinni", title: "–" }, noWords)).toEqual([]);
    });
 });
 
@@ -184,7 +216,7 @@ describe("findSameVacancy", () => {
       expect(found).toBeUndefined();
    });
 
-   it("joins a recent vacancy when an older one with the fingerprint is too far back", () => {
+   it("joins a recent vacancy when an older one with its title is too far back", () => {
       const found = findSameVacancy(incoming(...postedOn("2026-10-10T10:00:00Z")), [
          open("old", ...postedOn("2026-09-01T10:00:00Z")),
          open("recent", ...postedOn("2026-10-05T10:00:00Z")),
@@ -264,6 +296,20 @@ describe("findSameVacancy", () => {
       expect(
          findSameVacancy(incoming({}), [open("a", { source: "dou", description: translated })]),
       ).toBeUndefined();
+   });
+
+   it("joins the same text on another site under a title within its own", () => {
+      const found = findSameVacancy(incoming({ title: "Senior Node.js Developer" }), [
+         open("a", { source: "dou", title: "Senior Node.js Developer (Payments)" }),
+      ]);
+      expect(found).toBe("a");
+   });
+
+   it("keeps apart the same text under titles that don't match: two levels of one job", () => {
+      const found = findSameVacancy(incoming({ title: "Middle+ Node.js Developer" }), [
+         open("a", { title: "Senior Node.js Developer" }),
+      ]);
+      expect(found).toBeUndefined();
    });
 
    it("picks the vacancy with the most similar posting", () => {

@@ -1,5 +1,4 @@
 import type { Location, NormalizedPosting, VacancyFields } from "@jobpilot/contracts";
-import { normalizeCompanyName } from "./company.js";
 import { normalizeSkills } from "./skills.js";
 import { normalizeTitle, seniorityFromTitle } from "./title.js";
 
@@ -10,9 +9,16 @@ export interface PostingForMerge {
    goneAt: Date | null;
 }
 
-/** A posting of an open vacancy, for a new posting with the same fingerprint to compare itself with. */
+/** A posting of an open vacancy of the same employer, for a new posting to compare itself with. */
 export interface OpenVacancyPosting extends Pick<PostingForMerge, "parsed" | "firstSeenAt"> {
    vacancyId: string;
+}
+
+/** The title of a posting of an open vacancy: all vacanciesWithMatchingTitle needs. */
+export interface OpenPostingTitle {
+   vacancyId: string;
+   source: string;
+   title: string;
 }
 
 // The share of two texts' words they must have in common to be one position. Lower is not safe: at
@@ -23,30 +29,69 @@ const MIN_SHARED_WORDS = 0.6;
 const MAX_VACANCY_SPAN_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
- * Key of the postings that may be one vacancy: employer + title; findSameVacancy tells whether they are.
- * Location is left out on purpose: sources write it too differently ("Kyiv", "Київ", "Remote, Ukraine").
- * With a hidden employer there is nothing reliable to match on, so the posting gets a key of its own.
+ * The open vacancies of the employer whose titles may be the posting's, by its title alone:
+ * - on its own site a title is the same, words and all: one site lists "Product Analyst" and "Junior
+ *   Product Analyst" as two jobs;
+ * - across sites one title's words are all in the other's: "Middle Full-Stack Developer (AI Native)"
+ *   on one is "Middle Full-Stack Developer" on the other.
+ * A vacancy with a posting on the posting's site under another title is another job, however alike
+ * its postings elsewhere: that site tells them apart. findSameVacancy compares the texts.
  */
-export function vacancyFingerprint(posting: Pick<PostingForMerge, "postingId" | "parsed">): string {
-   const company = posting.parsed.company;
-   if (!company) return `posting:${posting.postingId}`;
-   return `${normalizeCompanyName(company.name)}|${normalizeTitle(posting.parsed.title)}`;
+export function vacanciesWithMatchingTitle(
+   posting: Pick<OpenPostingTitle, "source" | "title">,
+   openTitles: OpenPostingTitle[],
+): Set<string> {
+   const otherOnItsSite = new Set(
+      openTitles
+         .filter((open) => open.source === posting.source && !titlesMatch(posting, open))
+         .map((open) => open.vacancyId),
+   );
+   return new Set(
+      openTitles
+         .filter((open) => !otherOnItsSite.has(open.vacancyId) && titlesMatch(posting, open))
+         .map((open) => open.vacancyId),
+   );
+}
+
+/** Same site: the same title. Different sites: one title's words all in the other's. */
+function titlesMatch(
+   a: Pick<OpenPostingTitle, "source" | "title">,
+   b: Pick<OpenPostingTitle, "source" | "title">,
+): boolean {
+   const aWords = titleWordsOf(a.title);
+   const bWords = titleWordsOf(b.title);
+   // a title of no words ("—") says nothing: not even that it's the same as another such
+   if (aWords.size === 0 || bWords.size === 0) return false;
+   if (a.source === b.source) return normalizeTitle(a.title) === normalizeTitle(b.title);
+   return isSubset(aWords, bWords) || isSubset(bWords, aWords);
+}
+
+/** A title's distinct words, as normalizeTitle writes them: "Node.js (Sr.)" → node, js, sr. */
+function titleWordsOf(title: string): Set<string> {
+   return new Set(normalizeTitle(title).split(" ").filter(Boolean));
+}
+
+function isSubset(part: Set<string>, whole: Set<string>): boolean {
+   return [...part].every((word) => whole.has(word));
 }
 
 /**
- * The vacancy a posting belongs to among the postings of open vacancies with its fingerprint: the
- * one with the most similar posting, or undefined for a vacancy of its own. An extra card is better
- * than two jobs in one vacancy, so when in doubt the postings stay apart: a translation does too.
- * Places don't count: the same text for UA and for Europe is one job posted twice.
+ * The vacancy a posting belongs to among the postings of its employer's open vacancies: one whose
+ * title may be its (vacanciesWithMatchingTitle), with the most similar text, or undefined for a
+ * vacancy of its own. An extra card is better than two jobs in one vacancy, so when in doubt the
+ * postings stay apart: a translation does too. Places don't count: the same text for UA and for
+ * Europe is one job posted twice.
  */
 export function findSameVacancy(
    posting: Pick<PostingForMerge, "parsed" | "firstSeenAt">,
    openPostings: OpenVacancyPosting[],
 ): string | undefined {
+   const titled = vacanciesWithMatchingTitle(posting.parsed, openPostings.map(openPostingTitle));
    const postedTime = postedAt(posting);
    const firstPostedTimes = firstPostedTimeByVacancy(openPostings);
    const words = wordsOf(posting.parsed.description);
    const samePosition = openPostings
+      .filter((open) => titled.has(open.vacancyId))
       .filter((open) => {
          const firstPostedTime = firstPostedTimes.get(open.vacancyId)!;
          return Math.abs(postedTime - firstPostedTime) <= MAX_VACANCY_SPAN_MS;
@@ -58,6 +103,10 @@ export function findSameVacancy(
       .filter((open) => open.shared >= MIN_SHARED_WORDS);
    const [mostSimilar] = samePosition.sort((a, b) => b.shared - a.shared);
    return mostSimilar?.vacancyId;
+}
+
+function openPostingTitle({ vacancyId, parsed }: OpenVacancyPosting): OpenPostingTitle {
+   return { vacancyId, source: parsed.source, title: parsed.title };
 }
 
 /**

@@ -162,6 +162,13 @@
       "when": 1794096602461,
       "tag": "0022_requested_salary",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794307664431,
+      "tag": "0023_vacancy_by_company",
+      "breakpoints": true
     }
   ]
 }

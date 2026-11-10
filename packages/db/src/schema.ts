@@ -117,12 +117,12 @@ export const vacancies = pgTable(
       salaryPeriod: text("salary_period").$type<SalaryPeriod>(),
       skills: text("skills").array().notNull().default(emptyTextArray), // normalized: 'node.js', not 'NodeJS'
       experienceYears: integer("experience_years"),
-      fingerprint: text("fingerprint").notNull(),
       createdAt: tstz("created_at").notNull().defaultNow(),
       updatedAt: tstz("updated_at").notNull().defaultNow(), // last time the merged fields changed; evaluations older than this are stale
       closedAt: tstz("closed_at"), // null = at least one posting still active
    },
-   (t) => [index("vacancies_fingerprint_idx").on(t.fingerprint)],
+   // a new posting looks for its vacancy among its employer's
+   (t) => [index("vacancies_company_id_idx").on(t.companyId)],
 );
 
 // ─── Per-user data ────────────────────────────────────────────────────────────
