@@ -53,19 +53,16 @@ export class JobAttemptsService {
    }
 
    /**
-    * What I already tried with a vacancy's employer. A name that hides the employer ("NDA") is
-    * no employer: my attempts at other hidden ones aren't its history.
+    * What I already tried with a vacancy and its employer. A name that hides the employer ("NDA") is
+    * no employer: my attempts at other hidden ones aren't its history. The vacancy's own row stays.
     */
    async getCompanyHistory(userId: string, vacancyId: string): Promise<CompanyAttemptHistory> {
-      const { company, otherCount, latestOther } = await this.db.jobAttempts.getCompanyHistory(
-         userId,
-         vacancyId,
-         COMPANY_HISTORY_SIZE,
-      );
+      const { thisAttempt, company, otherCount, latestOther } =
+         await this.db.jobAttempts.getCompanyHistory(userId, vacancyId, COMPANY_HISTORY_SIZE);
       if (!company || isHiddenEmployerName(company.normalizedName)) {
-         return { company: null, otherCount: 0, latestOther: [] };
+         return { thisAttempt, company: null, otherCount: 0, latestOther: [] };
       }
-      return { company: company.name, otherCount, latestOther };
+      return { thisAttempt, company: company.name, otherCount, latestOther };
    }
 
    /** Adds a job JobPilot doesn't know about. */

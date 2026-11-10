@@ -78,10 +78,12 @@ export interface JobAttemptSummary {
 }
 
 /**
- * GET /job-attempts/company-history: what I already tried with a vacancy's employer. Not the vacancy
- * itself: its page already says how applying to it went.
+ * GET /job-attempts/company-history: what I already tried with a vacancy and its employer: the
+ * vacancy's own row of the tracker, and the employer's other ones.
  */
 export interface CompanyAttemptHistory {
+   /** the vacancy's own row of the tracker; null until I apply, or once it's removed */
+   thisAttempt: JobAttemptSummary | null;
    /** the employer's name; null when it's hidden, then there's no history with it either */
    company: string | null;
    /** how many attempts at the employer's other vacancies, rows added by hand too */

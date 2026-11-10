@@ -66,6 +66,8 @@ export interface StoredJobAttemptChanges extends Omit<
 
 /** What I already tried with a vacancy's employer, as stored. */
 export interface StoredCompanyAttemptHistory {
+   /** the vacancy's own row; null when there's none of mine */
+   thisAttempt: JobAttemptSummary | null;
    /** the vacancy's employer; null when it's hidden or there's no such vacancy */
    company: { name: string; normalizedName: string } | null;
    /** how many attempts at the employer's other vacancies, rows added by hand too */
@@ -86,7 +88,10 @@ export interface JobAttemptsRepository {
    listForUser(userId: string, options: JobAttemptListOptions): Promise<JobAttemptListItem[]>;
    /** A row of my tracker as the list shows it; undefined when there's no such row of mine. */
    getForUser(userId: string, attemptId: string): Promise<JobAttemptListItem | undefined>;
-   /** The latest `limit` of my attempts at a vacancy's employer's other vacancies, and their count. */
+   /**
+    * My attempt at a vacancy, and the latest `limit` of my attempts at its employer's other vacancies
+    * with their count.
+    */
    getCompanyHistory(
       userId: string,
       vacancyId: string,
@@ -256,15 +261,23 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
             status: jobAttempts.status,
             appliedAt: jobAttempts.appliedAt,
          };
-         const [company] = await db
-            .select({
-               id: companies.id,
-               name: companies.name,
-               normalizedName: companies.normalizedName,
-            })
-            .from(vacancies)
-            .innerJoin(companies, eq(companies.id, vacancies.companyId))
-            .where(eq(vacancies.id, vacancyId));
+         const [[company], [thisAttempt]] = await Promise.all([
+            db
+               .select({
+                  id: companies.id,
+                  name: companies.name,
+                  normalizedName: companies.normalizedName,
+               })
+               .from(vacancies)
+               .innerJoin(companies, eq(companies.id, vacancies.companyId))
+               .where(eq(vacancies.id, vacancyId)),
+            // one at most: one attempt per vacancy
+            db
+               .select(summary)
+               .from(jobAttempts)
+               .innerJoin(vacancies, eq(vacancies.id, jobAttempts.vacancyId))
+               .where(and(eq(jobAttempts.userId, userId), eq(jobAttempts.vacancyId, vacancyId))),
+         ]);
 
          const others = company
             ? await db
@@ -289,6 +302,7 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
             appliedAt: row.appliedAt.toISOString(),
          });
          return {
+            thisAttempt: thisAttempt ? withIsoDate(thisAttempt) : null,
             company: company
                ? { name: company.name, normalizedName: company.normalizedName }
                : null,
