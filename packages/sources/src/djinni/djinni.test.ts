@@ -165,6 +165,20 @@ describe("job page: location only on the page, not in JSON-LD", () => {
    });
 });
 
+describe("job page: several work modes", () => {
+   // saved from djinni.co on 2026-11-10: "Office, Remote, Hybrid Remote"
+   it("reads each listed mode, not only hybrid", () => {
+      const posting = parseJobPage(
+         raw(
+            "857327",
+            "https://djinni.co/jobs/857327-middle-full-stack-developer/",
+            "job-office-remote-hybrid.html",
+         ),
+      );
+      expect(posting.workModes).toEqual(["onsite", "remote", "hybrid"]);
+   });
+});
+
 describe("job page: hidden employer", () => {
    // JSON-LD says hiringOrganization: "confidential"; the page shows only the posting agency's banner
    const posting = parseJobPage(

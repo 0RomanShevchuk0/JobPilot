@@ -119,7 +119,10 @@ function employmentTypes(ld: JobPostingLd): EmploymentType[] {
       .filter((t): t is EmploymentType => t !== undefined);
 }
 
-/** Djinni labels: "Full Remote", "Office Work", "Hybrid Remote", "Office or Remote". */
+/**
+ * Djinni labels: "Full Remote", "Office Work", "Hybrid Remote", "Office or Remote", or a list of them:
+ * "Office, Remote, Hybrid Remote".
+ */
 function workModes($: cheerio.CheerioAPI, ld: JobPostingLd): WorkMode[] {
    const label = $("strong.d-block.font-weight-600")
       .filter((_, el) => $(el).find(".location-text").length === 0)
@@ -128,14 +131,20 @@ function workModes($: cheerio.CheerioAPI, ld: JobPostingLd): WorkMode[] {
       .find((text) => /remote|office|hybrid/i.test(text)); // the label that names a work mode, any case
 
    if (label) {
-      // the word anywhere in the label, any case: "Hybrid Remote" → hybrid, "Office or Remote" → onsite + remote
-      if (/hybrid/i.test(label)) return ["hybrid"];
-      const modes: WorkMode[] = [];
-      if (/office/i.test(label)) modes.push("onsite");
-      if (/remote/i.test(label)) modes.push("remote");
-      return modes;
+      // each listed mode on its own: "Office, Remote, Hybrid Remote" → "Office" | "Remote" | "Hybrid Remote"
+      const parts = label.split(/,|\bor\b/i);
+      return [...new Set(parts.flatMap(workModesOfPart))];
    }
    return ld.jobLocationType === "TELECOMMUTE" ? ["remote"] : [];
+}
+
+/** One mode of a label, the word anywhere, any case: "Hybrid Remote" → hybrid, "Full Remote" → remote. */
+function workModesOfPart(part: string): WorkMode[] {
+   // "Hybrid Remote" is hybrid, not remote too
+   if (/hybrid/i.test(part)) return ["hybrid"];
+   if (/office/i.test(part)) return ["onsite"];
+   if (/remote/i.test(part)) return ["remote"];
+   return [];
 }
 
 function officeLocations(ld: JobPostingLd): Location[] {
