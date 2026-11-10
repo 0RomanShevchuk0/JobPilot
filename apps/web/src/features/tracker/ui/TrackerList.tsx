@@ -4,13 +4,15 @@ import { Button, LoadMoreTrigger, PageLoader } from "../../../shared/ui";
 import { useJobAttempt, useJobAttempts, type JobAttemptListFilter } from "../api/queries";
 import { trackerAddress } from "../lib/address";
 import { JobAttemptPanel } from "./JobAttemptPanel";
-import { JobAttemptRow, rowGridClasses } from "./JobAttemptRow";
+import { JobAttemptRow, rowGridClasses, wideOnlyColumnClasses } from "./JobAttemptRow";
 import { NewJobAttemptPanel } from "./NewJobAttemptPanel";
 import { TrackerFilters } from "./TrackerFilters";
 
 const columns = ["Company", "Role", "Stage", "Status", "Asked", "Notes", "Applied"];
 // numbers line up on the right, to compare
 const rightAlignedColumns = ["Asked", "Applied"];
+// left out between sm and lg, as the rows leave them out
+const wideOnlyColumns = ["Asked", "Notes"];
 
 /**
  * Every attempt to get a job, the latest applied first, a page at a time as I scroll, searched and
@@ -65,7 +67,7 @@ export function TrackerList() {
                   {columns.map((column) => (
                      <span
                         key={column}
-                        className={rightAlignedColumns.includes(column) ? "text-right" : ""}
+                        className={`${rightAlignedColumns.includes(column) ? "text-right" : ""} ${wideOnlyColumns.includes(column) ? wideOnlyColumnClasses : ""}`}
                      >
                         {column}
                      </span>
