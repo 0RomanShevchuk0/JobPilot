@@ -10,10 +10,12 @@ import { Badge, CheckIcon, Menu, menuItemStyles } from "../../../shared/ui";
 import { useUpdateJobAttempt } from "../api/queries";
 import { trackerAddress } from "../lib/address";
 import { stageLabels, stageStyles, statusLabels, statusStyles } from "../lib/labels";
+import { shortSalaryText } from "../lib/requested-salary";
 import { shortDate } from "../lib/short-date";
 
 /** The tracker's columns from sm up; on a phone a row stacks. Shared with the table's header. */
-export const rowGridClasses = "sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_8.5rem_7.5rem_4.5rem]";
+export const rowGridClasses =
+   "sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_8.5rem_7.5rem_5rem_minmax(0,1fr)_4.5rem]";
 
 // a Badge's look, a button: the arrow says it opens, the color alone wouldn't. On a phone it's a
 // finger's target: taller, with its own room around it; in the table a badge's size
@@ -24,8 +26,8 @@ const pickerClasses =
 const fadedStatuses: JobAttemptStatus[] = ["rejected", "declined"];
 
 /**
- * One attempt, a line of the tracker: who, what, how far it got, how it stands, when I applied. The
- * stage and status change right here; the rest of the row opens the panel.
+ * One attempt, a line of the tracker: who, what, how far it got, how it stands, what I asked for, my
+ * notes, when I applied. The stage and status change right here; the rest of the row opens the panel.
  */
 export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
    const update = useUpdateJobAttempt(attempt.id);
@@ -39,6 +41,7 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
    const title = attempt.title ?? "Untitled job";
    const company = attempt.company ?? "Company unknown";
    const faded = fadedStatuses.includes(status);
+   const panelAddress = { search: trackerAddress.withPanel(params, { attempt: attempt.id }) };
 
    const pickStage = (next: JobAttemptStage) => {
       if (next !== attempt.stage) update.mutate({ stage: next });
@@ -51,7 +54,7 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
       <li className="relative hover:bg-gray-50">
          {/* the whole row, under the pickers: a menu's button can't sit in a link */}
          <Link
-            to={{ search: trackerAddress.withPanel(params, { attempt: attempt.id }) }}
+            to={panelAddress}
             // the panel opens over the list: the list stays where I scrolled it
             preventScrollReset
             aria-label={`${company}: ${title}`}
@@ -119,7 +122,40 @@ export function JobAttemptRow({ attempt }: { attempt: JobAttemptListItem }) {
                      </button>
                   ))}
                </Menu>
+               {/* on a phone at the end of the pickers' line, and only when there is one */}
+               <span
+                  className={`ml-auto self-center text-sm whitespace-nowrap text-gray-600 sm:ml-0 sm:text-right ${attempt.requestedSalary ? "" : "max-sm:hidden"}`}
+               >
+                  {attempt.requestedSalary ? shortSalaryText(attempt.requestedSalary) : "—"}
+               </span>
             </div>
+            {attempt.notes ? (
+               // over the row's link, to be hovered: the whole note shows at once, not after the
+               // browser's delay for a title. Hidden from screen readers: the panel reads it whole
+               <div
+                  aria-hidden
+                  className="group relative col-span-2 row-start-4 mt-1 min-w-0 sm:col-span-1 sm:row-start-auto sm:mt-0"
+               >
+                  {/* clicked, it opens the panel like the rest of the row. Out of the tab order: the
+                      row's link is already there */}
+                  <Link
+                     to={panelAddress}
+                     preventScrollReset
+                     tabIndex={-1}
+                     className="block truncate text-sm text-gray-500"
+                  >
+                     {attempt.notes}
+                  </Link>
+                  {/* the note's own lines, a long one cut. Not hovered itself: the row under it stays
+                      clickable */}
+                  <div className="pointer-events-none absolute top-full left-0 z-20 mt-1 hidden w-72 rounded border border-gray-200 bg-white p-2 text-sm whitespace-pre-line text-gray-700 shadow-lg group-hover:block">
+                     <p className="line-clamp-12">{attempt.notes}</p>
+                  </div>
+               </div>
+            ) : (
+               // on a phone nothing: the line would be a dash alone
+               <span className="text-sm text-gray-500 max-sm:hidden">—</span>
+            )}
             <span className="col-start-2 row-start-1 text-right text-sm text-gray-500 sm:col-start-auto sm:row-start-auto">
                {shortDate(attempt.appliedAt)}
             </span>

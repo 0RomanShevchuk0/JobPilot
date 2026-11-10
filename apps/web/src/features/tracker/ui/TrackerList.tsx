@@ -8,7 +8,9 @@ import { JobAttemptRow, rowGridClasses } from "./JobAttemptRow";
 import { NewJobAttemptPanel } from "./NewJobAttemptPanel";
 import { TrackerFilters } from "./TrackerFilters";
 
-const columns = ["Company", "Role", "Stage", "Status", "Applied"];
+const columns = ["Company", "Role", "Stage", "Status", "Asked", "Notes", "Applied"];
+// numbers line up on the right, to compare
+const rightAlignedColumns = ["Asked", "Applied"];
 
 /**
  * Every attempt to get a job, the latest applied first, a page at a time as I scroll, searched and
@@ -61,7 +63,10 @@ export function TrackerList() {
                   className={`hidden gap-x-3 border-b border-gray-200 bg-gray-50 px-4 py-1.5 text-xs font-medium text-gray-500 sm:grid ${rowGridClasses}`}
                >
                   {columns.map((column) => (
-                     <span key={column} className={column === "Applied" ? "text-right" : ""}>
+                     <span
+                        key={column}
+                        className={rightAlignedColumns.includes(column) ? "text-right" : ""}
+                     >
                         {column}
                      </span>
                   ))}

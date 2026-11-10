@@ -16,3 +16,18 @@ export const defaultRequestedSalaryUnits: RequestedSalaryUnits = {
 export function salaryText({ amount, currency, period }: RequestedSalary): string {
    return `${amount.toLocaleString()} ${currency} / ${period}`;
 }
+
+const shortPeriods: Record<SalaryPeriod, string> = { hour: "hr", month: "mo", year: "yr" };
+
+/** "$3.5K/mo", "₴150K/mo", "$40/hr": short enough for a column of the tracker. */
+export function shortSalaryText({ amount, currency, period }: RequestedSalary): string {
+   const shortAmount = amount.toLocaleString(undefined, {
+      style: "currency",
+      currency,
+      // "₴", not "UAH"
+      currencyDisplay: "narrowSymbol",
+      notation: "compact",
+      maximumFractionDigits: 1,
+   });
+   return `${shortAmount}/${shortPeriods[period]}`;
+}
