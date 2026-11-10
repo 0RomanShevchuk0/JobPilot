@@ -8,6 +8,7 @@
       "start": "node dist/main.js",
       "discover:now": "tsc && node dist/scripts/discover-now.js",
       "vacancies:rebuild": "tsc && node dist/scripts/rebuild-vacancies.js",
+      "vacancies:merge-duplicates": "tsc && node dist/scripts/merge-duplicate-vacancies.js",
       "postings:reparse": "tsc && node dist/scripts/reparse-postings.js",
       "matches:refresh": "tsc && node dist/scripts/refresh-matches.js",
       "sessions:check": "tsc && node dist/scripts/check-sessions.js",

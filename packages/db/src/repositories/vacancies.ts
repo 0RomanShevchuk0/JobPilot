@@ -8,9 +8,16 @@ import type {
    VacancyFields,
    WorkMode,
 } from "@jobpilot/contracts";
-import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, sql, TransactionRollbackError } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
-import { companies, postings, profiles, vacancies } from "../schema.js";
+import {
+   companies,
+   jobAttempts,
+   postings,
+   profiles,
+   vacancies,
+   vacancyMatches,
+} from "../schema.js";
 import { profilePickedPostingCategorySql } from "./query-parts/subscriptions.js";
 
 export interface LinkPostingInput {
@@ -42,6 +49,27 @@ export interface PostingOfOpenVacancy {
    vacancyId: string;
    parsed: NormalizedPosting;
    firstSeenAt: Date;
+}
+
+/** A posting of an open vacancy of a known employer, with whose it is. */
+export interface PostingOfEmployerVacancy extends PostingOfOpenVacancy {
+   postingId: string;
+   companyId: string;
+   companyName: string;
+}
+
+/**
+ * How folding a duplicate into a vacancy went. both_tracked: a user has a tracker row on each, and a
+ * vacancy has one per user, so nothing changed: a person sorts that out.
+ */
+export interface DuplicateMergeOutcome {
+   outcome: "merged" | "both_tracked";
+   /** tracker rows moved from the duplicate */
+   movedAttempts: number;
+   /** whether the vacancy had tracker rows of its own */
+   vacancyTracked: boolean;
+   /** users who hid the duplicate, now hiding the vacancy too */
+   carriedHidden: number;
 }
 
 export interface VacancyPosting {
@@ -78,6 +106,18 @@ export interface VacanciesRepository {
     * one: nothing tells whose it is. Returns the vacancy id.
     */
    linkPosting(input: LinkPostingInput): Promise<string>;
+   /** The parsed postings of every open vacancy whose employer is known. */
+   listOpenPostingsOfKnownEmployers(): Promise<PostingOfEmployerVacancy[]>;
+   /**
+    * Folds a duplicate into the vacancy it is: its postings (their applications go along) and
+    * tracker rows move over, a user who hid it hides the vacancy too, its evaluations go and it is
+    * deleted. The vacancy is left to rebuild. dryRun: works it all out, then undoes it.
+    */
+   mergeDuplicateInto(
+      duplicateId: string,
+      vacancyId: string,
+      options: { dryRun: boolean },
+   ): Promise<DuplicateMergeOutcome>;
    /** All parsed postings of a vacancy, to merge its fields from. */
    postingsOf(vacancyId: string): Promise<VacancyPosting[]>;
    /** Stores the merged fields. Returns false when they are the same as stored: updatedAt stays as is. */
@@ -128,6 +168,58 @@ async function selectOpenPostingsMatching(
    return rows.map((p) => ({ ...p, parsed: p.parsed! }));
 }
 
+/** mergeDuplicateInto's changes, in its transaction; none when a user tracks both. */
+async function moveDuplicate(
+   tx: Transaction,
+   duplicateId: string,
+   vacancyId: string,
+): Promise<DuplicateMergeOutcome> {
+   const trackers = await tx
+      .select({ userId: jobAttempts.userId, vacancyId: jobAttempts.vacancyId })
+      .from(jobAttempts)
+      .where(inArray(jobAttempts.vacancyId, [duplicateId, vacancyId]));
+   const duplicateTrackers = trackers.filter((t) => t.vacancyId === duplicateId);
+   const vacancyTrackers = new Set(
+      trackers.filter((t) => t.vacancyId === vacancyId).map((t) => t.userId),
+   );
+   const outcome = {
+      movedAttempts: duplicateTrackers.length,
+      vacancyTracked: vacancyTrackers.size > 0,
+   };
+   if (duplicateTrackers.some((t) => vacancyTrackers.has(t.userId))) {
+      return { outcome: "both_tracked", ...outcome, carriedHidden: 0 };
+   }
+
+   await tx.update(jobAttempts).set({ vacancyId }).where(eq(jobAttempts.vacancyId, duplicateId));
+
+   // hidden as of when the duplicate was: the hidden list stays in the order it was made
+   const hiders = await tx
+      .select({ userId: vacancyMatches.userId, statusChangedAt: vacancyMatches.statusChangedAt })
+      .from(vacancyMatches)
+      .where(and(eq(vacancyMatches.vacancyId, duplicateId), eq(vacancyMatches.status, "hidden")));
+   let carriedHidden = 0;
+   for (const { userId, statusChangedAt } of hiders) {
+      // a user with no evaluation of the vacancy has no row to hide it on
+      const carried = await tx
+         .update(vacancyMatches)
+         .set({ status: "hidden", statusChangedAt })
+         .where(
+            and(
+               eq(vacancyMatches.vacancyId, vacancyId),
+               eq(vacancyMatches.userId, userId),
+               isNull(vacancyMatches.status),
+            ),
+         )
+         .returning({ userId: vacancyMatches.userId });
+      carriedHidden += carried.length;
+   }
+
+   await tx.delete(vacancyMatches).where(eq(vacancyMatches.vacancyId, duplicateId));
+   await tx.update(postings).set({ vacancyId }).where(eq(postings.vacancyId, duplicateId));
+   await tx.delete(vacancies).where(eq(vacancies.id, duplicateId));
+   return { outcome: "merged", ...outcome, carriedHidden };
+}
+
 export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
    return {
       async linkPosting({ postingId, pickTitleMatches, pickVacancy, company, title, description }) {
@@ -170,6 +262,37 @@ export function createVacanciesRepository(db: Drizzle): VacanciesRepository {
             await tx.update(postings).set({ vacancyId }).where(eq(postings.id, postingId));
             return vacancyId;
          });
+      },
+
+      async listOpenPostingsOfKnownEmployers() {
+         const rows = await db
+            .select({
+               postingId: postings.id,
+               vacancyId: vacancies.id,
+               companyId: companies.id,
+               companyName: companies.name,
+               parsed: postings.parsed,
+               firstSeenAt: postings.firstSeenAt,
+            })
+            .from(postings)
+            .innerJoin(vacancies, eq(vacancies.id, postings.vacancyId))
+            .innerJoin(companies, eq(companies.id, vacancies.companyId))
+            .where(and(isNull(vacancies.closedAt), isNotNull(postings.parsed)));
+         return rows.map((r) => ({ ...r, parsed: r.parsed! }));
+      },
+
+      async mergeDuplicateInto(duplicateId, vacancyId, { dryRun }) {
+         let result: DuplicateMergeOutcome | undefined;
+         try {
+            await db.transaction(async (tx) => {
+               result = await moveDuplicate(tx, duplicateId, vacancyId);
+               if (dryRun) tx.rollback();
+            });
+         } catch (err) {
+            // the dry run's undo, not a failure
+            if (!(dryRun && err instanceof TransactionRollbackError)) throw err;
+         }
+         return result!;
       },
 
       async postingsOf(vacancyId) {
