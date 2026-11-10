@@ -40,15 +40,16 @@ export function JobAttemptPanel({
                <p className={`text-sm ${attempt.company ? "text-gray-600" : "text-gray-400"}`}>
                   {attempt.company ?? "Company unknown"}
                </p>
-               <h2 className="font-semibold text-gray-900">
-                  {attempt.vacancyId ? (
-                     <Link to={`/matches/${attempt.vacancyId}`} className="hover:underline">
-                        {title}
-                     </Link>
-                  ) : (
-                     title
-                  )}
-               </h2>
+               <h2 className="font-semibold text-gray-900">{title}</h2>
+               {/* a link of its own, not the title: a title that's a link went unnoticed */}
+               {attempt.vacancyId && (
+                  <Link
+                     to={`/matches/${attempt.vacancyId}`}
+                     className="mt-1 inline-block text-sm text-blue-600 hover:underline"
+                  >
+                     Open vacancy →
+                  </Link>
+               )}
             </>
          }
       >
