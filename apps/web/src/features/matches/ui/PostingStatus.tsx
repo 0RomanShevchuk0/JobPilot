@@ -15,7 +15,8 @@ export function PostingStatus({ posting, details }: { posting: MatchPosting; det
    const detail = !details
       ? null
       : application?.status === "submitted"
-        ? `${sentOn} · ${application.origin === "manual" ? "by hand" : "JobPilot"}`
+        ? // after "bumped …" a bare date would pass for another of the bump
+          `${posting.bumpedSinceAppliedAt ? "sent " : ""}${sentOn} · ${application.origin === "manual" ? "by hand" : "JobPilot"}`
         : posting.cannotApplyReason;
    return (
       <span className="flex min-w-0 items-center gap-1.5 text-xs text-gray-600">

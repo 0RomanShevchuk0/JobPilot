@@ -1,5 +1,6 @@
 import type { ApplicationStatus, MatchPosting } from "@jobpilot/contracts";
 import { applicationStatusLabels } from "../../applications";
+import { formatJobSiteDay } from "./display";
 
 // the dot by the status: what it means at a glance, apart from the site badges' own color
 const DOT_COLORS: Record<ApplicationStatus | "refused", string> = {
@@ -13,11 +14,18 @@ const DOT_COLORS: Record<ApplicationStatus | "refused", string> = {
 };
 
 /**
- * Where applying through the posting stands: my application's status ("ready", "sent"), or "can't
- * apply" when its page refused; null while nothing started there, nothing to show then.
+ * Where applying through the posting stands: my application's status ("ready", "sent"), "can't
+ * apply" when its page refused, or that the employer bumped it after mine got no answer; null while
+ * nothing started there, nothing to show then.
  */
 export function postingState(posting: MatchPosting): { label: string; dotColor: string } | null {
    const { application } = posting;
+   if (posting.bumpedSinceAppliedAt) {
+      return {
+         label: `no answer · bumped ${formatJobSiteDay(posting.bumpedSinceAppliedAt)}`,
+         dotColor: DOT_COLORS.ready_for_review,
+      };
+   }
    if (application) {
       return {
          label: applicationStatusLabels[application.status],

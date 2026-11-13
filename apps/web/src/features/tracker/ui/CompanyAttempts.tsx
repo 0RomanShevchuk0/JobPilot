@@ -63,7 +63,10 @@ interface OtherAttemptsProps {
    latestOther: JobAttemptSummary[];
 }
 
-/** The employer's other jobs I tried: the latest few, and a link to all of them in the tracker. */
+/**
+ * My other attempts at the employer, earlier ones at this job too: the latest few, and a link to all
+ * of them in the tracker.
+ */
 function OtherAttempts({ company, otherCount, latestOther }: OtherAttemptsProps) {
    return (
       <section className="mt-6">

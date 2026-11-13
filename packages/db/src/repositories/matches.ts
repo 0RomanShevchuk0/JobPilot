@@ -22,6 +22,7 @@ import {
    vacancies,
    vacancyMatches,
 } from "../schema.js";
+import { postingBumpedSinceUnansweredApplicationSql } from "./query-parts/apply-again.js";
 import { postingRefusedOnItsPageSql } from "./query-parts/apply-checks.js";
 import { userSubscribedToVacancySql } from "./query-parts/subscriptions.js";
 
@@ -122,17 +123,21 @@ const markedAtSql = sql`coalesce(${vacancyMatches.statusChangedAt}, ${vacancyMat
  * Whether the vacancy has a posting the user can still apply through: on its job site, with no
  * application of theirs sent through it, nor one the site refused, and not refused by its page in
  * the can-apply check (in the evaluation the query reads). What makes a vacancy new: one
- * on two sites applied to on one stays new, applying on each gets it seen more.
+ * on two sites applied to on one stays new, applying on each gets it seen more. One sent through
+ * comes back once the employer bumped it and never answered: to apply again.
  */
 function hasPostingToApplyThroughSql(userId: string) {
    return sql`exists (
       select 1 from ${postings}
       where ${postings.vacancyId} = ${vacancies.id} and ${postings.goneAt} is null
          and not ${postingRefusedOnItsPageSql}
-         and not exists (
-            select 1 from ${applications}
-            where ${applications.userId} = ${userId} and ${applications.postingId} = ${postings.id}
-               and ${applications.status} in ('submitted', 'cannot_apply')
+         and (
+            not exists (
+               select 1 from ${applications}
+               where ${applications.userId} = ${userId} and ${applications.postingId} = ${postings.id}
+                  and ${applications.status} in ('submitted', 'cannot_apply')
+            )
+            or ${postingBumpedSinceUnansweredApplicationSql(userId)}
          )
    )`;
 }
@@ -215,6 +220,10 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
             sourceName: sources.name,
             url: postings.url,
             apply: sql<NormalizedPosting["apply"] | null>`${postings.parsed}->'apply'`,
+            bumpedSinceAppliedAt: sql<string | null>`case
+               when ${postingBumpedSinceUnansweredApplicationSql(userId)}
+               then ${postings.parsed}->>'publishedAt'
+            end`,
          })
          .from(postings)
          .innerJoin(sources, eq(sources.id, postings.sourceId))
@@ -240,12 +249,13 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
          const vacancyApplications = userApplications.filter((a) => a.vacancyId === r.vacancyId);
          const vacancyPostings = activePostings
             .filter((p) => p.vacancyId === r.vacancyId)
-            .map(({ id, source, sourceName, url, apply }) => ({
+            .map(({ id, source, sourceName, url, apply, bumpedSinceAppliedAt }) => ({
                id,
                source,
                sourceName,
                url,
                externalApplyUrl: externalApplyUrl(apply),
+               bumpedSinceAppliedAt,
                application: applicationOf(vacancyApplications, (a) => a.postingId === id),
                cannotApplyReason: postingRefusal(analysis, id, vacancyApplications),
             }));

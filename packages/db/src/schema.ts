@@ -284,7 +284,10 @@ export const vacancyMatches = pgTable(
    (t) => [primaryKey({ columns: [t.userId, t.vacancyId] })],
 );
 
-/** One attempt to get a job, a row of the tracker: every application to a vacancy shares it. */
+/**
+ * One attempt to get a job, a row of the tracker: the applications to a vacancy share it, until the
+ * company goes quiet (no_answer): the next one starts another.
+ */
 export const jobAttempts = pgTable(
    "job_attempts",
    {
@@ -313,8 +316,9 @@ export const jobAttempts = pgTable(
       requestedSalaryPeriod: text("requested_salary_period").$type<SalaryPeriod>(),
    },
    (t) => [
-      // one attempt per vacancy; nulls differ, so rows added by hand are not limited
-      unique("job_attempts_user_vacancy_uq").on(t.userId, t.vacancyId),
+      // a vacancy's attempts: one, and another with each application after the company went quiet
+      // (no_answer); the rest join the latest
+      index("job_attempts_user_vacancy_idx").on(t.userId, t.vacancyId),
       // a requested salary is all three or none: an amount says nothing without its currency and
       // period
       check(
@@ -349,8 +353,13 @@ export const applications = pgTable(
          .defaultNow()
          .$onUpdate(() => new Date()),
    },
-   // one application per job posting: preparing again reuses it
-   (t) => [unique("applications_user_posting_uq").on(t.userId, t.postingId)],
+   // one application in the works per job posting: preparing again reuses it. Sent ones are any
+   // number: applying again once the employer bumped the job and never answered is a new one
+   (t) => [
+      uniqueIndex("applications_user_posting_unsent_uq")
+         .on(t.userId, t.postingId)
+         .where(sql`${t.status} <> 'submitted'`),
+   ],
 );
 
 export const documents = pgTable(

@@ -169,6 +169,13 @@
       "when": 1794307664431,
       "tag": "0023_vacancy_by_company",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794588279518,
+      "tag": "0024_applications_sent_again",
+      "breakpoints": true
     }
   ]
 }

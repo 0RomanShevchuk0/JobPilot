@@ -17,6 +17,7 @@ import {
    vacancies,
    vacancyMatches,
 } from "../schema.js";
+import { postingBumpedSinceUnansweredApplicationSql } from "./query-parts/apply-again.js";
 import { requestedSalaryColumns, salaryFromColumns } from "./query-parts/requested-salary.js";
 import { likeContainsPattern } from "./query-parts/like-pattern.js";
 import { externalApplyUrl } from "./matches.js";
@@ -99,8 +100,10 @@ export interface ApplicationsRepository {
    /**
     * I applied through the posting myself (on the employer's site it sends to, or the job site) and
     * mark it sent: a new application, or the one JobPilot was preparing. It joins the tracker, unless
-    * it is sent already. siteSaid: the job site said I had applied, when JobPilot asked it to apply,
-    * and that is why it is marked; kept as its failureReason, to tell me. Returns its id.
+    * it is sent already; then a new one only when I apply again (the employer bumped the job since and
+    * never answered), in a tracker row of its own. siteSaid: the job site said I had applied,
+    * when JobPilot asked it to apply, and that is why it is marked; kept as its failureReason, to
+    * tell me. Returns its id.
     */
    markSentByHand(userId: string, postingId: string, siteSaid?: string): Promise<{ id: string }>;
    /**
@@ -146,8 +149,10 @@ const listColumns = {
 
 type Transaction = Parameters<Parameters<Drizzle["transaction"]>[0]>[0];
 
-// the worker finishing a preparation leaves alone one I marked sent by hand meanwhile
-const notSentSql = ne(applications.status, "submitted");
+// the worker finishing a preparation leaves alone one I marked sent by hand meanwhile. A literal, as
+// in applications_user_posting_unsent_uq: ON CONFLICT finds that partial index by this condition, and
+// a parameter ($1) matches it only in a plan made for its value, not in a generic one
+const notSentSql = sql`${applications.status} <> 'submitted'`;
 
 // what the in-progress list holds: something can still be done with it
 const inWorkStatuses: ApplicationStatus[] = ["draft", "preparing", "ready_for_review", "failed"];
@@ -176,9 +181,10 @@ function withIsoDates<T extends { submittedAt: Date | null; createdAt: Date; upd
 }
 
 /**
- * Puts a sent application into the attempt at its vacancy, starting one with the first application.
- * A new one starts asking the profile's target salary, when it has one: the one I most likely asked
- * for. One already started keeps its own.
+ * Puts a sent application into my latest attempt at its vacancy. The first application starts one, and
+ * so does one after the company went quiet (no_answer): applying again, through the same site or
+ * another, is another attempt. A new one starts asking the profile's target salary, when it has one:
+ * the one I most likely asked for. One already started keeps its own.
  */
 async function addToAttempt(tx: Transaction, applicationId: string): Promise<void> {
    const [application] = await tx
@@ -198,20 +204,59 @@ async function addToAttempt(tx: Transaction, applicationId: string): Promise<voi
    // applying goes through a vacancy's match, so its posting always has one
    if (!application) throw new Error(`application ${applicationId} has no vacancy`);
    const { userId, vacancyId, companyId, salaryTarget, salaryCurrency, salaryPeriod } = application;
+   // applications to the vacancy through two sites at once would both find no attempt and start two.
+   // no key update: they wait for each other, rows that only refer to it (matches, postings) don't
+   await tx
+      .select({ id: vacancies.id })
+      .from(vacancies)
+      .where(eq(vacancies.id, vacancyId))
+      .for("no key update");
+   // locked against taking back its last application meanwhile
+   const [latest] = await tx
+      .select({ id: jobAttempts.id, status: jobAttempts.status })
+      .from(jobAttempts)
+      .where(and(eq(jobAttempts.userId, userId), eq(jobAttempts.vacancyId, vacancyId)))
+      .orderBy(desc(jobAttempts.appliedAt), desc(jobAttempts.id))
+      .limit(1)
+      .for("update");
    const targetSalary = salaryFromColumns(salaryTarget, salaryCurrency, salaryPeriod);
-   const [attempt] = await tx
-      .insert(jobAttempts)
-      .values({ userId, vacancyId, companyId, ...requestedSalaryColumns(targetSalary) })
-      .onConflictDoUpdate({
-         target: [jobAttempts.userId, jobAttempts.vacancyId],
-         // changes nothing: returns the row and locks it against taking back the last application
-         set: { vacancyId: sql`excluded.vacancy_id` },
-      })
-      .returning({ id: jobAttempts.id });
+   const [attempt] =
+      latest && latest.status !== "no_answer"
+         ? [latest]
+         : await tx
+              .insert(jobAttempts)
+              .values({ userId, vacancyId, companyId, ...requestedSalaryColumns(targetSalary) })
+              .returning({ id: jobAttempts.id });
    await tx
       .update(applications)
       .set({ attemptId: attempt!.id })
       .where(eq(applications.id, applicationId));
+}
+
+/** The user's applications through the posting. */
+function ofPostingSql(userId: string, postingId: string) {
+   return and(eq(applications.userId, userId), eq(applications.postingId, postingId));
+}
+
+/**
+ * Locks the posting's row for the transaction: its applications change one at a time. No key update:
+ * rows that only refer to it (others' applications) don't wait.
+ */
+async function lockPosting(tx: Transaction, postingId: string): Promise<void> {
+   await tx
+      .select({ id: postings.id })
+      .from(postings)
+      .where(eq(postings.id, postingId))
+      .for("no key update");
+}
+
+/** Whether the employer bumped the posting since my last application through it and never answered. */
+async function canApplyAgain(tx: Transaction, userId: string, postingId: string): Promise<boolean> {
+   const [row] = await tx
+      .select({ id: postings.id })
+      .from(postings)
+      .where(and(eq(postings.id, postingId), postingBumpedSinceUnansweredApplicationSql(userId)));
+   return row !== undefined;
 }
 
 export function createApplicationsRepository(db: Drizzle): ApplicationsRepository {
@@ -236,17 +281,27 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
       },
 
       async startPreparing(userId, postingId) {
-         const [row] = await db
-            .insert(applications)
-            .values({ userId, postingId, status: "preparing" })
-            .onConflictDoUpdate({
-               target: [applications.userId, applications.postingId],
-               // the fields stay: the new answers replace them, or the questions are reused
-               set: { status: "preparing", failureReason: null, updatedAt: sql`now()` },
-               setWhere: ne(applications.status, "submitted"),
-            })
-            .returning({ id: applications.id });
-         return row;
+         return db.transaction(async (tx) => {
+            await lockPosting(tx, postingId);
+            // JobPilot applies through a job site's own form, and that takes one application a job
+            const [sent] = await tx
+               .select({ id: applications.id })
+               .from(applications)
+               .where(and(ofPostingSql(userId, postingId), eq(applications.status, "submitted")))
+               .limit(1);
+            if (sent) return undefined;
+            const [row] = await tx
+               .insert(applications)
+               .values({ userId, postingId, status: "preparing" })
+               .onConflictDoUpdate({
+                  target: [applications.userId, applications.postingId],
+                  targetWhere: notSentSql,
+                  // the fields stay: the new answers replace them, or the questions are reused
+                  set: { status: "preparing", failureReason: null, updatedAt: sql`now()` },
+               })
+               .returning({ id: applications.id });
+            return row;
+         });
       },
 
       async listForUser(userId, { tab, q, source, origin, after, limit }) {
@@ -346,38 +401,42 @@ export function createApplicationsRepository(db: Drizzle): ApplicationsRepositor
 
       async markSentByHand(userId, postingId, siteSaid) {
          return db.transaction(async (tx) => {
-            const [row] = await tx
-               .insert(applications)
-               .values({
-                  userId,
-                  postingId,
-                  status: "submitted",
-                  origin: "manual",
-                  submittedAt: sql`now()`,
-                  failureReason: siteSaid ?? null,
-               })
-               // one sent already stays as it was; one JobPilot was on is sent by hand now
-               .onConflictDoUpdate({
-                  target: [applications.userId, applications.postingId],
-                  set: {
-                     status: "submitted",
-                     origin: "manual",
-                     submittedAt: sql`now()`,
-                     failureReason: siteSaid ?? null,
-                     updatedAt: sql`now()`,
-                  },
-                  setWhere: ne(applications.status, "submitted"),
-               })
+            // two clicks at once would both find nothing sent and send two
+            await lockPosting(tx, postingId);
+            const sentByHand = {
+               status: "submitted",
+               origin: "manual",
+               submittedAt: sql`now()`,
+               failureReason: siteSaid ?? null,
+            } as const;
+
+            // one JobPilot was on is sent by hand now
+            const [inWork] = await tx
+               .update(applications)
+               .set({ ...sentByHand, updatedAt: sql`now()` })
+               .where(and(ofPostingSql(userId, postingId), notSentSql))
                .returning({ id: applications.id });
-            if (row) {
-               await addToAttempt(tx, row.id);
-               return row;
+            if (inWork) {
+               await addToAttempt(tx, inWork.id);
+               return inWork;
             }
-            const [sent] = await tx
+
+            // one sent already stays as it was, unless I apply again: the employer bumped the job and
+            // never answered
+            const [lastSent] = await tx
                .select({ id: applications.id })
                .from(applications)
-               .where(and(eq(applications.userId, userId), eq(applications.postingId, postingId)));
-            return sent!;
+               .where(ofPostingSql(userId, postingId))
+               .orderBy(desc(applications.submittedAt))
+               .limit(1);
+            if (lastSent && !(await canApplyAgain(tx, userId, postingId))) return lastSent;
+
+            const [created] = await tx
+               .insert(applications)
+               .values({ userId, postingId, ...sentByHand })
+               .returning({ id: applications.id });
+            await addToAttempt(tx, created!.id);
+            return created!;
          });
       },
 

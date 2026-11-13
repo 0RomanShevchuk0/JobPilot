@@ -32,7 +32,9 @@ export function PostingApplyActions({
    const markSentBesideApply = withMarkApplied && markSentButton;
 
    function actions() {
-      if (application?.status === "submitted") {
+      // bumped since, no answer: applying again, as the first time
+      const sent = application?.status === "submitted" && !posting.bumpedSinceAppliedAt;
+      if (sent) {
          if (application.origin !== "manual") return null;
          return (
             <Button
@@ -45,7 +47,7 @@ export function PostingApplyActions({
             </Button>
          );
       }
-      if (application) {
+      if (application && application.status !== "submitted") {
          // ready: checking the answers and sending is what's next, the main thing here
          const ready = application.status === "ready_for_review";
          const linkStyles = buttonStyles({ variant: ready ? "primary" : "outline", size: "sm" });

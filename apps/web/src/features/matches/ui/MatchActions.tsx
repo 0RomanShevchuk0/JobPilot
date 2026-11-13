@@ -16,11 +16,12 @@ import { MarkSentByHandButton } from "./MarkSentByHandButton";
 import { PostingApplyActions } from "./PostingApplyActions";
 
 /**
- * Whether I can still apply through the posting: nothing sent through it, and its site didn't refuse,
- * on its page or to an application.
+ * Whether I can still apply through the posting: nothing sent through it, or the employer bumped it
+ * since and never answered, and its site didn't refuse, on its page or to an application.
  */
 const isToApplyThrough = (posting: MatchPosting) =>
-   posting.application?.status !== "submitted" && posting.cannotApplyReason === null;
+   (posting.application?.status !== "submitted" || posting.bumpedSinceAppliedAt !== null) &&
+   posting.cannotApplyReason === null;
 
 /**
  * Where applying to the vacancy stands across its job sites: the one posting left to apply through, or

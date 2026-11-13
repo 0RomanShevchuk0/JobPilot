@@ -134,7 +134,12 @@ export interface MatchPosting {
     * a posting; null when applying happens on the job site itself
     */
    externalApplyUrl: string | null;
-   /** my application through this job site, once started */
+   /**
+    * when the job site bumped it after my last application through it, which got no answer: the
+    * employer is still looking, I may apply again. Null otherwise
+    */
+   bumpedSinceAppliedAt: string | null;
+   /** my application through this job site, once started; the latest when I applied more than once */
    application: MatchApplication | null;
    /**
     * why I can't apply through it: its page said so (the can-apply check), or the site refused an

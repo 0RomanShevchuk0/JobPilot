@@ -66,11 +66,14 @@ export interface StoredJobAttemptChanges extends Omit<
 
 /** What I already tried with a vacancy's employer, as stored. */
 export interface StoredCompanyAttemptHistory {
-   /** the vacancy's own row; null when there's none of mine */
+   /** the vacancy's own row, the latest when I applied again; null when there's none of mine */
    thisAttempt: JobAttemptSummary | null;
    /** the vacancy's employer; null when it's hidden or there's no such vacancy */
    company: { name: string; normalizedName: string } | null;
-   /** how many attempts at the employer's other vacancies, rows added by hand too */
+   /**
+    * how many other attempts at the employer: at its other vacancies, earlier ones at this one, rows
+    * added by hand
+    */
    otherCount: number;
    /** the latest of them, the latest applied first */
    latestOther: JobAttemptSummary[];
@@ -271,12 +274,14 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
                .from(vacancies)
                .innerJoin(companies, eq(companies.id, vacancies.companyId))
                .where(eq(vacancies.id, vacancyId)),
-            // one at most: one attempt per vacancy
+            // the latest: applying again after no answer starts another
             db
                .select(summary)
                .from(jobAttempts)
                .innerJoin(vacancies, eq(vacancies.id, jobAttempts.vacancyId))
-               .where(and(eq(jobAttempts.userId, userId), eq(jobAttempts.vacancyId, vacancyId))),
+               .where(and(eq(jobAttempts.userId, userId), eq(jobAttempts.vacancyId, vacancyId)))
+               .orderBy(desc(jobAttempts.appliedAt), desc(jobAttempts.id))
+               .limit(1),
          ]);
 
          const others = company
@@ -289,8 +294,8 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
                     and(
                        eq(jobAttempts.userId, userId),
                        eq(jobAttempts.companyId, company.id),
-                       // a row added by hand has no vacancy: it's another one too
-                       or(isNull(jobAttempts.vacancyId), ne(jobAttempts.vacancyId, vacancyId)),
+                       // rows added by hand and earlier attempts at this vacancy are others too
+                       thisAttempt ? ne(jobAttempts.id, thisAttempt.id) : undefined,
                     ),
                  )
                  .orderBy(desc(jobAttempts.appliedAt), desc(jobAttempts.id))

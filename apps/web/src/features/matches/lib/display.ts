@@ -48,7 +48,12 @@ export function matchDetailsLine(match: MatchListItem): string {
 
 /** The day the job site published or last bumped the vacancy. */
 export function formatPublishedDate(match: MatchListItem): string {
+   return formatJobSiteDay(match.publishedAt);
+}
+
+/** A day a job site gave: when it published or bumped a job. */
+export function formatJobSiteDay(iso: string): string {
    // the job sites are Ukrainian and some give a day only, stored as Kyiv midnight: in another time
    // zone it would show the day before
-   return new Date(match.publishedAt).toLocaleDateString(undefined, { timeZone: "Europe/Kyiv" });
+   return new Date(iso).toLocaleDateString(undefined, { timeZone: "Europe/Kyiv" });
 }

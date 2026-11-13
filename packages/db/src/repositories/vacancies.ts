@@ -59,8 +59,9 @@ export interface PostingOfEmployerVacancy extends PostingOfOpenVacancy {
 }
 
 /**
- * How folding a duplicate into a vacancy went. both_tracked: a user has a tracker row on each, and a
- * vacancy has one per user, so nothing changed: a person sorts that out.
+ * How folding a duplicate into a vacancy went. both_tracked: a user has a tracker row on each, most
+ * likely one attempt split in two, so nothing changed: a person sorts that out rather than the
+ * vacancy getting both rows.
  */
 export interface DuplicateMergeOutcome {
    outcome: "merged" | "both_tracked";
