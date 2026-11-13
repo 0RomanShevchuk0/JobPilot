@@ -38,13 +38,20 @@ export async function handleFetch(
       return "gone";
    }
 
-   let parsed: NormalizedPosting;
+   // a page the parser can't read is retried: a site may answer 200 with a page not ready yet (DOU on a
+   // job published moments ago); a real layout change still ends in "failed" after the last attempt
+   let posting: NormalizedPosting;
    try {
-      parsed = normalizedPostingSchema.parse(adapter.parse(result.raw));
+      posting = adapter.parse(result.raw);
    } catch (err) {
-      // the same page would fail the same way again: no point retrying, the job stays in "failed" to look at
-      throw new UnrecoverableError(`parse failed for ${ref.url}: ${(err as Error).message}`);
+      throw new Error(`parse failed for ${ref.url}: ${(err as Error).message}`);
    }
+   const validated = normalizedPostingSchema.safeParse(posting);
+   if (!validated.success) {
+      // the parser's own output breaks the contract: the same page would fail the same way again
+      throw new UnrecoverableError(`invalid posting from ${ref.url}: ${validated.error.message}`);
+   }
+   const parsed = validated.data;
 
    await database.postings.saveFetched(postingId, result.raw, parsed, adapter.parserVersion);
    await buildVacancyQueue.add("build-vacancy", { postingId }, buildVacancyJobOptions(postingId));
