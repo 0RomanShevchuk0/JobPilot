@@ -42,6 +42,7 @@ import {
    detectClosedPostingsJobOptions,
    probeSessionsJobOptions,
    markSilentJobAttemptsJobOptions,
+   fetchRetryDelayMs,
 } from "./queues.js";
 import { sources } from "./sources.js";
 
@@ -137,7 +138,13 @@ for (const entry of sources) {
          fetchQueueName(source),
          (job) => handleFetch(job, entry, database, buildVacancyQueue),
          // one page at a time, at most one per fetchIntervalMs
-         { connection, concurrency: 1, limiter: { max: 1, duration: fetchIntervalMs } },
+         {
+            connection,
+            concurrency: 1,
+            limiter: { max: 1, duration: fetchIntervalMs },
+            // fetchJobOptions' custom backoff
+            settings: { backoffStrategy: (attemptsMade) => fetchRetryDelayMs(attemptsMade) },
+         },
       ),
    );
 }
@@ -220,6 +227,8 @@ workers.push(
 // every job; the summary waits until it has stayed empty this long, so a run gets one line, not one
 // per job. Longer than the slowest fetch interval for that reason.
 const SUMMARY_QUIET_MS = 10_000;
+// a job failing this many times is reported though it will retry: for a fetch, about 1.5 hours in
+const REPORT_FROM_ATTEMPT = 4;
 
 for (const worker of workers) {
    // counts since the last summary
@@ -241,14 +250,18 @@ for (const worker of workers) {
            ? "not retrying"
            : "gave up";
       log(worker.name, `job ${job?.id} failed (${outcome}): ${err.message}`);
-      // only final failures are incidents: one that will retry may still succeed
-      if (!willRetry) {
+      // final failures are incidents: one that will retry may still succeed. So is one still failing at
+      // REPORT_FROM_ATTEMPT: a fetch retries for a day, and a job site's new layout shouldn't wait that
+      // long to be seen. The other queues give up before it
+      const longFailing = (job?.attemptsMade ?? 0) >= REPORT_FROM_ATTEMPT;
+      if (!willRetry || longFailing) {
          sentry.reportError(err, {
             tags: { queue: worker.name },
             extra: {
                jobId: job?.id,
                jobName: job?.name,
                attemptsMade: job?.attemptsMade,
+               willRetry,
                data: job?.data,
             },
          });

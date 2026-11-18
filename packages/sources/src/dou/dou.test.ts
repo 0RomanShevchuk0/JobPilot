@@ -156,7 +156,7 @@ describe("closed job page", () => {
                "job-closed.html",
             ),
          ),
-      ).toThrow(/layout not recognized/);
+      ).toThrow(/layout not recognized \(closed/);
    });
 });
 
@@ -172,7 +172,7 @@ describe("job page: category", () => {
       // the breadcrumb links lose their ?category= filter
       const body = fixture("job-salary-external.html").replaceAll("?category=", "?section=");
       const page = { ...raw("368779", url, "job-salary-external.html"), body };
-      expect(() => parseJobPage(page)).toThrow(/layout not recognized/);
+      expect(() => parseJobPage(page)).toThrow(/layout not recognized \(no category\)/);
    });
 });
 

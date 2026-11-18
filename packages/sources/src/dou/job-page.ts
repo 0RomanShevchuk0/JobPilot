@@ -44,9 +44,19 @@ export function parseJobPage(raw: RawPosting): NormalizedPosting {
    const descriptionHtml = $(DESCRIPTION_SELECTOR).first().html();
    // the category says whom the job is for: without it the page isn't one we can read
    const category = categoryOnPage($);
-   if ($(CLOSED_JOB_SELECTOR).length > 0 || !title || !descriptionHtml || !category) {
-      // a layout change or a closed job: fail loudly instead of saving half a posting
-      throw new Error(`dou ${raw.externalId}: job page layout not recognized`);
+   const closed = $(CLOSED_JOB_SELECTOR).length > 0;
+   if (closed || !title || !descriptionHtml || !category) {
+      // a layout change or a closed job: fail loudly instead of saving half a posting. What the page
+      // lacks tells a layout change from a page DOU isn't ready to show yet
+      const problems = [
+         closed && "closed",
+         !title && "no title",
+         !descriptionHtml && "no description",
+         !category && "no category",
+      ].filter((problem) => problem !== false);
+      throw new Error(
+         `dou ${raw.externalId}: job page layout not recognized (${problems.join(", ")})`,
+      );
    }
    const places = placesOnPage($);
    const company = $(COMPANY_SELECTOR).first().text().trim();

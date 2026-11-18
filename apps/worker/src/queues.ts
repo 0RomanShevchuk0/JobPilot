@@ -30,12 +30,24 @@ export const markSilentJobAttemptsJobOptions: JobsOptions = {
    removeOnFail: 500,
 };
 
+const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
+// the pauses before a fetch's next attempts: a page DOU isn't ready to show yet reads fine minutes
+// later (one published moments ago); a site down for hours, the next day
+const FETCH_RETRY_DELAYS_MS = [5 * MINUTE_MS, 15 * MINUTE_MS, HOUR_MS, 6 * HOUR_MS, 24 * HOUR_MS];
+
 export const fetchJobOptions: JobsOptions = {
-   attempts: 3,
-   backoff: { type: "exponential", delay: 30_000 },
+   attempts: FETCH_RETRY_DELAYS_MS.length + 1,
+   // the fetch worker's backoffStrategy: fetchRetryDelayMs
+   backoff: { type: "custom" },
    removeOnComplete: 1000,
    removeOnFail: 5000,
 };
+
+/** How long a fetch waits before its next attempt, by how many it has made. */
+export function fetchRetryDelayMs(attemptsMade: number): number {
+   return FETCH_RETRY_DELAYS_MS[attemptsMade - 1] ?? FETCH_RETRY_DELAYS_MS.at(-1)!;
+}
 
 /**
  * One pending build per posting: adding it again while it waits is a no-op (it reads fresh data when
