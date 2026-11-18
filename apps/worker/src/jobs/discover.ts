@@ -1,5 +1,6 @@
 import type { DiscoverJobData, FetchJobData } from "@jobpilot/contracts";
 import type { DatabaseClient } from "@jobpilot/db";
+import { sentry } from "@jobpilot/observability";
 import { type Job, type Queue, UnrecoverableError } from "bullmq";
 import { log } from "../log.js";
 import { fetchJobOptions } from "../queues.js";
@@ -25,7 +26,12 @@ export async function handleDiscover(
       log("discover", `${source}: no user picked a category, skipped`);
       return { found: 0, queued: 0 };
    }
-   const refs = await entry.adapter.discover({ keywords });
+   const { refs, failedFeeds } = await entry.adapter.discover({ keywords });
+   // the next run reads it again; one down for good shows up in Sentry while the other feeds still count
+   for (const failure of failedFeeds) {
+      log("discover", `${source}: feed skipped: ${failure}`);
+      sentry.reportError(new Error(failure), { tags: { queue: job.queueName, source } });
+   }
    const toFetch = await database.postings.markSeen(source, refs);
 
    const jobs = toFetch.map(({ postingId, ref, cameBack }) => {

@@ -53,6 +53,16 @@ export interface DiscoverParams {
    keywords?: string[];
 }
 
+/**
+ * What a discover run read: the postings of every feed that answered, and why the others didn't. A
+ * feed is one listing of the site, one per keyword: one down doesn't cost the rest.
+ */
+export interface DiscoverResult {
+   refs: PostingRef[];
+   /** e.g. "dou RSS https://jobs.dou.ua/vacancies/feeds/?category=Analyst: HTTP 503" */
+   failedFeeds: string[];
+}
+
 /** A user's session on a job site: the site's cookies, as the extension reads them from the browser. */
 export const siteSessionSchema = z.object({
    cookies: z.array(
@@ -111,7 +121,8 @@ export interface SourceAdapter {
    readonly fetchIntervalMs: number;
    /** Every search filter the site has: users pick theirs from these, discover() gets the picked values. */
    readonly categories: readonly SourceCategory[];
-   discover(params: DiscoverParams): Promise<PostingRef[]>;
+   /** Reads each feed on its own; throws only when none of them answered: the site is down. */
+   discover(params: DiscoverParams): Promise<DiscoverResult>;
    fetch(ref: PostingRef): Promise<FetchResult>;
    /** Pure: no network. Must never guess — a field it is not sure about stays undefined. */
    parse(raw: RawPosting): NormalizedPosting;

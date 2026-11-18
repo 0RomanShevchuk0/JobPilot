@@ -1,4 +1,5 @@
-import type { PostingRef, SourceAdapter } from "@jobpilot/contracts";
+import type { SourceAdapter } from "@jobpilot/contracts";
+import { readFeeds } from "../feeds.js";
 import { getText } from "../http.js";
 import { checkDouJobPage } from "./account-page.js";
 import { DOU_CATEGORIES } from "./categories.js";
@@ -19,14 +20,8 @@ export function createDouAdapter(): SourceAdapter {
       /** keywords are DOU categories ("Node.js", "Front End"): the feed's only useful filter */
       async discover({ keywords }) {
          const urls = keywords?.length ? keywords.map((k) => rssUrl(k)) : [rssUrl()];
-         const byId = new Map<string, PostingRef>();
-         // one feed per category; a job in several feeds is returned once
-         for (const url of urls) {
-            const res = await getText(url);
-            if (res.status !== 200) throw new Error(`dou RSS ${url}: HTTP ${res.status}`);
-            for (const ref of parseRss(res.body)) byId.set(ref.externalId, ref);
-         }
-         return [...byId.values()];
+         // one feed per category, each on its own; a job in several feeds is returned once
+         return readFeeds("dou RSS", urls, parseRss);
       },
 
       async fetch(ref) {

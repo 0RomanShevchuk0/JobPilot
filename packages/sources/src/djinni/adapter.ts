@@ -1,4 +1,5 @@
-import type { PostingRef, SourceAdapter } from "@jobpilot/contracts";
+import type { SourceAdapter } from "@jobpilot/contracts";
+import { readFeeds } from "../feeds.js";
 import { getText } from "../http.js";
 import { checkDjinniJobPage } from "./account-page.js";
 import { DJINNI_CATEGORIES } from "./categories.js";
@@ -18,14 +19,8 @@ export function createDjinniAdapter(): SourceAdapter {
 
       async discover({ keywords }) {
          const urls = keywords?.length ? keywords.map((k) => rssUrl(k)) : [rssUrl()];
-         const byId = new Map<string, PostingRef>();
-         // one feed per keyword; a job matching several keywords is returned once
-         for (const url of urls) {
-            const res = await getText(url);
-            if (res.status !== 200) throw new Error(`djinni RSS ${url}: HTTP ${res.status}`);
-            for (const ref of parseRss(res.body)) byId.set(ref.externalId, ref);
-         }
-         return [...byId.values()];
+         // one feed per keyword, each on its own; a job matching several keywords is returned once
+         return readFeeds("djinni RSS", urls, parseRss);
       },
 
       async fetch(ref) {
