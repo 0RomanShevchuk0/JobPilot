@@ -34,7 +34,16 @@ describe("readFeeds", () => {
       );
       // 2 is in two feeds: once
       expect(result.refs.map((r) => r.externalId)).toEqual(["1", "2", "3"]);
-      expect(result.failedFeeds).toEqual(["site RSS https://site.test/feed?c=b: HTTP 503"]);
+      expect(result.answeredFeeds).toEqual([
+         "https://site.test/feed?c=a",
+         "https://site.test/feed?c=c",
+      ]);
+      expect(result.failedFeeds).toEqual([
+         {
+            url: "https://site.test/feed?c=b",
+            message: "site RSS https://site.test/feed?c=b: HTTP 503",
+         },
+      ]);
    });
 
    it("counts a feed that doesn't answer at all as failed too", async () => {
@@ -47,7 +56,12 @@ describe("readFeeds", () => {
          ["https://site.test/feed?c=a", "https://site.test/feed?c=b"],
          parseIds,
       );
-      expect(result.failedFeeds).toEqual(["site RSS https://site.test/feed?c=b: fetch failed"]);
+      expect(result.failedFeeds).toEqual([
+         {
+            url: "https://site.test/feed?c=b",
+            message: "site RSS https://site.test/feed?c=b: fetch failed",
+         },
+      ]);
    });
 
    it("throws when no feed answered: the site is down", async () => {

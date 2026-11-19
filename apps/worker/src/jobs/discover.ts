@@ -2,6 +2,8 @@ import type { DiscoverJobData, FetchJobData } from "@jobpilot/contracts";
 import type { DatabaseClient } from "@jobpilot/db";
 import { sentry } from "@jobpilot/observability";
 import { type Job, type Queue, UnrecoverableError } from "bullmq";
+import type { Redis } from "ioredis";
+import { recordFeedRuns } from "../feed-failures.js";
 import { log } from "../log.js";
 import { fetchJobOptions } from "../queues.js";
 import { findSource } from "../sources.js";
@@ -14,6 +16,8 @@ export async function handleDiscover(
    job: Job<DiscoverJobData>,
    database: DatabaseClient,
    fetchQueues: Map<string, Queue<FetchJobData>>,
+   /** where each feed's failed runs in a row are counted */
+   redis: Redis,
 ) {
    const { source } = job.data;
    const entry = findSource(source);
@@ -26,11 +30,13 @@ export async function handleDiscover(
       log("discover", `${source}: no user picked a category, skipped`);
       return { found: 0, queued: 0 };
    }
-   const { refs, failedFeeds } = await entry.adapter.discover({ keywords });
-   // the next run reads it again; one down for good shows up in Sentry while the other feeds still count
-   for (const failure of failedFeeds) {
-      log("discover", `${source}: feed skipped: ${failure}`);
-      sentry.reportError(new Error(failure), { tags: { queue: job.queueName, source } });
+   const { refs, answeredFeeds, failedFeeds } = await entry.adapter.discover({ keywords });
+   // the next run reads it again; one down for good shows up in Sentry while the other feeds still
+   // count, a blip only in the log
+   const failures = await recordFeedRuns(redis, answeredFeeds, failedFeeds);
+   for (const { message, runsInARow, down } of failures) {
+      log("discover", `${source}: feed skipped (${runsInARow} runs in a row): ${message}`);
+      if (down) sentry.reportError(new Error(message), { tags: { queue: job.queueName, source } });
    }
    const toFetch = await database.postings.markSeen(source, refs);
 

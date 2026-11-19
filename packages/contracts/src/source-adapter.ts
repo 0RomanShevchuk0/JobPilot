@@ -59,8 +59,16 @@ export interface DiscoverParams {
  */
 export interface DiscoverResult {
    refs: PostingRef[];
+   /** the URLs of the feeds that answered */
+   answeredFeeds: string[];
+   failedFeeds: FailedFeed[];
+}
+
+/** A feed that didn't answer in a discover run, and why. */
+export interface FailedFeed {
+   url: string;
    /** e.g. "dou RSS https://jobs.dou.ua/vacancies/feeds/?category=Analyst: HTTP 503" */
-   failedFeeds: string[];
+   message: string;
 }
 
 /** A user's session on a job site: the site's cookies, as the extension reads them from the browser. */

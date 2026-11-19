@@ -153,7 +153,7 @@ if (collectsVacancies) {
    workers.push(
       new Worker<DiscoverJobData>(
          QueueNames.discover,
-         (job) => handleDiscover(job, database, fetchQueues),
+         (job) => handleDiscover(job, database, fetchQueues, connection),
          { connection, concurrency: 1 },
       ),
       new Worker<DetectClosedPostingsJobData>(

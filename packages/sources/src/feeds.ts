@@ -1,4 +1,4 @@
-import type { DiscoverResult, PostingRef } from "@jobpilot/contracts";
+import type { DiscoverResult, FailedFeed, PostingRef } from "@jobpilot/contracts";
 import { getText } from "./http.js";
 
 /**
@@ -13,16 +13,20 @@ export async function readFeeds(
    parseFeed: (body: string) => PostingRef[],
 ): Promise<DiscoverResult> {
    const byId = new Map<string, PostingRef>();
-   const failedFeeds: string[] = [];
+   const answeredFeeds: string[] = [];
+   const failedFeeds: FailedFeed[] = [];
    for (const url of urls) {
       try {
          const res = await getText(url);
          if (res.status !== 200) throw new Error(`HTTP ${res.status}`);
          for (const ref of parseFeed(res.body)) byId.set(ref.externalId, ref);
+         answeredFeeds.push(url);
       } catch (err) {
-         failedFeeds.push(`${label} ${url}: ${(err as Error).message}`);
+         failedFeeds.push({ url, message: `${label} ${url}: ${(err as Error).message}` });
       }
    }
-   if (failedFeeds.length === urls.length) throw new Error(failedFeeds.join("; "));
-   return { refs: [...byId.values()], failedFeeds };
+   if (failedFeeds.length === urls.length) {
+      throw new Error(failedFeeds.map((feed) => feed.message).join("; "));
+   }
+   return { refs: [...byId.values()], answeredFeeds, failedFeeds };
 }
