@@ -22,7 +22,8 @@ resource "google_compute_address" "jobpilot" {
 
 resource "google_compute_instance" "jobpilot" {
   name         = "jobpilot-us"
-  machine_type = "e2-micro" # Always Free in us-central1/us-west1/us-east1
+  # 4 GB: e2-micro's 1 GB hung the VM when scoring spawned claude-cli for every vacancy in a row
+  machine_type = "e2-medium"
   zone         = local.zone
   tags         = ["jobpilot-web"]
 
