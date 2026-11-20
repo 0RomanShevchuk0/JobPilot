@@ -11,20 +11,20 @@ const periods: { period: StatsPeriod; title: string }[] = [
 ];
 
 const tabs = [
-   { tab: "vacancies", title: "Vacancies" },
    { tab: "tracker", title: "Tracker" },
+   { tab: "vacancies", title: "Vacancies" },
 ] as const;
 type StatsTab = (typeof tabs)[number]["tab"];
 
 /**
- * Two tabs: the vacancies found over a period, how many suited me and what I did with them; and the
- * Tracker's attempts, all time, all of them or at one requested salary. The tab, the period and the
- * salary are in the address (?tab=tracker, ?period=week, ?salary=3000-USD-month), kept on a reload and
- * back; each tab keeps the other's while away.
+ * Two tabs: the Tracker's attempts, all time, all of them or at one requested salary (opens first);
+ * and the vacancies found over a period, how many suited me and what I did with them. The tab, the
+ * period and the salary are in the address (?tab=vacancies, ?period=week, ?salary=3000-USD-month),
+ * kept on a reload and back; each tab keeps the other's while away.
  */
 export function StatsPage() {
    const [params, setParams] = useSearchParams();
-   const tab = tabs.find((t) => t.tab === params.get("tab"))?.tab ?? "vacancies";
+   const tab = tabs.find((t) => t.tab === params.get("tab"))?.tab ?? "tracker";
    const period = periods.find((p) => p.period === params.get("period"))?.period ?? "day";
    // one that isn't a salary level (edited by hand) is all of them, as an unknown period is the default
    const salaryInAddress = params.get("salary");
@@ -39,7 +39,7 @@ export function StatsPage() {
       else query.set(name, value);
       setParams(query, { replace: true });
    };
-   const setTab = (t: StatsTab) => setParam("tab", t === "vacancies" ? null : t);
+   const setTab = (t: StatsTab) => setParam("tab", t === "tracker" ? null : t);
    const setPeriod = (p: StatsPeriod) => setParam("period", p === "day" ? null : p);
    const setSalary = (s: string | null) => setParam("salary", s);
 
@@ -59,10 +59,10 @@ export function StatsPage() {
             ))}
          </nav>
 
-         {tab === "vacancies" ? (
-            <VacancyStats period={period} onPeriodChange={setPeriod} />
-         ) : (
+         {tab === "tracker" ? (
             <AttemptStats salary={salary} onSalaryChange={setSalary} />
+         ) : (
+            <VacancyStats period={period} onPeriodChange={setPeriod} />
          )}
       </main>
    );
