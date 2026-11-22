@@ -7,15 +7,13 @@ import type {
    JobAttemptListItem,
    JobAttemptListPage,
    NewJobAttempt,
-   Profile,
-   RequestedSalary,
 } from "@jobpilot/contracts";
 import type { JobAttemptListOptions } from "@jobpilot/db";
 import { isHiddenEmployerName, normalizeCompanyName } from "@jobpilot/vacancies";
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { Database } from "../infra/database.js";
 import { Llm } from "../infra/llm.js";
-import { buildJobPageRequest, type JobPageFields } from "./job-page-reading.js";
+import { buildJobPageRequest, notesFromJobPage, type JobPageFields } from "./job-page-reading.js";
 
 // rows per page of the tracker: a page fills a screen or two
 const PAGE_SIZE = 30;
@@ -36,18 +34,6 @@ function companyNamed(name: string): { name: string; normalizedName: string } | 
    const normalizedName = normalizeCompanyName(name);
    // a name with no letter or digit ("...") normalizes to nothing: no company to link to
    return normalizedName ? { name, normalizedName } : null;
-}
-
-/**
- * What I usually ask, for a row added from a job page: the profile's target salary, else its minimum,
- * in its currency and period; none without a salary in the profile. Rounded: the profile takes
- * 37.5 an hour, the tracker whole amounts.
- */
-function usualRequestedSalary(salary: Profile["salary"]): RequestedSalary | undefined {
-   if (!salary) return undefined;
-   const amount = Math.round(salary.target ?? salary.min);
-   if (amount < 1) return undefined;
-   return { amount, currency: salary.currency, period: salary.period };
 }
 
 @Injectable()
@@ -94,9 +80,10 @@ export class JobAttemptsService {
 
    /**
     * A row for a job applied to on its own site, read from the page open in the browser: the model finds
-    * the open job's title and employer. The row the link already has instead of a second one; none when
-    * the page holds no job, or the model can't tell. Contacts are cut out of the page before the model
-    * reads it: a signed-in site greets the user by name.
+    * the open job's title, employer and what it pays, which goes in the notes. The row the link already
+    * has instead of a second one; none when the page holds no job, or the model can't tell. Contacts are cut out of the page before the model
+    * reads it: a signed-in site greets the user by name. No requested salary: such sites' forms often
+    * ask for none, and the profile's is the Ukrainian market's; one asked for is added in the row.
     */
    async addFromPage(userId: string, page: AddJobPage): Promise<AddedJobPage> {
       const existingId = await this.db.jobAttempts.findIdByUrl(userId, page.url);
@@ -125,7 +112,7 @@ export class JobAttemptsService {
          title,
          company: company || undefined,
          url: page.url,
-         requestedSalary: usualRequestedSalary(stored?.profile.salary),
+         notes: notesFromJobPage(fields),
       });
       return { outcome: "added", attemptId: id };
    }
