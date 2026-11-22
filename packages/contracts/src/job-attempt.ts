@@ -129,6 +129,30 @@ export const newJobAttemptSchema = z.object({
 });
 export type NewJobAttempt = z.infer<typeof newJobAttemptSchema>;
 
+/** How much of a job page's text POST /job-attempts/from-page takes: the extension cuts it to this. */
+export const JOB_PAGE_TEXT_MAX_LENGTH = 30_000;
+
+/**
+ * POST /job-attempts/from-page: the job page open in the browser, as the extension reads it, for a row
+ * of a job applied to there.
+ */
+export const addJobPageSchema = z.object({
+   /** the job's own page, not the search it was opened from */
+   url: jobUrlSchema,
+   /** the tab's title */
+   title: z.string().max(1000),
+   /** the page's visible text */
+   text: z.string().max(JOB_PAGE_TEXT_MAX_LENGTH),
+});
+export type AddJobPage = z.infer<typeof addJobPageSchema>;
+
+/**
+ * What came of a job page: a row added for it, the row already there for its link, or no job found on
+ * it (nothing added).
+ */
+export type AddedJobPage =
+   { outcome: "added" | "existing"; attemptId: string } | { outcome: "not_a_job" };
+
 /** What PATCH /job-attempts/:id changes: at least one of them. */
 export const jobAttemptChangesSchema = z
    .object({

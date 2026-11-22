@@ -88,8 +88,18 @@ export default defineConfig({
       // storage and alarms: a session the API didn't get is kept and sent again later;
       // scripting: the form is filled in on the job page, in the tab opened for the application only;
       // webNavigation: told when a job site's page has loaded, to fill the form in;
-      // webRequest: sees (only sees, changes nothing) the site's answer when the user sends the form
-      permissions: ["cookies", "storage", "alarms", "scripting", "webNavigation", "webRequest"],
+      // webRequest: sees (only sees, changes nothing) the site's answer when the user sends the form;
+      // activeTab: the popup's Add this job to the tracker reads the page open in the tab, any site,
+      // only when the popup is opened on it; no warning in Chrome
+      permissions: [
+         "cookies",
+         "storage",
+         "alarms",
+         "scripting",
+         "webNavigation",
+         "webRequest",
+         "activeTab",
+      ],
       // the job sites' pages: their cookies, the job pages with the form (from @jobpilot/sources)
       host_permissions: jobSitePages,
       // the web app may talk to the extension: whether it is there, and which application to fill in

@@ -1,17 +1,27 @@
+import { redactContacts } from "@jobpilot/contacts";
 import type {
+   AddedJobPage,
+   AddJobPage,
    CompanyAttemptHistory,
    JobAttemptChanges,
    JobAttemptListItem,
    JobAttemptListPage,
    NewJobAttempt,
+   Profile,
+   RequestedSalary,
 } from "@jobpilot/contracts";
 import type { JobAttemptListOptions } from "@jobpilot/db";
 import { isHiddenEmployerName, normalizeCompanyName } from "@jobpilot/vacancies";
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { Database } from "../infra/database.js";
+import { Llm } from "../infra/llm.js";
+import { buildJobPageRequest, type JobPageFields } from "./job-page-reading.js";
 
 // rows per page of the tracker: a page fills a screen or two
 const PAGE_SIZE = 30;
+
+// the tracker takes a title and a company name up to this long
+const MAX_NAME_LENGTH = 200;
 
 // a vacancy's page shows this many attempts at its employer: the rest are a link to the tracker away
 const COMPANY_HISTORY_SIZE = 3;
@@ -28,9 +38,26 @@ function companyNamed(name: string): { name: string; normalizedName: string } | 
    return normalizedName ? { name, normalizedName } : null;
 }
 
+/**
+ * What I usually ask, for a row added from a job page: the profile's target salary, else its minimum,
+ * in its currency and period; none without a salary in the profile. Rounded: the profile takes
+ * 37.5 an hour, the tracker whole amounts.
+ */
+function usualRequestedSalary(salary: Profile["salary"]): RequestedSalary | undefined {
+   if (!salary) return undefined;
+   const amount = Math.round(salary.target ?? salary.min);
+   if (amount < 1) return undefined;
+   return { amount, currency: salary.currency, period: salary.period };
+}
+
 @Injectable()
 export class JobAttemptsService {
-   constructor(private readonly db: Database) {}
+   private readonly logger = new Logger(JobAttemptsService.name);
+
+   constructor(
+      private readonly db: Database,
+      private readonly llm: Llm,
+   ) {}
 
    /** A page of my tracker, only the rows matching the filters; the next one starts after its last row. */
    async list(
@@ -63,6 +90,44 @@ export class JobAttemptsService {
          return { thisAttempt, company: null, otherCount: 0, latestOther: [] };
       }
       return { thisAttempt, company: company.name, otherCount, latestOther };
+   }
+
+   /**
+    * A row for a job applied to on its own site, read from the page open in the browser: the model finds
+    * the open job's title and employer. The row the link already has instead of a second one; none when
+    * the page holds no job, or the model can't tell. Contacts are cut out of the page before the model
+    * reads it: a signed-in site greets the user by name.
+    */
+   async addFromPage(userId: string, page: AddJobPage): Promise<AddedJobPage> {
+      const existingId = await this.db.jobAttempts.findIdByUrl(userId, page.url);
+      if (existingId) return { outcome: "existing", attemptId: existingId };
+
+      const stored = await this.db.profiles.get(userId);
+      const contacts = stored?.profile.contacts ?? {};
+      const redacted = {
+         ...page,
+         title: redactContacts(page.title, contacts),
+         text: redactContacts(page.text, contacts),
+      };
+      let fields: JobPageFields;
+      try {
+         fields = await this.llm.generate(buildJobPageRequest(redacted));
+      } catch (error) {
+         // down, over its limit or off the schema: the user adds the row by hand, the log says why
+         this.logger.warn(`reading a job page with ${this.llm.model} failed: ${String(error)}`);
+         return { outcome: "not_a_job" };
+      }
+      const title = fields.title.trim().slice(0, MAX_NAME_LENGTH);
+      if (!fields.isJobPosting || !title) return { outcome: "not_a_job" };
+      const company = fields.company.trim().slice(0, MAX_NAME_LENGTH);
+
+      const { id } = await this.create(userId, {
+         title,
+         company: company || undefined,
+         url: page.url,
+         requestedSalary: usualRequestedSalary(stored?.profile.salary),
+      });
+      return { outcome: "added", attemptId: id };
    }
 
    /** Adds a job JobPilot doesn't know about. */

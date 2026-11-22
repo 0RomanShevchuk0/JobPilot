@@ -1,5 +1,8 @@
 import {
+   addJobPageSchema,
    jobAttemptChangesSchema,
+   type AddedJobPage,
+   type AddJobPage,
    jobAttemptStages,
    jobAttemptStatuses,
    newJobAttemptSchema,
@@ -87,6 +90,18 @@ export class JobAttemptsController {
       @Body(new ZodValidationPipe(newJobAttemptSchema)) attempt: NewJobAttempt,
    ) {
       return this.jobAttempts.create(userId, attempt);
+   }
+
+   /**
+    * Adds a job applied to on its own site from the page open in the browser (the extension sends it):
+    * the row added, the one already there for the link, or none when no job is found on the page.
+    */
+   @Post("from-page")
+   addFromPage(
+      @CurrentUserId() userId: string,
+      @Body(new ZodValidationPipe(addJobPageSchema)) page: AddJobPage,
+   ): Promise<AddedJobPage> {
+      return this.jobAttempts.addFromPage(userId, page);
    }
 
    /** Changes a row: its company, title, link, date, stage, status or notes. */

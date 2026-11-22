@@ -11,9 +11,16 @@ import { TrackerPanel } from "./TrackerPanel";
 
 /**
  * Adds a job JobPilot doesn't know about. The date is today unless changed; the stage and status start
- * as just applied, one already under way goes in as it stands.
+ * as just applied, one already under way goes in as it stands. The link may come filled in: a job page
+ * the extension found no job on.
  */
-export function NewJobAttemptPanel({ onClose }: { onClose: () => void }) {
+export function NewJobAttemptPanel({
+   initialUrl = "",
+   onClose,
+}: {
+   initialUrl?: string;
+   onClose: () => void;
+}) {
    const create = useCreateJobAttempt(onClose);
    const requestedSalaryUnits = useRequestedSalaryUnits();
 
@@ -48,7 +55,7 @@ export function NewJobAttemptPanel({ onClose }: { onClose: () => void }) {
                   values={{
                      company: "",
                      title: "",
-                     url: "",
+                     url: initialUrl,
                      appliedAt: localDate(),
                      stage: "applied",
                      status: "active",

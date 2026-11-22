@@ -279,3 +279,8 @@ section + section {
 .secondary:hover {
    background: var(--border);
 }
+
+/* under the Tracker's button: what it does, then what is happening */
+.tracker-note {
+   margin: 6px 0 0;
+}

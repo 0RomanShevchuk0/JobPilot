@@ -1,0 +1,5 @@
+{
+   // what `nest build` compiles for the server: the code without its tests
+   "extends": "./tsconfig.json",
+   "exclude": ["src/**/*.test.ts"]
+}

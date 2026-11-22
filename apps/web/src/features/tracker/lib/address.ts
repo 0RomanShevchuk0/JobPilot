@@ -50,11 +50,23 @@ export const trackerAddress = {
       return `/tracker?${filter}`;
    },
 
+   /**
+    * The link the Add form starts with (?add&url=…): the job page the extension found no job on, to
+    * fill in by hand. Web pages only, as the form takes; "" for none.
+    */
+   readNewJobUrl(params: URLSearchParams): string {
+      const url = params.get("url") ?? "";
+      // a web page's protocol: "https:" or "http:", not "javascript:"
+      return URL.canParse(url) && /^https?:$/.test(new URL(url).protocol) ? url : "";
+   },
+
    /** The address's query with another panel, or none; the filter stays. */
    withPanel(params: URLSearchParams, panel: TrackerPanel | null): string {
       const next = new URLSearchParams(params);
       next.delete("attempt");
       next.delete("add");
+      // the Add form's starting link goes with it
+      next.delete("url");
       if (panel === "add") next.set("add", "");
       else if (panel) next.set("attempt", panel.attempt);
       return `?${next}`;

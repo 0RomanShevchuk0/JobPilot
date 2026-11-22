@@ -91,6 +91,8 @@ export interface JobAttemptsRepository {
    listForUser(userId: string, options: JobAttemptListOptions): Promise<JobAttemptListItem[]>;
    /** A row of my tracker as the list shows it; undefined when there's no such row of mine. */
    getForUser(userId: string, attemptId: string): Promise<JobAttemptListItem | undefined>;
+   /** My row added with this link, the latest one; undefined when there is none. */
+   findIdByUrl(userId: string, url: string): Promise<string | undefined>;
    /**
     * My attempt at a vacancy, and the latest `limit` of my attempts at its employer's other vacancies
     * with their count.
@@ -254,6 +256,16 @@ export function createJobAttemptsRepository(db: Drizzle): JobAttemptsRepository 
             1,
          );
          return item;
+      },
+
+      async findIdByUrl(userId, url) {
+         const [row] = await db
+            .select({ id: jobAttempts.id })
+            .from(jobAttempts)
+            .where(and(eq(jobAttempts.userId, userId), eq(jobAttempts.url, url)))
+            .orderBy(desc(jobAttempts.appliedAt))
+            .limit(1);
+         return row?.id;
       },
 
       async getCompanyHistory(userId, vacancyId, limit) {

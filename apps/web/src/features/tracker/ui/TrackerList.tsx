@@ -98,7 +98,12 @@ export function TrackerList() {
          {openAttempt && (
             <JobAttemptPanel key={openAttempt.id} attempt={openAttempt} onClose={closePanel} />
          )}
-         {params.has("add") && <NewJobAttemptPanel onClose={closePanel} />}
+         {params.has("add") && (
+            <NewJobAttemptPanel
+               initialUrl={trackerAddress.readNewJobUrl(params)}
+               onClose={closePanel}
+            />
+         )}
       </>
    );
 }
