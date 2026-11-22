@@ -43,6 +43,13 @@ Don't collect a list first: the user checks jobs while the search goes on.
 - **Filling a form** with the user's data only when they ask for that job; never press the submit button: the user checks and sends. On forms whose page shifts while typing, focus fields with Tab / Shift+Tab, not clicks, and check with a screenshot at the end.
 - **Tracker:** after the user sends, remind them to press "Add this job to the tracker" in the JobPilot extension on the job's page.
 
+## Browser quirks
+
+- Never close a tab while the user's tabs are in the group: closing the one the group was opened with loses the whole group.
+- A form inside an iframe (Deel, Ashby-like): open the iframe's own address, then fields have refs for `form_input`.
+- Custom dropdowns: click to open, screenshot, click the option; typing + Enter doesn't select.
+- Workday and other sites that need an account: stop there, the user registers.
+
 ## Limits
 
 A session handles a shortlist and a handful of letters, not dozens of applications: when the context runs long, say where it stopped.
