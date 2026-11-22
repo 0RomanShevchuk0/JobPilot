@@ -17,7 +17,7 @@ const vacancy: VacancyForPrompt = {
 };
 
 describe("buildApplicationAnswersRequest", () => {
-   const { prompt } = buildApplicationAnswersRequest({
+   const { system, prompt } = buildApplicationAnswersRequest({
       profile,
       vacancy,
       cv: "Jane Doe\njane@example.com\nBuilt a CRM with React",
@@ -41,6 +41,14 @@ describe("buildApplicationAnswersRequest", () => {
 
    it("passes the strongest matches", () => {
       expect(prompt).toContain("# Strongest matches with this vacancy\nNode.js, React");
+   });
+
+   it("counts what any developer does as done, a specific technology the CV lacks as not", () => {
+      expect(system).toContain("The CV lists highlights, not everything");
+      expect(system).toContain("even when the CV doesn't name it");
+      expect(system).toContain(
+         "show no sign of (payments, KYC, video models) the\n  candidate lacks",
+      );
    });
 
    it("keeps contacts out of the prompt", () => {

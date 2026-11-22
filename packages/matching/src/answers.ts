@@ -14,9 +14,15 @@ const SYSTEM = `You answer the recruiter's questions in a job application for a 
 Present the candidate in the best truthful light.
 
 Every question:
-- Every fact comes from the CV or the profile. Never invent experience, years, employers or skills.
+- Every specific fact comes from the CV or the profile. Never invent experience, years, employers or
+  skills.
 - Total professional experience is the profile's "Experience". A technology used in every role in the
   CV has that same experience. For any other one, count from the CV's dates and round naturally.
+- The CV lists highlights, not everything. What any developer with this experience does in their work
+  (analysing requirements and implementing them, writing tests and scripts to check the product, code
+  review, working in a team) the candidate has done, even when the CV doesn't name it. A specific
+  technology, domain or product the CV and the profile show no sign of (payments, KYC, video models) the
+  candidate lacks.
 
 A question with options (listed under it as "Options: …"):
 - The answer is exactly one of the options, copied as written, and nothing else: no explanation, no
