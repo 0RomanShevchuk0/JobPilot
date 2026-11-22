@@ -1,34 +1,30 @@
 import type { AddedJobPage, AddJobPage } from "@jobpilot/contracts";
 import { browser } from "wxt/browser";
-import { WEB_URL } from "../../shared/api.js";
 import { isAddJobPageMessage } from "./add-job-page-message.js";
 import { trackerApi } from "./api.js";
 
+/** What adding a page came to, as the popup shows it: the API's answer, or the request failing. */
+export type JobPageAdding = AddedJobPage | { outcome: "failed" };
+
 /**
- * The popup's Add this job to the tracker, done here: the popup closes when the tracker's tab opens,
- * and closing it would cut the request off. The row added, or the one already there, opens in the
- * tracker; with none (no job found on the page, the API refused) the tracker's Add form opens with the
- * link, to fill in by hand.
+ * The popup's Add this job to the tracker, done here: closing the popup would cut the request off.
+ * The answer goes back to the popup, which says what happened; nothing opens by itself. `true` keeps
+ * the channel open for the answer, it comes after the request.
  */
 export function registerTrackerAdding(): void {
-   browser.runtime.onMessage.addListener((message: unknown) => {
+   browser.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
       if (!isAddJobPageMessage(message)) return;
-      void addJobPageAndOpenTracker(message.page);
+      addJobPage(message.page).then(sendResponse);
+      return true;
    });
 }
 
-async function addJobPageAndOpenTracker(page: AddJobPage): Promise<void> {
-   let added: AddedJobPage;
+/** Adds the page's job to the tracker; "failed" when the request does (not signed in, the server down). */
+async function addJobPage(page: AddJobPage): Promise<JobPageAdding> {
    try {
-      added = await trackerApi.addFromPage(page);
+      return await trackerApi.addFromPage(page);
    } catch (err) {
-      // not signed in, the server down: the form still saves typing the link
       console.error("adding the job page to the tracker failed", err);
-      added = { outcome: "not_a_job" };
+      return { outcome: "failed" };
    }
-   const query =
-      added.outcome === "not_a_job"
-         ? new URLSearchParams({ add: "", url: page.url })
-         : new URLSearchParams({ attempt: added.attemptId });
-   await browser.tabs.create({ url: `${WEB_URL}/tracker?${query}` });
 }

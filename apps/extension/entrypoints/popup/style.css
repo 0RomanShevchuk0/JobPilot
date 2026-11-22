@@ -284,3 +284,8 @@ section + section {
 .tracker-note {
    margin: 6px 0 0;
 }
+
+/* in the note: to the row added, or to the tracker's Add form */
+.tracker-link {
+   color: var(--info);
+}
