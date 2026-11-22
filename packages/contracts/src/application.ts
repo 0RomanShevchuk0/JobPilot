@@ -38,7 +38,12 @@ export type FormFieldKind = (typeof formFieldKinds)[number];
 /** Kinds answered with one of the field's options, as the form writes it. */
 export const choiceFieldKinds: readonly FormFieldKind[] = ["radio", "select"];
 
-export const formFieldValueSources = ["profile", "document", "ai"] as const;
+/**
+ * Where a field's proposed value came from: the profile (the usual message, when a message for the
+ * vacancy couldn't be written), a document (the CV), the model answering a question (ai), or the model
+ * writing the message to the recruiter for this vacancy (ai-message).
+ */
+export const formFieldValueSources = ["profile", "document", "ai", "ai-message"] as const;
 export type FormFieldValueSource = (typeof formFieldValueSources)[number];
 
 /** One field of an application form as the job site shows it, before anything is answered. */

@@ -110,7 +110,10 @@ export function ProfileForm({ saved, hasCv }: ProfileFormProps) {
                </Field>
             </div>
             <LinksList form={form} />
-            <Field label="Application message" hint="Adapted to each vacancy when applying">
+            <Field
+               label="Application message"
+               hint="Sent when a message for the vacancy can't be written"
+            >
                <textarea {...register("applicationMessage")} className={textareaClasses} />
             </Field>
          </Section>

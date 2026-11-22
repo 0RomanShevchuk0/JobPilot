@@ -5,17 +5,19 @@ import {
    type ApplyForm,
    type ApplyFormField,
    type FormField,
+   type FormFieldValueSource,
    type PrepareApplicationJobData,
    type Profile,
 } from "@jobpilot/contracts";
 import type { ApplicationToPrepare, DatabaseClient, VacancyForMatching } from "@jobpilot/db";
 import type { LlmProvider } from "@jobpilot/llm";
 import {
-   applicationMessage,
    buildApplicationAnswersRequest,
+   buildApplicationMessageRequest,
    pickNumber,
    pickOption,
    tidyAnswer,
+   usualApplicationMessage,
 } from "@jobpilot/matching";
 import { type Job, UnrecoverableError } from "bullmq";
 import { LOGIN_HINT } from "../config.js";
@@ -94,15 +96,20 @@ async function prepare(
       refreshForm || application.fields.length === 0
          ? await readForm(entry, postingUrl, userId, database)
          : storedForm(application.fields);
-   const answers =
-      form.questions.length > 0
-         ? await answerQuestions(database, llm, userId, stored.profile, vacancy, form.questions)
-         : [];
+   // a form with only a CV field has nothing for the model to write
+   const material =
+      form.questions.length > 0 || form.message
+         ? await loadMaterial(database, userId, stored.profile, vacancy)
+         : undefined;
+   // independent of each other, so at once; a failed answer still fails the job, as before
+   const [answers, message] = await Promise.all([
+      material && form.questions.length > 0 ? answerQuestions(llm, material, form.questions) : [],
+      material && form.message ? writeMessage(llm, material) : undefined,
+   ]);
 
    const fields = form.questions.map((q, i) => formField(q, "ai", answers[i]));
-   if (form.message) {
-      const message = applicationMessage(stored.profile);
-      fields.push(formField(form.message, "profile", message));
+   if (form.message && message) {
+      fields.push(formField(form.message, message.valueSource, message.text));
    }
    if (form.cv) {
       const baseCv = await database.documents.getBaseCvFileInfo(userId);
@@ -120,32 +127,64 @@ async function prepare(
    return fields.length;
 }
 
+/** What the answers and the message are written from: the candidate, their CV and the vacancy. */
+interface ApplicationMaterial {
+   profile: Profile;
+   vacancy: VacancyForMatching;
+   cv?: string;
+   /** the scoring's strongest matches, to lead with */
+   matchedSkills: string[];
+}
+
+/** The profile and the vacancy with the user's CV and the scoring's strongest matches for it. */
+async function loadMaterial(
+   database: DatabaseClient,
+   userId: string,
+   profile: Profile,
+   vacancy: VacancyForMatching,
+): Promise<ApplicationMaterial> {
+   const [cv, match] = await Promise.all([
+      database.documents.getBaseCvText(userId),
+      database.matches.get(userId, vacancy.id),
+   ]);
+   return { profile, vacancy, cv, matchedSkills: match?.analysis.ai?.matchedSkills ?? [] };
+}
+
+/**
+ * The message to the recruiter, written for this vacancy; the user's usual one when the model fails, so
+ * it never holds the application back: the user reviews and edits the message either way.
+ */
+async function writeMessage(
+   llm: LlmProvider,
+   material: ApplicationMaterial,
+): Promise<{ valueSource: FormFieldValueSource; text: string }> {
+   try {
+      const request = buildApplicationMessageRequest(material);
+      const { message } = await llm.generate(request);
+      const text = tidyAnswer(message);
+      if (!text) throw new Error("the model wrote an empty message");
+      return { valueSource: "ai-message", text };
+   } catch (err) {
+      log("prepare-application", `the usual message instead: ${(err as Error).message}`);
+   }
+   return { valueSource: "profile", text: usualApplicationMessage(material.profile) };
+}
+
 /**
  * One answer per question, in their order, from the CV, the profile and the vacancy. A choice question's
  * answer is one of its options, as the form writes it.
  */
 async function answerQuestions(
-   database: DatabaseClient,
    llm: LlmProvider,
-   userId: string,
-   profile: Profile,
-   vacancy: VacancyForMatching,
+   material: ApplicationMaterial,
    questions: ApplyFormField[],
 ): Promise<string[]> {
-   const match = await database.matches.get(userId, vacancy.id);
-   const cv = await database.documents.getBaseCvText(userId);
    const questionsForModel = questions.map((q) => ({
       label: q.label,
       options: choiceFieldKinds.includes(q.kind) ? q.options : undefined,
       numeric: q.kind === "number",
    }));
-   const request = buildApplicationAnswersRequest({
-      profile,
-      vacancy,
-      cv,
-      matchedSkills: match?.analysis.ai?.matchedSkills ?? [],
-      questions: questionsForModel,
-   });
+   const request = buildApplicationAnswersRequest({ ...material, questions: questionsForModel });
    const { answers } = await llm.generate(request);
    if (answers.length !== questions.length) {
       throw new Error(`the model answered ${answers.length} of ${questions.length} questions`);
@@ -201,7 +240,9 @@ function storedForm(fields: FormField[]): Pick<ApplyForm, "questions" | "message
       required,
       options,
    });
-   const message = fields.find((f) => f.valueSource === "profile");
+   const message = fields.find(
+      (f) => f.valueSource === "ai-message" || f.valueSource === "profile",
+   );
    const cv = fields.find((f) => f.valueSource === "document");
    return {
       questions: fields.filter((f) => f.valueSource === "ai").map(asFormField),

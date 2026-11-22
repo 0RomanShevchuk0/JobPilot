@@ -5,7 +5,6 @@ export { applyHardLimits, buildScoringRequest, SCORING_PROMPT_VERSION } from "./
 export type { VacancyForPrompt } from "./describe.js";
 export {
    applicationAnswersSchema,
-   applicationMessage,
    buildApplicationAnswersRequest,
    pickNumber,
    pickOption,
@@ -13,3 +12,9 @@ export {
    type ApplicationAnswers,
    type ApplicationQuestion,
 } from "./answers.js";
+export {
+   applicationMessageSchema,
+   buildApplicationMessageRequest,
+   usualApplicationMessage,
+   type ApplicationMessage,
+} from "./message.js";

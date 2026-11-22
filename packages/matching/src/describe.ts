@@ -9,7 +9,8 @@ import type {
    WorkMode,
 } from "@jobpilot/contracts";
 
-// How the candidate and a vacancy are written into prompts: shared by scoring and application answers.
+// How the candidate and a vacancy are written into prompts: shared by scoring, application answers and
+// the message to the recruiter.
 
 // a few long postings shouldn't eat the tokens-per-minute limit; real ones are 2-6k characters
 const MAX_DESCRIPTION_CHARS = 15_000;
@@ -55,6 +56,27 @@ export function describeProfile(p: Profile): string {
       ["Languages", list(p.languages.map(language))],
       ["Notes", p.notes || undefined],
    ]);
+}
+
+/**
+ * The prompt sections an application is written from: the candidate, their CV, the vacancy and what of
+ * the candidate matches it best (the scoring's strongest matches, to lead with; gaps are deliberately
+ * not passed in).
+ */
+export function describeApplication(input: {
+   profile: Profile;
+   vacancy: VacancyForPrompt;
+   cv?: string;
+   matchedSkills: string[];
+}): string[] {
+   const { profile, vacancy, cv, matchedSkills } = input;
+   const sections = [`# Candidate\n${describeProfile(profile)}`];
+   if (cv) sections.push(`# Candidate's CV\n${describeCv(cv, profile)}`);
+   sections.push(`# Vacancy\n${describeVacancy(vacancy)}`);
+   if (matchedSkills.length > 0) {
+      sections.push(`# Strongest matches with this vacancy\n${matchedSkills.join(", ")}`);
+   }
+   return sections;
 }
 
 export function describeVacancy(v: VacancyForPrompt): string {

@@ -3,6 +3,7 @@ import { Badge, buttonStyles } from "../../../shared/ui";
 
 const sourceLabels: Record<FormField["valueSource"], string> = {
    ai: "AI",
+   "ai-message": "AI",
    profile: "profile",
    document: "document",
 };

@@ -1,7 +1,7 @@
 import type { Profile } from "@jobpilot/contracts";
 import type { LlmRequest } from "@jobpilot/llm";
 import { z } from "zod";
-import { describeCv, describeProfile, describeVacancy, type VacancyForPrompt } from "./describe.js";
+import { describeApplication, type VacancyForPrompt } from "./describe.js";
 
 export const applicationAnswersSchema = z.object({
    answers: z
@@ -9,18 +9,6 @@ export const applicationAnswersSchema = z.object({
       .describe("One answer per question, in the same order as the questions"),
 });
 export type ApplicationAnswers = z.infer<typeof applicationAnswersSchema>;
-
-// when the profile has no usual message: short and neutral, in the spirit users write themselves
-const DEFAULT_MESSAGE =
-   "I'm interested in this position and believe my experience is relevant to the role. I'd be glad to discuss how I could contribute to your team.";
-
-/**
- * The message to the recruiter: the user's own usual message, as it is. A model adds nothing to it but
- * risk, and the user can still edit it per vacancy when reviewing the application.
- */
-export function applicationMessage(profile: Profile): string {
-   return profile.applicationMessage.trim() || DEFAULT_MESSAGE;
-}
 
 const SYSTEM = `You answer the recruiter's questions in a job application for a software developer.
 Present the candidate in the best truthful light.
@@ -100,10 +88,7 @@ export interface ApplicationQuestion {
    numeric?: boolean;
 }
 
-/**
- * The model request that answers the recruiter's questions of an application form. matchedSkills are
- * the scoring's strongest matches, to lead with; gaps are deliberately not passed in.
- */
+/** The model request that answers the recruiter's questions of an application form. */
 export function buildApplicationAnswersRequest(input: {
    profile: Profile;
    vacancy: VacancyForPrompt;
@@ -111,13 +96,8 @@ export function buildApplicationAnswersRequest(input: {
    matchedSkills: string[];
    questions: ApplicationQuestion[];
 }): LlmRequest<ApplicationAnswers> {
-   const { profile, vacancy, cv, matchedSkills, questions } = input;
-   const sections = [`# Candidate\n${describeProfile(profile)}`];
-   if (cv) sections.push(`# Candidate's CV\n${describeCv(cv, profile)}`);
-   sections.push(`# Vacancy\n${describeVacancy(vacancy)}`);
-   if (matchedSkills.length > 0) {
-      sections.push(`# Strongest matches with this vacancy\n${matchedSkills.join(", ")}`);
-   }
+   const { questions, ...application } = input;
+   const sections = describeApplication(application);
    const questionLines = questions.map(describeQuestion).join("\n");
    sections.push(`# Questions\n${questionLines}`);
    return { system: SYSTEM, prompt: sections.join("\n\n"), schema: applicationAnswersSchema };

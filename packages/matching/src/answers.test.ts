@@ -1,18 +1,11 @@
 import { profileSchema } from "@jobpilot/contracts";
 import { describe, expect, it } from "vitest";
-import {
-   applicationMessage,
-   buildApplicationAnswersRequest,
-   pickNumber,
-   pickOption,
-   tidyAnswer,
-} from "./answers.js";
+import { buildApplicationAnswersRequest, pickNumber, pickOption, tidyAnswer } from "./answers.js";
 import type { VacancyForPrompt } from "./describe.js";
 
 const profile = profileSchema.parse({
    contacts: { fullName: "Jane Doe", email: "jane@example.com" },
    experienceYears: 4,
-   applicationMessage: "I'm interested in this position.",
 });
 const vacancy: VacancyForPrompt = {
    title: "Full Stack Developer",
@@ -53,18 +46,6 @@ describe("buildApplicationAnswersRequest", () => {
    it("keeps contacts out of the prompt", () => {
       expect(prompt).not.toMatch(/Jane Doe|jane@example\.com/);
       expect(prompt).toContain("Built a CRM with React");
-   });
-});
-
-describe("applicationMessage", () => {
-   it("is the user's usual message as it is", () => {
-      expect(applicationMessage(profile)).toBe("I'm interested in this position.");
-   });
-
-   it("falls back to a neutral message when the profile has none", () => {
-      expect(applicationMessage({ ...profile, applicationMessage: "  " })).toMatch(
-         /^I'm interested/,
-      ); // the default one
    });
 });
 
