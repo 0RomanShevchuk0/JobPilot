@@ -91,7 +91,7 @@ describe("applyHardLimits", () => {
    it("makes a vacancy asking for more years than my limit a skip", () => {
       const limited = applyHardLimits(profile, { ...ai, requiredYears: 5 });
       expect(limited).toMatchObject({ verdict: "skip", score: 39 });
-      expect(limited.concerns).toEqual(["5+ years required, my limit is 4", "Salary not stated"]);
+      expect(limited.concerns).toEqual(["5+ years required, your limit is 4", "Salary not stated"]);
    });
 
    it("makes a role that is not the work I look for a skip, however well the stack matches", () => {
@@ -101,7 +101,7 @@ describe("applyHardLimits", () => {
          roleMismatch: "people management role",
       });
       expect(limited).toMatchObject({ verdict: "skip", score: 39 });
-      expect(limited.concerns[0]).toBe("not the role I look for: people management role");
+      expect(limited.concerns[0]).toBe("not the role you look for: people management role");
    });
 
    it("lists every deal-breaker it found", () => {

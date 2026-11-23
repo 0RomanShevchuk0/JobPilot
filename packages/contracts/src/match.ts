@@ -190,9 +190,10 @@ export interface MatchListItem {
    score: number | null;
    verdict: AiAssessment["verdict"] | null;
    summary: string | null;
+   /** the AI's main reasons to apply, the most important first */
+   strengths: string[];
+   /** the AI's main reasons against, deal-breakers first */
    concerns: string[];
-   matchedSkills: string[];
-   missingSkills: string[];
    /** why the prefilter rejected it; empty when it passed */
    rejectedBy: RejectReason[];
    /** why the job site won't let me apply; null when it will or wasn't asked */

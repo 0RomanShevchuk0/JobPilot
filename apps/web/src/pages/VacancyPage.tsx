@@ -46,7 +46,7 @@ function Vacancy({ match }: { match: MatchDetails }) {
             <h2 className="mb-2 text-xs font-semibold tracking-wide text-blue-900 uppercase">
                AI evaluation
             </h2>
-            <MatchEvaluation match={match} withMatchedSkills />
+            <MatchEvaluation match={match} />
          </section>
          <section className="mt-8">
             <h2 className="mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase">

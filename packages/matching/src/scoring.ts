@@ -55,11 +55,11 @@ const DEAL_BREAKER_MAX_SCORE = 39;
 export function applyHardLimits(profile: Profile, ai: AiAssessment): AiAssessment {
    const max = profile.hardFilters.maxRequiredYears;
    const dealBreakers = [
-      ai.roleMismatch && `not the role I look for: ${ai.roleMismatch}`,
+      ai.roleMismatch && `not the role you look for: ${ai.roleMismatch}`,
       max !== undefined &&
          ai.requiredYears !== null &&
          ai.requiredYears > max &&
-         `${ai.requiredYears}+ years required, my limit is ${max}`,
+         `${ai.requiredYears}+ years required, your limit is ${max}`,
    ].filter((reason): reason is string => Boolean(reason));
    if (dealBreakers.length === 0) return ai;
    return {

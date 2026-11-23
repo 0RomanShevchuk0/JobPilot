@@ -10,6 +10,7 @@ import type {
    MatchListItem,
    MatchStatus,
    NormalizedPosting,
+   StoredAiAssessment,
 } from "@jobpilot/contracts";
 import { and, desc, eq, inArray, isNull, not, or, sql, type SQL } from "drizzle-orm";
 import type { Drizzle } from "../drizzle.js";
@@ -267,9 +268,8 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
             application: applicationOf(vacancyApplications, () => true),
             verdict: analysis.ai?.verdict ?? null,
             summary: analysis.ai?.summary ?? null,
-            concerns: analysis.ai?.concerns ?? [],
-            matchedSkills: analysis.ai?.matchedSkills ?? [],
-            missingSkills: analysis.ai?.missingSkills ?? [],
+            strengths: analysis.ai ? shownStrengths(analysis.ai) : [],
+            concerns: analysis.ai ? shownConcerns(analysis.ai) : [],
             rejectedBy: analysis.prefilter.rejectedBy,
             cannotApplyReason:
                cannotApplyReason(analysis.applyCheck) ??
@@ -486,4 +486,32 @@ function refusedOnEverySiteLeft(
    if (vacancyPostings.length === 0) return null;
    if (!vacancyPostings.every((p) => p.cannotApplyReason !== null)) return null;
    return vacancyPostings.map((p) => `${p.sourceName}: ${p.cannotApplyReason}`).join("; ");
+}
+
+// the model is asked for as many, but may not keep to it
+const MAX_STRENGTHS = 3;
+const MAX_CONCERNS = 4;
+// an older assessment lists up to 16 matched skills, the main ones first
+const MAX_SKILLS_AS_STRENGTH = 5;
+
+/** The reasons to apply to show; for an assessment older than strengths, the skills that matched. */
+function shownStrengths(ai: StoredAiAssessment): string[] {
+   if (ai.strengths) return ai.strengths.slice(0, MAX_STRENGTHS);
+   const skills = ai.matchedSkills.slice(0, MAX_SKILLS_AS_STRENGTH);
+   return skills.length > 0 ? [skills.join(", ")] : [];
+}
+
+/**
+ * The reasons against to show. An older assessment lists missing skills apart: they go second, after
+ * the first concern, where a deal-breaker is if there is one.
+ */
+function shownConcerns(ai: StoredAiAssessment): string[] {
+   const missing = ai.missingSkills ?? [];
+   const [first, ...rest] = ai.concerns;
+   const concerns = [
+      ...(first ? [first] : []),
+      ...(missing.length > 0 ? [`Missing: ${missing.join(", ")}`] : []),
+      ...rest,
+   ];
+   return concerns.slice(0, MAX_CONCERNS);
 }

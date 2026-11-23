@@ -82,7 +82,7 @@ function checkSalary(p: Profile, v: VacancyForPrefilter): RejectReason | undefin
    if (offered === undefined || wanted === undefined || offered >= wanted) return;
    return {
       check: "salary",
-      detail: `up to ${top} ${v.salary.currency}/${v.salary.period}, my minimum ${p.salary.min} ${p.salary.currency}/${p.salary.period}`,
+      detail: `up to ${top} ${v.salary.currency}/${v.salary.period}, your minimum ${p.salary.min} ${p.salary.currency}/${p.salary.period}`,
    };
 }
 
@@ -100,7 +100,7 @@ function checkLanguages(p: Profile, v: VacancyForPrefilter): RejectReason[] {
       return [
          {
             check: "language" as const,
-            detail: `${required.code} ${required.level} required, I have ${mine.level}`,
+            detail: `${required.code} ${required.level} required, you have ${mine.level}`,
          },
       ];
    });
@@ -111,7 +111,7 @@ function checkExperience(p: Profile, v: VacancyForPrefilter): RejectReason | und
    if (max === undefined || v.experienceYears === undefined || v.experienceYears <= max) return;
    return {
       check: "experience",
-      detail: `${v.experienceYears}+ years required, my limit is ${max}`,
+      detail: `${v.experienceYears}+ years required, your limit is ${max}`,
    };
 }
 
