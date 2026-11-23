@@ -56,17 +56,30 @@ export const aiAssessmentSchema = z.object({
          "apply: meets the main requirements; stretch: asks somewhat more than the candidate has but is realistic; skip: clear mismatch or a deal-breaker",
       ),
    matchedSkills: z.array(z.string()).describe("Required skills the candidate has"),
-   missingSkills: z
+   strengths: z
       .array(z.string())
-      .describe("Required (not nice-to-have) skills the candidate lacks"),
+      .describe(
+         'Up to 3 main reasons to apply, the most important first, each under 80 characters. Nothing the vacancy calls a plus or nice to have. Matching required skills are grouped into one item: "Whole core stack: TypeScript, NestJS, PostgreSQL"; empty if none',
+      ),
    concerns: z
       .array(z.string())
       .describe(
-         "Risks found in the text, e.g. people management experience, a higher language level, relocation, salary below target; empty if none",
+         "Up to 4 main reasons against, the most important first, each under 80 characters: required skills the candidate lacks (grouped into one item), a higher level, people management, a higher language level, relocation, salary below target; empty if none",
       ),
-   summary: z.string().describe("1-2 sentences: why this score"),
+   summary: z
+      .string()
+      .describe(
+         "The conclusion in one sentence under 100 characters, without names of technologies",
+      ),
 });
 export type AiAssessment = z.infer<typeof aiAssessmentSchema>;
+
+/** An assessment as stored: the ones made before strengths were added list missing skills apart. */
+export type StoredAiAssessment = Omit<AiAssessment, "strengths"> & {
+   strengths?: string[];
+   /** required skills I lack; concerns have the main ones since */
+   missingSkills?: string[];
+};
 
 /**
  * Whether the job site lets the user apply, as its job page shows it to them; the reason when it won't
@@ -108,7 +121,7 @@ export interface MatchAnalysis {
     */
    applyChecks?: Record<string, ApplyCheck>;
    salaryFit?: SalaryFit;
-   ai?: AiAssessment;
+   ai?: StoredAiAssessment;
 }
 
 /** What the can-apply check records on an evaluation: the answer as one, each site's, the salary. */

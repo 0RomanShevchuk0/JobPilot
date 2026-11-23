@@ -53,6 +53,15 @@ describe("buildScoringRequest", () => {
       expect(prompt.indexOf("# Candidate's CV")).toBeLessThan(prompt.indexOf("# Vacancy"));
    });
 
+   it("tells the limit on required years only when the candidate has one", () => {
+      expect(buildScoringRequest(profile, vacancy).prompt).toContain("Limit on required years: 4");
+      const unlimited = {
+         ...profile,
+         hardFilters: { ...profile.hardFilters, maxRequiredYears: undefined },
+      };
+      expect(buildScoringRequest(unlimited, vacancy).prompt).not.toContain("Limit on required");
+   });
+
    it("leaves the CV section out when there is no CV", () => {
       expect(buildScoringRequest(profile, vacancy).prompt).not.toContain("# Candidate's CV");
    });
@@ -74,7 +83,7 @@ describe("applyHardLimits", () => {
       score: 67,
       verdict: "stretch",
       matchedSkills: [],
-      missingSkills: [],
+      strengths: [],
       concerns: ["Salary not stated"],
       summary: "",
    };
