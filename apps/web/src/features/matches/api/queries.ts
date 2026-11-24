@@ -32,7 +32,7 @@ export function useMatches(tab: MatchesTab, includeSkipped: boolean) {
    });
 }
 
-/** One vacancy as evaluated for my current profile. */
+/** One vacancy as last evaluated for me, maybe for an older profile. */
 export function useMatch(vacancyId: string) {
    return useQuery({
       queryKey: queryKeys.matches.details(vacancyId),

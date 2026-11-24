@@ -11,7 +11,7 @@ import { CompanyAttempts } from "../features/tracker";
 import { BackLink, PageLoader } from "../shared/ui";
 
 /**
- * One vacancy as evaluated for my profile: every job site it is on, what I already tried with it and
+ * One vacancy as last evaluated for me: every job site it is on, what I already tried with it and
  * its employer, the evaluation, the description.
  */
 export function VacancyPage() {

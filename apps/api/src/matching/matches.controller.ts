@@ -42,7 +42,10 @@ export class MatchesController {
       });
    }
 
-   /** One vacancy as evaluated for my current profile, with its description and every job site it is on. */
+   /**
+    * One vacancy as last evaluated for me, for an older profile too, with its description and every job
+    * site it is on.
+    */
    @Get(":vacancyId")
    async get(
       @CurrentUserId() userId: string,

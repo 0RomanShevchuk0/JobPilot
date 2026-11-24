@@ -19,7 +19,7 @@ export class MatchesService {
       return { items: page, nextCursor: hasMore ? page[PAGE_SIZE - 1]!.vacancyId : null };
    }
 
-   /** Undefined when the vacancy has no evaluation for the user's current profile. */
+   /** Undefined when the vacancy has no evaluation for the user. */
    get(userId: string, vacancyId: string): Promise<MatchDetails | undefined> {
       return this.db.matches.getDetails(userId, vacancyId);
    }

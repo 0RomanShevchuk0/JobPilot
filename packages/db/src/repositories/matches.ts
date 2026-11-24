@@ -75,8 +75,9 @@ export interface MatchesRepository {
     */
    listForUser(userId: string, options: MatchListOptions): Promise<MatchListItem[]>;
    /**
-    * One vacancy evaluated for the user's current profile version, with what only its own page shows;
-    * closed ones too. Undefined when there is no such evaluation.
+    * One vacancy as last evaluated for the user, with what only its own page shows; closed ones too.
+    * The evaluation may be for an older profile version: a closed vacancy or one in an unpicked
+    * category isn't re-evaluated, another one may still be waiting for it. Undefined when there is none.
     */
    getDetails(userId: string, vacancyId: string): Promise<MatchDetails | undefined>;
    /**
@@ -154,7 +155,7 @@ function appliedToVacancySql(userId: string) {
 }
 
 export function createMatchesRepository(db: Drizzle): MatchesRepository {
-   /** The user's evaluations made for their current profile version that also meet the condition. */
+   /** The user's evaluations that meet the condition, whatever profile version they were made for. */
    function selectMatches(userId: string, condition: SQL | undefined, order: MatchOrder = "score") {
       // gone postings count too: a closed vacancy on its own page still has a date
       const publishedAt = sql`(
@@ -180,14 +181,6 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
                evaluatedAt: vacancyMatches.evaluatedAt,
             })
             .from(vacancyMatches)
-            // evaluations made for an older profile version are stale: a re-evaluation is on its way
-            .innerJoin(
-               profiles,
-               and(
-                  eq(profiles.userId, vacancyMatches.userId),
-                  eq(profiles.version, vacancyMatches.profileVersion),
-               ),
-            )
             .innerJoin(vacancies, eq(vacancies.id, vacancyMatches.vacancyId))
             .leftJoin(companies, eq(companies.id, vacancies.companyId))
             .where(and(eq(vacancyMatches.userId, userId), condition))
@@ -311,10 +304,16 @@ export function createMatchesRepository(db: Drizzle): MatchesRepository {
                from vacancy_matches last_shown
                where last_shown.user_id = ${userId} and last_shown.vacancy_id = ${after}
             )`;
+         const currentProfileVersion = db
+            .select({ version: profiles.version })
+            .from(profiles)
+            .where(eq(profiles.userId, userId));
          const rows = await selectMatches(
             userId,
             and(
                isNull(vacancies.closedAt),
+               // evaluations made for an older profile version are stale: a re-evaluation is on its way
+               eq(vacancyMatches.profileVersion, currentProfileVersion),
                // a category I unpicked hides its vacancies; their evaluations stay for when I pick it again
                userSubscribedToVacancySql(userId),
                status === null ? isNull(vacancyMatches.status) : eq(vacancyMatches.status, status),

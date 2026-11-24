@@ -215,7 +215,10 @@ export interface MatchListPage {
    nextCursor: string | null;
 }
 
-/** One vacancy in GET /matches/:vacancyId: the list item plus what only its own page shows. */
+/**
+ * One vacancy in GET /matches/:vacancyId: the list item plus what only its own page shows. Its
+ * evaluation may be for an older profile: not every vacancy is re-evaluated when the profile changes.
+ */
 export interface MatchDetails extends MatchListItem {
    description: string; // markdown
    locations: Location[];
