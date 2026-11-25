@@ -7,7 +7,7 @@ export function ActionError({ message, onClose }: { message: string; onClose: ()
    return (
       <div
          role="alert"
-         className="flex items-start gap-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-left text-sm text-red-700 sm:absolute sm:top-full sm:right-0 sm:z-30 sm:mt-1 sm:w-72 sm:shadow-lg"
+         className="flex items-start gap-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-left text-sm text-red-700 sm:absolute sm:top-full sm:right-0 sm:z-20 sm:mt-1 sm:w-72 sm:shadow-lg"
       >
          <p className="flex-1">{message}</p>
          <button

@@ -74,9 +74,10 @@ export function MatchApplyAction({ match }: { match: MatchListItem }) {
 
    const shown = action();
    if (!shown) return null;
-   // relative z-20: above the card's stretched link, so the buttons stay clickable on their own, and
-   // above the date (z-10). On a phone the card's width (flex: its one child stretches)
-   return <div className="relative z-20 flex flex-col sm:block">{shown}</div>;
+   // relative: above the card's stretched link, so the buttons stay clickable on their own. No z-index:
+   // under the tab bar and the open menus, its error (z-20) over what's around. On a phone the card's
+   // width (flex: its one child stretches)
+   return <div className="relative flex flex-col sm:block">{shown}</div>;
 }
 
 /**
@@ -91,8 +92,9 @@ export function MatchMoreMenu({ match }: { match: MatchListItem }) {
    const error = mark.error ?? markSent.error;
 
    return (
-      // relative z-20: above the card's stretched link, and above the date (z-10) its menu covers
-      <div className="relative z-20 flex flex-col items-end gap-1">
+      // relative: above the card's stretched link. No z-index: the ⋯ button stays under the tab bar and
+      // other open menus, its own menu (z-20) goes over them and the date (z-10)
+      <div className="relative flex flex-col items-end gap-1">
          <Menu
             label="More actions"
             trigger={
